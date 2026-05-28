@@ -96,6 +96,21 @@ Rectangle {
             }
         }
 
+        // Heimdall section header: PLACES — Linux home + common folders.
+        // Style follows design canvas overline spec (11px uppercase, soft
+        // letter-spacing). Kept tight so it doesn't dominate the row stack.
+        Text {
+            Layout.fillWidth: true
+            Layout.leftMargin: Theme.spacing
+            Layout.topMargin: Theme.spacing / 2
+            text: "PLACES"
+            color: Theme.muted
+            font.pointSize: Theme.fontSmall - 1
+            font.bold: true
+            font.capitalization: Font.AllUppercase
+            font.letterSpacing: 1
+        }
+
         // Quick access section
         Column {
             Layout.fillWidth: true
@@ -212,6 +227,20 @@ Rectangle {
             Layout.rightMargin: Theme.spacing
             height: 1
             color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.08)
+        }
+
+        // Heimdall section header: FAVORITES — user-curated bookmarks.
+        // Drag a folder onto the section to pin it (existing HyprFM logic).
+        Text {
+            Layout.fillWidth: true
+            Layout.leftMargin: Theme.spacing
+            Layout.topMargin: Theme.spacing / 2
+            text: "FAVORITES"
+            color: Theme.muted
+            font.pointSize: Theme.fontSmall - 1
+            font.bold: true
+            font.capitalization: Font.AllUppercase
+            font.letterSpacing: 1
         }
 
         // Bookmarks section — drag folders to add, drag items to reorder
@@ -557,8 +586,23 @@ Rectangle {
             }
         }
 
+        // Heimdall section header: DEVICES — mount points and USB.
+        Text {
+            Layout.fillWidth: true
+            Layout.leftMargin: Theme.spacing
+            Layout.topMargin: Theme.spacing / 2
+            text: "DEVICES"
+            color: Theme.muted
+            font.pointSize: Theme.fontSmall - 1
+            font.bold: true
+            font.capitalization: Font.AllUppercase
+            font.letterSpacing: 1
+            visible: devicesSection.visible
+        }
+
         // Devices section
         Column {
+            id: devicesSection
             Layout.fillWidth: true
 
             Repeater {
