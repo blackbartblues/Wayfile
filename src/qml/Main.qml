@@ -172,7 +172,9 @@ ApplicationWindow {
         Q.Theme.transparencyLevel = Qt.binding(() => Theme.transparencyLevel)
 
         root.scheduleActivePaneFocus()
-        missingDepsStartupTimer.start()
+        // Heimdall: dependency check is opt-in via Settings -> "Check Optional
+        // Dependencies", not a startup popup. The dialog is still present, but
+        // we don't auto-open it.
     }
 
     onActiveChanged: {
@@ -1209,6 +1211,7 @@ ApplicationWindow {
         currentSidebarWidth: root.sidebarWidth
         onRemoteConnectRequested: root.openRemoteConnectDialog()
         onKeyboardShortcutsRequested: root.openKeyboardShortcutsDialog()
+        onDependencyCheckRequested: missingDependenciesDialog.openDialog()
         onClosed: root.scheduleActivePaneFocus()
     }
 
@@ -1222,18 +1225,8 @@ ApplicationWindow {
         onClosed: root.scheduleActivePaneFocus()
     }
 
-    // Show the missing-dependencies dialog shortly after startup if anything
-    // is unavailable. Delayed so the window renders first and the dialog
-    // open-animation lines up against a visible backdrop.
-    Timer {
-        id: missingDepsStartupTimer
-        interval: 400
-        repeat: false
-        onTriggered: {
-            if (dependencies && dependencies.hasAnyMissing)
-                missingDependenciesDialog.openDialog()
-        }
-    }
+    // (Heimdall: the startup auto-popup was removed. Trigger via Settings ->
+    // "Check Optional Dependencies" instead.)
 
     // ── Rename dialog ───────────────────────────────────────────────────────
     property string renameTargetPath: ""

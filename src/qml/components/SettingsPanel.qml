@@ -117,6 +117,7 @@ Window {
 
     signal remoteConnectRequested()
     signal keyboardShortcutsRequested()
+    signal dependencyCheckRequested()
     signal closed()
 
     readonly property string systemFontLabel: "System Default"
@@ -312,6 +313,11 @@ Window {
     function openKeyboardShortcuts() {
         closePanel()
         keyboardShortcutsRequested()
+    }
+
+    function openDependencyCheck() {
+        closePanel()
+        dependencyCheckRequested()
     }
 
     function currentSettings() {
@@ -877,6 +883,21 @@ Window {
                     text: "Connect to Network Location"
                     variant: "ghost"
                     onClicked: root.openRemoteConnect()
+                }
+            }
+
+            // Heimdall: dependency check moved off the startup auto-popup
+            // path and into a manual trigger here. Click only when you want
+            // to see what extra tools the file manager can use.
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+
+                Q.Button {
+                    Layout.fillWidth: true
+                    text: "Check Optional Dependencies"
+                    variant: "ghost"
+                    onClicked: root.openDependencyCheck()
                 }
             }
         }
