@@ -419,6 +419,58 @@ void TabListModel::unmergeAt(int idx)
     emit sessionChanged();
 }
 
+void TabListModel::selectRangeTo(int idx)
+{
+    if (idx < 0 || idx >= m_tabs.size())
+        return;
+    const int anchor = m_activeIndex >= 0 ? m_activeIndex : 0;
+    int lo = qMin(anchor, idx);
+    int hi = qMax(anchor, idx);
+
+    // Phase 2: cap-aware trim — keep the anchor end fixed so the user
+    // sees the selection grow from where they were.
+    if (hi - lo + 1 > kMaxPanes) {
+        emit selectionLimitReached(
+            tr("Maximum %1 tabs can be merged").arg(kMaxPanes));
+        if (idx >= anchor)
+            hi = anchor + kMaxPanes - 1;
+        else
+            lo = anchor - kMaxPanes + 1;
+    }
+
+    QSet<int> rebuilt;
+    for (int i = lo; i <= hi; ++i)
+        rebuilt.insert(i);
+
+    const QSet<int> previous = m_selectedIndices;
+    m_selectedIndices = rebuilt;
+
+    // Invariant: active ∈ selected.  If the trim pushed the active out
+    // of range, snap it to the clamped clicked end.
+    if (!m_selectedIndices.contains(m_activeIndex)) {
+        const int newActive = (idx >= anchor) ? hi : lo;
+        m_activeIndex = newActive;
+        emit activeIndexChanged();
+        emit sessionChanged();
+    }
+
+    bool selectionMutated = false;
+    for (int row : previous) {
+        if (!m_selectedIndices.contains(row)) {
+            emitIsSelectedChanged(row);
+            selectionMutated = true;
+        }
+    }
+    for (int row : std::as_const(m_selectedIndices)) {
+        if (!previous.contains(row)) {
+            emitIsSelectedChanged(row);
+            selectionMutated = true;
+        }
+    }
+    if (selectionMutated)
+        emit selectionChanged();
+}
+
 void TabListModel::activateAndCollapseSelection(int index)
 {
     if (index < 0 || index >= m_tabs.size())

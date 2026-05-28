@@ -53,6 +53,12 @@ public:
     // the UI talks to the model.
     Q_INVOKABLE void activateAndCollapseSelection(int index);
 
+    // Phase 2: range-select [min(activeIndex, idx) .. max(activeIndex, idx)]
+    // in one go.  Triggered by Shift+click on a tab; the active tab acts
+    // as the anchor.  Respects kMaxPanes — if the range would exceed the
+    // cap, it's trimmed from the far end and selectionLimitReached fires.
+    Q_INVOKABLE void selectRangeTo(int idx);
+
     // Phase 2 P2-M4: collapse the current selection (>= 2 tabs) into one
     // supertab.  The lowest-indexed selected tab is the receiver: it keeps
     // its row, and each other selected tab donates its currentPath to a

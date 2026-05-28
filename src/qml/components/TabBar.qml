@@ -277,13 +277,15 @@ Item {
                                 tabDelegate.startClose()
                                 return
                             }
-                            // Phase 2 P2-M1: Ctrl-click toggles this tab's
-                            // membership in the merge-selection set; plain
-                            // click activates the tab and collapses the
-                            // selection to just {this tab} in one atomic
-                            // call (separate clear + setActive lets the old
-                            // active linger in the set as a stale outline).
-                            if (mouse.modifiers & Qt.ControlModifier)
+                            // Phase 2 P2-M1: modifiers drive the selection.
+                            //   Shift+click — range-select [active..clicked]
+                            //   Ctrl+click  — toggle clicked in / out of the
+                            //                 merge set
+                            //   plain click — collapse selection to clicked
+                            //                 and make it active
+                            if (mouse.modifiers & Qt.ShiftModifier)
+                                tabModel.selectRangeTo(tabDelegate.index)
+                            else if (mouse.modifiers & Qt.ControlModifier)
                                 tabModel.toggleSelected(tabDelegate.index)
                             else
                                 tabModel.activateAndCollapseSelection(tabDelegate.index)
