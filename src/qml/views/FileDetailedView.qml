@@ -635,6 +635,20 @@ FocusScope {
                     border.color: folderDropArea.containsDrag ? Theme.accent : (detRow.isSelected ? Theme.accent : "transparent")
                     border.width: folderDropArea.containsDrag ? 2 : (detRow.isSelected ? 1 : 0)
 
+                    // Heimdall design-canvas: right-edge gold chevron on selected
+                    // folder rows — affordance for "drill in" (double-click or
+                    // Enter opens it). Files don't get the chevron because there's
+                    // no navigation target.
+                    IconChevronRight {
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.rightMargin: 6
+                        size: 14
+                        color: Theme.accent
+                        visible: detRow.isSelected && detRow.isDir
+                        z: 1
+                    }
+
                     Row {
                         anchors.fill: parent
                         anchors.leftMargin: 8
