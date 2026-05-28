@@ -434,7 +434,7 @@ QString PreviewService::localPreviewPath(const QString &path) const
     if (!isTrashUri(path))
         return QFileInfo::exists(path) ? path : QString();
 
-    QString cacheRoot = QDir::homePath() + "/.cache/hyprfm/preview-cache";
+    QString cacheRoot = QDir::homePath() + "/.cache/heimdall/preview-cache";
     QDir().mkpath(cacheRoot);
 
     const QString suffix = QFileInfo(QUrl(path).fileName()).suffix();

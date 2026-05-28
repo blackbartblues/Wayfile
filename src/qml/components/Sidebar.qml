@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Shapes
-import HyprFM
+import Heimdall
 import Quill as Quill
 
 Rectangle {
@@ -72,7 +72,7 @@ Rectangle {
         anchors.fill: parent
         spacing: 0
 
-        // App header: "hyprfm" + collapse button
+        // App header: "heimdall" + collapse button
         Item {
             Layout.fillWidth: true
             height: 44

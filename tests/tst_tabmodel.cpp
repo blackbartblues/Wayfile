@@ -376,7 +376,7 @@ private slots:
 
         QJsonArray tabs;
         QJsonObject tab;
-        tab["path"] = "/definitely/missing/path/for/hyprfm";
+        tab["path"] = "/definitely/missing/path/for/heimdall";
         tab["viewMode"] = "grid";
         tab["splitViewEnabled"] = false;
         tab["secondaryPath"] = "/another/missing/path";

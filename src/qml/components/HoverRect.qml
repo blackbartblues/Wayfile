@@ -1,5 +1,5 @@
 import QtQuick
-import HyprFM
+import Heimdall
 
 Rectangle {
     id: root

@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Shapes
-import HyprFM
+import Heimdall
 
 Rectangle {
     id: statusBar

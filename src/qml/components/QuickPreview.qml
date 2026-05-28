@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import HyprFM
+import Heimdall
 
 Item {
     id: root

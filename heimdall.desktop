@@ -1,10 +1,10 @@
 [Desktop Entry]
-Name=HyprFM
+Name=Heimdall
 Comment=File manager for Hyprland
-Exec=hyprfm %U
+Exec=heimdall %U
 Icon=system-file-manager
 Terminal=false
 Type=Application
 Categories=System;FileManager;
 MimeType=inode/directory;
-StartupWMClass=hyprfm
+StartupWMClass=heimdall

@@ -1,5 +1,5 @@
 import QtQuick
-import HyprFM
+import Heimdall
 
 // Semi-transparent rubber-band selection rectangle.
 // Usage:

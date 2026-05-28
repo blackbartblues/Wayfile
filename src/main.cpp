@@ -23,7 +23,7 @@
 #include <QLocalServer>
 #include <QLocalSocket>
 #include <unistd.h>
-#ifdef HYPRFM_HAS_KWINDOWSYSTEM
+#ifdef HEIMDALL_HAS_KWINDOWSYSTEM
 #include <KWindowEffects>
 #endif
 
@@ -66,12 +66,12 @@ int main(int argc, char *argv[])
         "qt.svg.warning=false");
 
     // Keep the default path fast. Full-window MSAA is expensive on many
-    // Wayland/compositor stacks; opt in with HYPRFM_MSAA=2/4 if wanted.
+    // Wayland/compositor stacks; opt in with HEIMDALL_MSAA=2/4 if wanted.
     QSurfaceFormat fmt;
-    fmt.setSamples(qMax(0, qEnvironmentVariableIntValue("HYPRFM_MSAA")));
+    fmt.setSamples(qMax(0, qEnvironmentVariableIntValue("HEIMDALL_MSAA")));
     QSurfaceFormat::setDefaultFormat(fmt);
 
-    // HyprFM is a Wayland-only application (wl-copy clipboard, Hyprland
+    // Heimdall is a Wayland-only application (wl-copy clipboard, Hyprland
     // integration, KWin blur effects). Detect a non-Wayland session before
     // Qt tries to load the wayland QPA plugin so users see an actionable
     // message instead of the cryptic "Failed to create wl_display" error.
@@ -80,17 +80,14 @@ int main(int argc, char *argv[])
         const char *session = sessionType.isEmpty() ? "unknown" : sessionType.constData();
         fprintf(stderr,
                 "\n"
-                "HyprFM: no Wayland display available (XDG_SESSION_TYPE=%s).\n"
+                "Heimdall: no Wayland display available (XDG_SESSION_TYPE=%s).\n"
                 "\n"
-                "HyprFM only supports Wayland sessions. Your current session\n"
+                "Heimdall only supports Wayland sessions. Your current session\n"
                 "appears to be X11 or does not expose $WAYLAND_DISPLAY.\n"
                 "\n"
-                "To run HyprFM:\n"
+                "To run Heimdall:\n"
                 "  * Log out and pick a Wayland session at the login screen\n"
-                "    (e.g. \"Ubuntu on Wayland\", GNOME on Wayland, Hyprland, KDE\n"
-                "    Plasma Wayland).\n"
-                "  * If running via Flatpak, also grant Wayland socket access:\n"
-                "      flatpak override --user --socket=wayland io.github.soyeb_jim285.HyprFM\n"
+                "    (e.g. Hyprland, Niri, Sway, GNOME on Wayland, KDE Plasma Wayland).\n"
                 "\n",
                 session);
         return 1;
@@ -119,9 +116,9 @@ int main(int argc, char *argv[])
     app.setOrganizationName("Heimdall");
     app.setDesktopFileName("heimdall");
 
-    // Startup timing: opt-in via HYPRFM_TIMING=1 so normal runs stay quiet.
+    // Startup timing: opt-in via HEIMDALL_TIMING=1 so normal runs stay quiet.
     // Prints milliseconds from QGuiApplication construction at each phase.
-    const bool timingEnabled = qEnvironmentVariableIntValue("HYPRFM_TIMING") != 0;
+    const bool timingEnabled = qEnvironmentVariableIntValue("HEIMDALL_TIMING") != 0;
     QElapsedTimer startupTimer;
     startupTimer.start();
     auto mark = [&](const char *label) {
@@ -131,14 +128,14 @@ int main(int argc, char *argv[])
     };
     mark("QGuiApplication ready");
 
-    // Single-instance: if another HyprFM is already running for this user,
+    // Single-instance: if another Heimdall is already running for this user,
     // forward our arg over a per-uid unix domain socket and exit. The
     // running instance spawns a new tab for the path. Mirrors how browsers
     // handle `firefox <url>` when a window is already open.
-    const QString hyprfmSocketName = QStringLiteral("hyprfm-%1").arg(static_cast<uint>(getuid()));
+    const QString heimdallSocketName = QStringLiteral("heimdall-%1").arg(static_cast<uint>(getuid()));
     {
         QLocalSocket probe;
-        probe.connectToServer(hyprfmSocketName);
+        probe.connectToServer(heimdallSocketName);
         if (probe.waitForConnected(150)) {
             QJsonObject msg;
             if (!initialOpenPath.isEmpty())
@@ -173,7 +170,7 @@ int main(int argc, char *argv[])
 
     // Ensure config directory exists
     // Heimdall fork: user-visible config dir is ~/.config/heimdall. The CMake
-    // install-time data dir macros (HYPRFM_DATA_DIR, HYPRFM_SOURCE_DIR) still
+    // install-time data dir macros (HEIMDALL_DATA_DIR, HEIMDALL_SOURCE_DIR) still
     // reference the upstream name — they're rebuild-time paths for finding
     // shipped themes, not user config — and will be renamed in a follow-up
     // CMakeLists pass.
@@ -193,26 +190,26 @@ int main(int argc, char *argv[])
 
     const QString appDir = QCoreApplication::applicationDirPath();
     const QString dataDir = firstExistingDir({
-        QDir(appDir).filePath("../share/hyprfm"),
-        QDir(appDir).filePath("../../share/hyprfm"),
-        QStringLiteral(HYPRFM_DATA_DIR),
-        QStringLiteral(HYPRFM_SOURCE_DIR),
+        QDir(appDir).filePath("../share/heimdall"),
+        QDir(appDir).filePath("../../share/heimdall"),
+        QStringLiteral(HEIMDALL_DATA_DIR),
+        QStringLiteral(HEIMDALL_SOURCE_DIR),
     });
 
     QStringList themeSearchPaths = {
         QDir(appDir).filePath("../themes"),
         QDir(appDir).filePath("../../themes"),
-        QStringLiteral(HYPRFM_DATA_DIR) + "/themes",
-        QStringLiteral(HYPRFM_SOURCE_DIR) + "/themes",
+        QStringLiteral(HEIMDALL_DATA_DIR) + "/themes",
+        QStringLiteral(HEIMDALL_SOURCE_DIR) + "/themes",
     };
     if (!dataDir.isEmpty())
         themeSearchPaths.prepend(QDir(dataDir).filePath("themes"));
 
     const QString themesDir = firstExistingDir(themeSearchPaths);
     if (dataDir.isEmpty())
-        qWarning() << "HyprFM: unable to locate data directory";
+        qWarning() << "Heimdall: unable to locate data directory";
     if (themesDir.isEmpty())
-        qWarning() << "HyprFM: unable to locate themes directory";
+        qWarning() << "Heimdall: unable to locate themes directory";
 
     // Heimdall fork: Bifröst is the signature dark theme. Catppuccin variants
     // remain shipped as user-selectable alternatives but are no longer the
@@ -350,13 +347,13 @@ int main(int argc, char *argv[])
 
     // Prefer the installed data layout, but keep source-tree fallbacks for dev builds.
     if (!dataDir.isEmpty()) {
-        engine.addImportPath(dataDir);                           // HyprFM module
+        engine.addImportPath(dataDir);                           // Heimdall module
         engine.addImportPath(QDir(dataDir).filePath("src/qml")); // Quill module
     }
-    engine.addImportPath(QStringLiteral(HYPRFM_DATA_DIR));
-    engine.addImportPath(QStringLiteral(HYPRFM_DATA_DIR "/src/qml"));
-    engine.addImportPath(QStringLiteral(HYPRFM_SOURCE_DIR));
-    engine.addImportPath(QStringLiteral(HYPRFM_SOURCE_DIR "/src/qml"));
+    engine.addImportPath(QStringLiteral(HEIMDALL_DATA_DIR));
+    engine.addImportPath(QStringLiteral(HEIMDALL_DATA_DIR "/src/qml"));
+    engine.addImportPath(QStringLiteral(HEIMDALL_SOURCE_DIR));
+    engine.addImportPath(QStringLiteral(HEIMDALL_SOURCE_DIR "/src/qml"));
 
     // Set icon theme so QIcon::fromTheme() works (e.g. for drag pixmaps)
     QIcon::setThemeName(config->iconTheme());
@@ -404,7 +401,7 @@ int main(int argc, char *argv[])
 
     const QString installedMainQml = dataDir.isEmpty()
         ? QString()
-        : QDir(dataDir).filePath(QStringLiteral("HyprFM/qml/Main.qml"));
+        : QDir(dataDir).filePath(QStringLiteral("Heimdall/qml/Main.qml"));
 
     // Prefer the installed on-disk module when it exists so deployed bundles
     // keep working even if Qt's embedded qrc payload is incomplete.
@@ -412,7 +409,7 @@ int main(int argc, char *argv[])
     if (!installedMainQml.isEmpty() && QFile::exists(installedMainQml)) {
         engine.load(QUrl::fromLocalFile(installedMainQml));
     } else {
-        engine.loadFromModule("HyprFM", "Main");
+        engine.loadFromModule("Heimdall", "Main");
     }
     mark("engine.load done");
 
@@ -436,7 +433,7 @@ int main(int argc, char *argv[])
         if (!window)
             return;
 
-#ifdef HYPRFM_HAS_KWINDOWSYSTEM
+#ifdef HEIMDALL_HAS_KWINDOWSYSTEM
         // KWin blur only shows through translucent content; Hyprland keeps
         // using compositor rules against the same transparent window surface.
         const bool blurRequested = config->transparencyEnabled();
@@ -552,11 +549,11 @@ int main(int argc, char *argv[])
     };
 
     // Stale socket from a crashed previous instance would block listen().
-    QLocalServer::removeServer(hyprfmSocketName);
+    QLocalServer::removeServer(heimdallSocketName);
     QLocalServer *ipcServer = new QLocalServer(&app);
     ipcServer->setSocketOptions(QLocalServer::UserAccessOption);
-    if (!ipcServer->listen(hyprfmSocketName)) {
-        qWarning() << "HyprFM: single-instance IPC listen failed:" << ipcServer->errorString();
+    if (!ipcServer->listen(heimdallSocketName)) {
+        qWarning() << "Heimdall: single-instance IPC listen failed:" << ipcServer->errorString();
     }
     QObject::connect(ipcServer, &QLocalServer::newConnection, &app, [ipcServer, openPathInNewTab]() {
         while (QLocalSocket *conn = ipcServer->nextPendingConnection()) {

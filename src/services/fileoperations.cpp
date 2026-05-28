@@ -856,7 +856,7 @@ QString temporaryRenamePathFor(const QString &sourcePath)
     QString tempPath;
     do {
         tempPath = joinLocation(parentLocation(sourcePath),
-                                QStringLiteral(".hyprfm-rename-%1.tmp")
+                                QStringLiteral(".heimdall-rename-%1.tmp")
                                     .arg(QUuid::createUuid().toString(QUuid::WithoutBraces)));
     } while (pathExistsSync(tempPath));
 
@@ -2145,7 +2145,7 @@ QString FileOperations::conflictBackupPath(const QString &targetPath) const
 {
     QString cacheRoot = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
     if (cacheRoot.isEmpty())
-        cacheRoot = QDir::homePath() + "/.cache/hyprfm";
+        cacheRoot = QDir::homePath() + "/.cache/heimdall";
 
     QDir backupDir(cacheRoot + "/conflict-backups");
     backupDir.mkpath(".");
