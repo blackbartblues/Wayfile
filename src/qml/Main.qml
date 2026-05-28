@@ -30,7 +30,7 @@ ApplicationWindow {
     property bool secondaryPaneSearchMode: false
     property bool primaryPaneFilterPanelOpen: false
     property bool secondaryPaneFilterPanelOpen: false
-    readonly property bool isRecentsView: activePane === "secondary"
+    readonly property bool isRecentsView: activePaneIndex === 1
         ? secondaryPaneIsRecents
         : primaryPaneIsRecents
     property var deleteConfirmPaths: []
@@ -43,19 +43,19 @@ ApplicationWindow {
     property var transferReservedTargets: ({})
     property bool paneFocusScheduled: false
     readonly property string unifiedTrashPath: "trash:///"
-    readonly property bool isTrashView: fileOps.isTrashPath(panePath(activePane))
-    readonly property bool isRemoteView: fileOps.isRemotePath(panePath(activePane))
+    readonly property bool isTrashView: fileOps.isTrashPath(panePath(activePaneIndex))
+    readonly property bool isRemoteView: fileOps.isRemotePath(panePath(activePaneIndex))
 
     // ── Sync fsModel when active tab changes; quit on last tab closed ───────
     Connections {
         target: tabModel
         function onActiveIndexChanged() {
             if (tabModel.activeTab) {
-                root.activePane = "primary"
+                root.activePaneIndex = 0
                 root.primaryPaneIsRecents = false
                 root.secondaryPaneIsRecents = false
-                root.clearPaneSearch("primary")
-                root.clearPaneSearch("secondary")
+                root.clearPaneSearch(0)
+                root.clearPaneSearch(1)
                 fsModel.setRootPath(tabModel.activeTab.currentPath)
                 root.syncMillerParentModel(tabModel.activeTab.currentPath)
                 if (tabModel.activeTab.splitViewEnabled)
@@ -76,16 +76,16 @@ ApplicationWindow {
             if (tabModel.activeTab) {
                 fsModel.setRootPath(tabModel.activeTab.currentPath)
                 root.syncMillerParentModel(tabModel.activeTab.currentPath)
-                root.setPaneRecents("primary", false)
-                root.clearPaneSearch("primary")
+                root.setPaneRecents(0, false)
+                root.clearPaneSearch(0)
                 root.scheduleActivePaneFocus()
             }
         }
         function onSecondaryCurrentPathChanged() {
             if (tabModel.activeTab) {
                 splitFsModel.setRootPath(tabModel.activeTab.secondaryCurrentPath)
-                root.setPaneRecents("secondary", false)
-                root.clearPaneSearch("secondary")
+                root.setPaneRecents(1, false)
+                root.clearPaneSearch(1)
                 root.scheduleActivePaneFocus()
             }
         }
@@ -108,8 +108,8 @@ ApplicationWindow {
                 return
             }
 
-            if (root.activePane === "secondary")
-                root.activePane = "primary"
+            if (root.activePaneIndex === 1)
+                root.activePaneIndex = 0
             root.updateSelectionStatus()
         }
     }
@@ -193,9 +193,12 @@ ApplicationWindow {
 
     // ── Search state ──────────────────────────────────────────────────────────
     property var debounceTimer: null
-    property string debouncePane: "primary"
-    property string activePane: "primary"
-    readonly property bool searchMode: paneSearchMode(activePane)
+    // Phase 1 M7: panes are addressed by integer index throughout the
+    // dispatch path now.  0 == the primary pane, 1 == the secondary; Phase 2
+    // generalises to arbitrary N when merged supertabs land.
+    property int debouncePane: 0
+    property int activePaneIndex: 0
+    readonly property bool searchMode: paneSearchMode(activePaneIndex)
     property real splitTransitionProgress: splitViewEnabled() ? 1 : 0
     readonly property bool splitViewPresented: splitViewEnabled() || splitTransitionProgress > 0.001
 
@@ -217,7 +220,7 @@ ApplicationWindow {
     }
 
     function paneBaseModel(pane) {
-        return pane === "secondary" ? splitFsModel : fsModel
+        return pane === 1 ? splitFsModel : fsModel
     }
 
     function clampedSidebarWidth(width) {
@@ -228,7 +231,7 @@ ApplicationWindow {
         if (!tabModel.activeTab)
             return fsModel.homePath()
 
-        return pane === "secondary"
+        return pane === 1
             ? tabModel.activeTab.secondaryCurrentPath
             : tabModel.activeTab.currentPath
     }
@@ -312,45 +315,45 @@ ApplicationWindow {
     }
 
     function paneIsRecents(pane) {
-        return pane === "secondary" ? secondaryPaneIsRecents : primaryPaneIsRecents
+        return pane === 1 ? secondaryPaneIsRecents : primaryPaneIsRecents
     }
 
     function setPaneRecents(pane, enabled) {
-        if (pane === "secondary")
+        if (pane === 1)
             secondaryPaneIsRecents = enabled
         else
             primaryPaneIsRecents = enabled
     }
 
     function searchProxyForPane(pane) {
-        return pane === "secondary" ? splitSearchProxy : searchProxy
+        return pane === 1 ? splitSearchProxy : searchProxy
     }
 
     function searchResultsForPane(pane) {
-        return pane === "secondary" ? splitSearchResults : searchResults
+        return pane === 1 ? splitSearchResults : searchResults
     }
 
     function searchServiceForPane(pane) {
-        return pane === "secondary" ? splitSearchService : searchService
+        return pane === 1 ? splitSearchService : searchService
     }
 
     function paneSearchMode(pane) {
-        return pane === "secondary" ? secondaryPaneSearchMode : primaryPaneSearchMode
+        return pane === 1 ? secondaryPaneSearchMode : primaryPaneSearchMode
     }
 
     function setPaneSearchMode(pane, enabled) {
-        if (pane === "secondary")
+        if (pane === 1)
             secondaryPaneSearchMode = enabled
         else
             primaryPaneSearchMode = enabled
     }
 
     function paneFilterPanelOpen(pane) {
-        return pane === "secondary" ? secondaryPaneFilterPanelOpen : primaryPaneFilterPanelOpen
+        return pane === 1 ? secondaryPaneFilterPanelOpen : primaryPaneFilterPanelOpen
     }
 
     function setPaneFilterPanelOpen(pane, enabled) {
-        if (pane === "secondary")
+        if (pane === 1)
             secondaryPaneFilterPanelOpen = enabled
         else
             primaryPaneFilterPanelOpen = enabled
@@ -403,14 +406,14 @@ ApplicationWindow {
     }
 
     function fileViewForPane(pane) {
-        if (pane === "secondary")
+        if (pane === 1)
             return secondaryPaneLoader.item ? secondaryPaneLoader.item.fileView : null
 
         return primaryPaneFrame.fileView
     }
 
     function activeFileView() {
-        return fileViewForPane(activePane)
+        return fileViewForPane(activePaneIndex)
     }
 
     function focusPathInPane(pane, path, reveal) {
@@ -478,13 +481,13 @@ ApplicationWindow {
 
     function setActivePane(pane) {
         var nextPane = pane
-        if (nextPane === "secondary" && !splitViewEnabled())
-            nextPane = "primary"
+        if (nextPane === 1 && !splitViewEnabled())
+            nextPane = 0
 
-        if (activePane === nextPane)
+        if (activePaneIndex === nextPane)
             return
 
-        activePane = nextPane
+        activePaneIndex = nextPane
         root.updateSelectionStatus()
         root.scheduleActivePaneFocus()
     }
@@ -493,7 +496,7 @@ ApplicationWindow {
         if (!splitViewEnabled())
             return
 
-        root.setActivePane(activePane === "primary" ? "secondary" : "primary")
+        root.setActivePane(activePaneIndex === 0 ? 1 : 0)
     }
 
     function navigatePaneTo(pane, path) {
@@ -502,7 +505,7 @@ ApplicationWindow {
 
         root.setPaneRecents(pane, false)
         root.clearPaneSearch(pane)
-        if (pane === "secondary" && splitViewEnabled())
+        if (pane === 1 && splitViewEnabled())
             tabModel.activeTab.navigateSecondaryTo(path)
         else
             tabModel.activeTab.navigateTo(path)
@@ -510,14 +513,14 @@ ApplicationWindow {
     }
 
     function navigateActivePaneTo(path) {
-        navigatePaneTo(activePane, path)
+        navigatePaneTo(activePaneIndex, path)
     }
 
     function openPathInNewTab(path) {
         if (!path)
             return
 
-        root.setPaneRecents(root.activePane, false)
+        root.setPaneRecents(root.activePaneIndex, false)
         tabModel.addTab()
         if (tabModel.activeTab)
             tabModel.activeTab.navigateTo(path)
@@ -696,7 +699,7 @@ ApplicationWindow {
         if (!tabModel.activeTab)
             return
 
-        if (activePane === "secondary" && splitViewEnabled())
+        if (activePaneIndex === 1 && splitViewEnabled())
             tabModel.activeTab.secondaryGoBack()
         else
             tabModel.activeTab.goBack()
@@ -706,17 +709,17 @@ ApplicationWindow {
         if (!tabModel.activeTab)
             return
 
-        if (activePane === "secondary" && splitViewEnabled())
+        if (activePaneIndex === 1 && splitViewEnabled())
             tabModel.activeTab.secondaryGoForward()
         else
             tabModel.activeTab.goForward()
     }
 
     function goActivePaneUp() {
-        if (!tabModel.activeTab || root.paneIsRecents(activePane))
+        if (!tabModel.activeTab || root.paneIsRecents(activePaneIndex))
             return
 
-        var currentPath = panePath(activePane)
+        var currentPath = panePath(activePaneIndex)
         if (fileOps.isRemotePath(currentPath)) {
             var parentRemotePath = fileOps.parentPath(currentPath)
             if (parentRemotePath && parentRemotePath !== currentPath)
@@ -737,7 +740,7 @@ ApplicationWindow {
             return
         }
 
-        if (activePane === "secondary" && splitViewEnabled())
+        if (activePaneIndex === 1 && splitViewEnabled())
             tabModel.activeTab.secondaryGoUp()
         else
             tabModel.activeTab.goUp()
@@ -749,16 +752,16 @@ ApplicationWindow {
 
         var enable = !tabModel.activeTab.splitViewEnabled
         if (enable) {
-            root.clearPaneSearch("secondary")
-            root.setPaneRecents("secondary", false)
+            root.clearPaneSearch(1)
+            root.setPaneRecents(1, false)
             tabModel.activeTab.resetSecondaryTo(tabModel.activeTab.currentPath)
         }
 
         if (!enable) {
-            root.clearPaneSearch("secondary")
-            root.setPaneRecents("secondary", false)
-            if (activePane === "secondary")
-                activePane = "primary"
+            root.clearPaneSearch(1)
+            root.setPaneRecents(1, false)
+            if (activePaneIndex === 1)
+                activePaneIndex = 0
         }
 
         tabModel.activeTab.splitViewEnabled = enable
@@ -769,7 +772,7 @@ ApplicationWindow {
         if (!tabModel.activeTab)
             return false
 
-        return activePane === "secondary" && splitViewEnabled()
+        return activePaneIndex === 1 && splitViewEnabled()
             ? tabModel.activeTab.secondaryCanGoBack
             : tabModel.activeTab.canGoBack
     }
@@ -778,26 +781,26 @@ ApplicationWindow {
         if (!tabModel.activeTab)
             return false
 
-        return activePane === "secondary" && splitViewEnabled()
+        return activePaneIndex === 1 && splitViewEnabled()
             ? tabModel.activeTab.secondaryCanGoForward
             : tabModel.activeTab.canGoForward
     }
 
     function activeItemCount() {
-        if (root.paneIsRecents(activePane))
+        if (root.paneIsRecents(activePaneIndex))
             return recentFiles.count
-        if (root.paneSearchMode(activePane))
-            return searchProxyForPane(activePane).rowCount()
+        if (root.paneSearchMode(activePaneIndex))
+            return searchProxyForPane(activePaneIndex).rowCount()
 
-        var model = paneBaseModel(activePane)
+        var model = paneBaseModel(activePaneIndex)
         return model.fileCount + model.folderCount
     }
 
     function activeFolderCount() {
-        if (root.paneIsRecents(activePane) || root.paneSearchMode(activePane))
+        if (root.paneIsRecents(activePaneIndex) || root.paneSearchMode(activePaneIndex))
             return 0
 
-        return paneBaseModel(activePane).folderCount
+        return paneBaseModel(activePaneIndex).folderCount
     }
 
     function applyActiveTabSort() {
@@ -831,7 +834,7 @@ ApplicationWindow {
         }
 
         var paths = []
-        var model = paneModel(activePane)
+        var model = paneModel(activePaneIndex)
         for (var i = 0; i < indices.length; ++i) {
             var selectedPath = filePathFromModel(model, indices[i])
             if (isLocalPath(selectedPath))
@@ -860,7 +863,7 @@ ApplicationWindow {
     // ── Helper: collect selected file paths from active view ─────────────────
     function getSelectedPaths(pane) {
         var paths = []
-        var targetPane = pane || activePane
+        var targetPane = pane || activePaneIndex
         var view = fileViewForPane(targetPane)
         if (!view) return paths
 
@@ -879,7 +882,7 @@ ApplicationWindow {
 
     function getSelectedItems(pane) {
         var items = []
-        var targetPane = pane || activePane
+        var targetPane = pane || activePaneIndex
         var view = fileViewForPane(targetPane)
         if (!view) return items
 
@@ -899,34 +902,34 @@ ApplicationWindow {
     }
 
     function currentOrSelectedDirectoryPath() {
-        var items = root.getSelectedItems(root.activePane)
+        var items = root.getSelectedItems(root.activePaneIndex)
         if (items.length === 1 && items[0].isDir)
             return items[0].path
 
-        if (!root.paneIsRecents(root.activePane) && !root.paneSearchMode(root.activePane))
-            return root.panePath(root.activePane)
+        if (!root.paneIsRecents(root.activePaneIndex) && !root.paneSearchMode(root.activePaneIndex))
+            return root.panePath(root.activePaneIndex)
 
         return ""
     }
 
     function selectedOrCurrentPropertiesPath() {
-        var items = root.getSelectedItems(root.activePane)
+        var items = root.getSelectedItems(root.activePaneIndex)
         if (items.length === 1)
             return items[0].path
 
-        if (!root.paneIsRecents(root.activePane) && !root.paneSearchMode(root.activePane))
-            return root.panePath(root.activePane)
+        if (!root.paneIsRecents(root.activePaneIndex) && !root.paneSearchMode(root.activePaneIndex))
+            return root.panePath(root.activePaneIndex)
 
         return ""
     }
 
     function selectedOrCurrentTerminalPath() {
-        var items = root.getSelectedItems(root.activePane)
+        var items = root.getSelectedItems(root.activePaneIndex)
         if (items.length === 1)
             return items[0].isDir ? items[0].path : fileOps.parentPath(items[0].path)
 
-        if (!root.paneIsRecents(root.activePane) && !root.paneSearchMode(root.activePane))
-            return root.panePath(root.activePane)
+        if (!root.paneIsRecents(root.activePaneIndex) && !root.paneSearchMode(root.activePaneIndex))
+            return root.panePath(root.activePaneIndex)
 
         return ""
     }
@@ -934,13 +937,13 @@ ApplicationWindow {
     function showContextMenuForActiveSelection() {
         var positionSource = root.activeFileView() || contentArea
         var mapped = positionSource.mapToItem(null, positionSource.width / 2, positionSource.height / 2)
-        var items = root.getSelectedItems(root.activePane)
+        var items = root.getSelectedItems(root.activePaneIndex)
         if (items.length > 0) {
-            root.showContextMenuForPane(root.activePane, items[0].path, items[0].isDir, Qt.point(mapped.x, mapped.y))
+            root.showContextMenuForPane(root.activePaneIndex, items[0].path, items[0].isDir, Qt.point(mapped.x, mapped.y))
             return
         }
 
-        root.showContextMenuForPane(root.activePane, "", true, Qt.point(mapped.x, mapped.y))
+        root.showContextMenuForPane(root.activePaneIndex, "", true, Qt.point(mapped.x, mapped.y))
     }
 
     function openRenameDialogForPath(path) {
@@ -1034,11 +1037,11 @@ ApplicationWindow {
             return
         }
 
-        if (!root.paneIsRecents(root.activePane) && !root.paneSearchMode(root.activePane)) {
+        if (!root.paneIsRecents(root.activePaneIndex) && !root.paneSearchMode(root.activePaneIndex)) {
             var firstPath = paths[0]
-            if (root.parentDirForPath(firstPath) === panePath(root.activePane)) {
+            if (root.parentDirForPath(firstPath) === panePath(root.activePaneIndex)) {
                 Qt.callLater(function() {
-                    root.focusPathInPane(root.activePane, firstPath, true)
+                    root.focusPathInPane(root.activePaneIndex, firstPath, true)
                 })
             }
         }
@@ -1049,7 +1052,7 @@ ApplicationWindow {
     // ── Helper: list of all file paths in current directory (for preview cycling)
     function getDirectoryFiles() {
         var files = []
-        var activeModel = paneModel(activePane)
+        var activeModel = paneModel(activePaneIndex)
         var count = activeModel.rowCount()
         for (var i = 0; i < count; i++) {
             var fp = filePathFromModel(activeModel, i)
@@ -1061,18 +1064,18 @@ ApplicationWindow {
 
     // ── Search helpers ────────────────────────────────────────────────────────
     function openSearch() {
-        if (fileOps.isRemotePath(panePath(activePane)))
+        if (fileOps.isRemotePath(panePath(activePaneIndex)))
             return
-        setPaneRecents(activePane, false)
-        setPaneSearchMode(activePane, true)
+        setPaneRecents(activePaneIndex, false)
+        setPaneSearchMode(activePaneIndex, true)
     }
 
     function closeSearch(pane) {
-        clearPaneSearch(pane || activePane)
+        clearPaneSearch(pane || activePaneIndex)
     }
 
     function handleSearchQuery(query) {
-        var pane = activePane
+        var pane = activePaneIndex
         var proxy = searchProxyForPane(pane)
         var results = searchResultsForPane(pane)
         var service = searchServiceForPane(pane)
@@ -1099,7 +1102,7 @@ ApplicationWindow {
     }
 
     function triggerRecursiveSearch(pane, query) {
-        var targetPane = pane || activePane
+        var targetPane = pane || activePaneIndex
         var targetQuery = query !== undefined ? query : searchProxyForPane(targetPane).searchQuery
         if (targetQuery === "") return
         searchServiceForPane(targetPane).startSearch(
@@ -1110,37 +1113,37 @@ ApplicationWindow {
     }
 
     function handleSearchEnter() {
-        var query = searchProxyForPane(activePane).searchQuery
+        var query = searchProxyForPane(activePaneIndex).searchQuery
         if (query === "") return
-        clearPaneDebounce(activePane)
-        searchServiceForPane(activePane).startSearch(
-            panePath(activePane),
+        clearPaneDebounce(activePaneIndex)
+        searchServiceForPane(activePaneIndex).startSearch(
+            panePath(activePaneIndex),
             query,
             fsModel.showHidden
         )
     }
 
     function selectFirstSearchResult(pane) {
-        var targetPane = pane || activePane
+        var targetPane = pane || activePaneIndex
         if (!paneSearchMode(targetPane) || searchProxyForPane(targetPane).rowCount() === 0)
             return
 
         var subView = subViewFor(fileViewForPane(targetPane))
         if (subView && subView.selectedIndices !== undefined) {
             subView.selectedIndices = [0]
-            if (targetPane === activePane)
+            if (targetPane === activePaneIndex)
                 subView.forceActiveFocus()
         }
     }
 
     Connections {
         target: searchService
-        function onSearchFinished() { root.selectFirstSearchResult("primary") }
+        function onSearchFinished() { root.selectFirstSearchResult(0) }
     }
 
     Connections {
         target: splitSearchService
-        function onSearchFinished() { root.selectFirstSearchResult("secondary") }
+        function onSearchFinished() { root.selectFirstSearchResult(1) }
     }
 
     Connections {
@@ -1407,7 +1410,7 @@ ApplicationWindow {
                 undoManager.createFolder(newItemParentPath, name)
             }
             if (fileOps.pathExists(createdPath))
-                root.focusPathInPane(root.activePane, createdPath, true)
+                root.focusPathInPane(root.activePaneIndex, createdPath, true)
             folderCloseAnim.start()
         }
         function reject() { folderCloseAnim.start() }
@@ -1572,7 +1575,7 @@ ApplicationWindow {
                 undoManager.createFile(newItemParentPath, name)
             }
             if (fileOps.pathExists(createdPath))
-                root.focusPathInPane(root.activePane, createdPath, true)
+                root.focusPathInPane(root.activePaneIndex, createdPath, true)
             fileCloseAnim.start()
         }
         function reject() { fileCloseAnim.start() }
@@ -1718,7 +1721,7 @@ ApplicationWindow {
         onOpened: {
             appSearchField.text = ""
             appChooserDialog.searchText = ""
-            appChooserDialog.allApps = root.paneBaseModel(root.activePane).allInstalledApps()
+            appChooserDialog.allApps = root.paneBaseModel(root.activePaneIndex).allInstalledApps()
             appSearchField.inputItem.forceActiveFocus()
         }
 
@@ -1831,7 +1834,7 @@ ApplicationWindow {
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    root.paneBaseModel(root.activePane).setDefaultApp(appChooserDialog.mimeType, modelData.desktopFile)
+                                    root.paneBaseModel(root.activePaneIndex).setDefaultApp(appChooserDialog.mimeType, modelData.desktopFile)
                                     appChooserDialog.close()
                                 }
                             }
@@ -1891,7 +1894,7 @@ ApplicationWindow {
         property string _metadataHint: ""
 
         function showProperties(path) {
-            fileModelRef = root.paneBaseModel(root.activePane) || fsModel
+            fileModelRef = root.paneBaseModel(root.activePaneIndex) || fsModel
             props = fileModelRef.fileProperties(path)
             currentTab = 0
             propsTabs.currentIndex = 0
@@ -2602,7 +2605,7 @@ ApplicationWindow {
         id: contextMenu
         blurSource: mainContent
 
-        fileModel: root.paneBaseModel(root.activePane)
+        fileModel: root.paneBaseModel(root.activePaneIndex)
         splitViewEnabled: root.splitViewEnabled()
         isTrashView: root.isTrashView
         currentViewMode: tabModel.activeTab ? tabModel.activeTab.viewMode : "grid"
@@ -2618,7 +2621,7 @@ ApplicationWindow {
         onOpenInNewTabRequested: (path) => root.openPathInNewTab(path)
         onOpenWithRequested: (path, desktopFile) => fileOps.openFileWith(path, desktopFile)
         onSetDefaultAppRequested: (mimeType, desktopFile) => {
-            root.paneBaseModel(root.activePane).setDefaultApp(mimeType, desktopFile)
+            root.paneBaseModel(root.activePaneIndex).setDefaultApp(mimeType, desktopFile)
         }
         onChooseAppRequested: (path, mimeType) => {
             appChooserDialog.filePath = path
@@ -2713,7 +2716,7 @@ ApplicationWindow {
 
         onOpenRequested: (path) => {
             if (sidebarItem.isRecents) {
-                root.setPaneRecents(root.activePane, true)
+                root.setPaneRecents(root.activePaneIndex, true)
                 return
             }
 
@@ -2859,12 +2862,12 @@ ApplicationWindow {
 
     Shortcut {
         sequence: config.shortcutMap["focus_left_pane"]
-        onActivated: root.setActivePane("primary")
+        onActivated: root.setActivePane(0)
     }
 
     Shortcut {
         sequence: config.shortcutMap["focus_right_pane"]
-        onActivated: root.setActivePane("secondary")
+        onActivated: root.setActivePane(1)
     }
 
     Shortcut {
@@ -2914,8 +2917,8 @@ ApplicationWindow {
         sequence: config.shortcutMap["paste"]
         onActivated: {
             if (!clipboard.hasContent && !fileOps.hasClipboardImage()) return
-            if (root.paneIsRecents(activePane)) return
-            var dest = panePath(activePane)
+            if (root.paneIsRecents(activePaneIndex)) return
+            var dest = panePath(activePaneIndex)
             if (dest === "") return
             root.pasteIntoDirectory(dest)
         }
@@ -3014,7 +3017,7 @@ ApplicationWindow {
     Shortcut {
         sequence: config.shortcutMap["new_folder"]
         onActivated: {
-            var dest = root.isRecentsView ? "" : panePath(activePane)
+            var dest = root.isRecentsView ? "" : panePath(activePaneIndex)
             root.toggleNewFolderDialog(dest)
         }
     }
@@ -3022,7 +3025,7 @@ ApplicationWindow {
     Shortcut {
         sequence: config.shortcutMap["new_file"]
         onActivated: {
-            var dest = root.isRecentsView ? "" : panePath(activePane)
+            var dest = root.isRecentsView ? "" : panePath(activePaneIndex)
             root.toggleNewFileDialog(dest)
         }
     }
@@ -3037,7 +3040,7 @@ ApplicationWindow {
             }
             var paths = getSelectedPaths()
             if (paths.length === 0) return
-            quickPreview.fileModel = root.paneBaseModel(activePane)
+            quickPreview.fileModel = root.paneBaseModel(activePaneIndex)
             quickPreview.filePath = paths[0]
             quickPreview.directoryFiles = getDirectoryFiles()
             quickPreview.active = true
@@ -3179,18 +3182,18 @@ ApplicationWindow {
         if (!tabModel.activeTab)
             return
 
-        var targetPath = path || panePath(activePane)
+        var targetPath = path || panePath(activePaneIndex)
         if (!targetPath)
             return
 
-        root.clearPaneSearch("secondary")
-        root.setPaneRecents("secondary", false)
+        root.clearPaneSearch(1)
+        root.setPaneRecents(1, false)
         tabModel.activeTab.resetSecondaryTo(targetPath)
 
         if (!tabModel.activeTab.splitViewEnabled)
             tabModel.activeTab.splitViewEnabled = true
 
-        root.setActivePane("secondary")
+        root.setActivePane(1)
     }
 
     function pasteIntoDirectory(destPath) {
@@ -3250,7 +3253,7 @@ ApplicationWindow {
                     width: root.sidebarWidth
                     height: parent.height
                     tooltipLayer: sidebarTooltipLayer
-                    currentPath: panePath(activePane)
+                    currentPath: panePath(activePaneIndex)
                     trashPath: root.unifiedTrashPath
                     isRecentsView: root.isRecentsView
                     onBookmarkClicked: (path) => {
@@ -3267,7 +3270,7 @@ ApplicationWindow {
                         sidebarContextMenu.popup(position.x, position.y)
                     }
                     onRecentsClicked: {
-                        root.setPaneRecents(root.activePane, true)
+                        root.setPaneRecents(root.activePaneIndex, true)
                     }
                     onCollapseClicked: root.sidebarVisible = !root.sidebarVisible
                     onFeatureHintRequested: (message) => toast.show(message, "info")
@@ -3342,7 +3345,7 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 window: root
                 activeTab: tabModel.activeTab
-                navigationPath: panePath(activePane)
+                navigationPath: panePath(activePaneIndex)
                 canGoBack: activePaneCanGoBack()
                 canGoForward: activePaneCanGoForward()
                 splitViewEnabled: root.splitViewEnabled()
@@ -3352,11 +3355,11 @@ ApplicationWindow {
                 searchMode: root.searchMode
                 showWindowControls: false
                 windowButtonLayout: config.windowButtonLayout
-                currentSearchQuery: root.searchProxyForPane(activePane).searchQuery
-                searchTypeFilter: root.searchProxyForPane(activePane).fileTypeFilter
-                searchDateFilter: root.searchProxyForPane(activePane).dateFilter
-                searchSizeFilter: root.searchProxyForPane(activePane).sizeFilter
-                filterPanelOpen: root.paneFilterPanelOpen(activePane)
+                currentSearchQuery: root.searchProxyForPane(activePaneIndex).searchQuery
+                searchTypeFilter: root.searchProxyForPane(activePaneIndex).fileTypeFilter
+                searchDateFilter: root.searchProxyForPane(activePaneIndex).dateFilter
+                searchSizeFilter: root.searchProxyForPane(activePaneIndex).sizeFilter
+                filterPanelOpen: root.paneFilterPanelOpen(activePaneIndex)
                 onBackRequested: root.goActivePaneBack()
                 onForwardRequested: root.goActivePaneForward()
                 onUpRequested: root.goActivePaneUp()
@@ -3385,15 +3388,15 @@ ApplicationWindow {
                     var subView = root.activeSubView()
                     if (subView) subView.forceActiveFocus()
                 }
-                onSearchFilterToggled: root.setPaneFilterPanelOpen(activePane, !root.paneFilterPanelOpen(activePane))
+                onSearchFilterToggled: root.setPaneFilterPanelOpen(activePaneIndex, !root.paneFilterPanelOpen(activePaneIndex))
                 onTransferRequested: (paths, destinationPath, moveOperation) => root.beginTransfer(paths, destinationPath, moveOperation, false)
-                onTypeFilterChanged: (filter) => root.searchProxyForPane(activePane).fileTypeFilter = filter
-                onDateFilterChanged: (filter) => root.searchProxyForPane(activePane).dateFilter = filter
-                onSizeFilterChanged: (filter) => root.searchProxyForPane(activePane).sizeFilter = filter
+                onTypeFilterChanged: (filter) => root.searchProxyForPane(activePaneIndex).fileTypeFilter = filter
+                onDateFilterChanged: (filter) => root.searchProxyForPane(activePaneIndex).dateFilter = filter
+                onSizeFilterChanged: (filter) => root.searchProxyForPane(activePaneIndex).sizeFilter = filter
                 onClearAllFilters: {
-                    root.searchProxyForPane(activePane).fileTypeFilter = ""
-                    root.searchProxyForPane(activePane).dateFilter = ""
-                    root.searchProxyForPane(activePane).sizeFilter = ""
+                    root.searchProxyForPane(activePaneIndex).fileTypeFilter = ""
+                    root.searchProxyForPane(activePaneIndex).dateFilter = ""
+                    root.searchProxyForPane(activePaneIndex).sizeFilter = ""
                 }
             }
 
@@ -3453,28 +3456,27 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         paneIndex: 0
-                        paneName: "primary"
-                        active: root.activePane === "primary"
+                        active: root.activePaneIndex === 0
                         splitViewPresented: root.splitViewPresented
                         splitTransitionProgress: root.splitTransitionProgress
-                        paneTitle: root.paneDisplayName("primary")
-                        paneFileModel: root.paneModel("primary")
-                        paneCurrentPath: root.panePath("primary")
+                        paneTitle: root.paneDisplayName(0)
+                        paneFileModel: root.paneModel(0)
+                        paneCurrentPath: root.panePath(0)
                         paneViewMode: tabModel.activeTab ? tabModel.activeTab.viewMode : "grid"
 
-                        onInteractionStarted: root.setActivePane("primary")
+                        onInteractionStarted: root.setActivePane(0)
                         onFileActivated: (filePath, isDirectory) =>
-                            root.handlePaneFileActivated("primary", filePath, isDirectory)
+                            root.handlePaneFileActivated(0, filePath, isDirectory)
                         onSelectionChanged: {
-                            root.setActivePane("primary")
+                            root.setActivePane(0)
                             root.updateSelectionStatus()
                         }
                         onTransferRequested: (paths, destinationPath, moveOperation) => {
-                            root.setActivePane("primary")
+                            root.setActivePane(0)
                             root.beginTransfer(paths, destinationPath, moveOperation, false)
                         }
                         onContextMenuRequested: (filePath, isDirectory, position) =>
-                            root.showContextMenuForPane("primary", filePath, isDirectory, position)
+                            root.showContextMenuForPane(0, filePath, isDirectory, position)
                     }
 
                     Loader {
@@ -3506,28 +3508,27 @@ ApplicationWindow {
                             scale: 0.96 + (0.04 * root.splitTransitionProgress)
                             transformOrigin: Item.Right
                             paneIndex: 1
-                            paneName: "secondary"
-                            active: root.activePane === "secondary"
+                            active: root.activePaneIndex === 1
                             splitViewPresented: root.splitViewPresented
                             splitTransitionProgress: root.splitTransitionProgress
-                            paneTitle: root.paneDisplayName("secondary")
-                            paneFileModel: root.paneModel("secondary")
-                            paneCurrentPath: root.panePath("secondary")
+                            paneTitle: root.paneDisplayName(1)
+                            paneFileModel: root.paneModel(1)
+                            paneCurrentPath: root.panePath(1)
                             paneViewMode: tabModel.activeTab ? tabModel.activeTab.viewMode : "grid"
 
-                            onInteractionStarted: root.setActivePane("secondary")
+                            onInteractionStarted: root.setActivePane(1)
                             onFileActivated: (filePath, isDirectory) =>
-                                root.handlePaneFileActivated("secondary", filePath, isDirectory)
+                                root.handlePaneFileActivated(1, filePath, isDirectory)
                             onSelectionChanged: {
-                                root.setActivePane("secondary")
+                                root.setActivePane(1)
                                 root.updateSelectionStatus()
                             }
                             onTransferRequested: (paths, destinationPath, moveOperation) => {
-                                root.setActivePane("secondary")
+                                root.setActivePane(1)
                                 root.beginTransfer(paths, destinationPath, moveOperation, false)
                             }
                             onContextMenuRequested: (filePath, isDirectory, position) =>
-                                root.showContextMenuForPane("secondary", filePath, isDirectory, position)
+                                root.showContextMenuForPane(1, filePath, isDirectory, position)
                         }
                     }
                 }
@@ -3542,11 +3543,11 @@ ApplicationWindow {
                     // and for virtual views (recents) where there's no real path.
                     activePath: (root.searchMode || root.isRecentsView)
                         ? ""
-                        : root.panePath(activePane)
-                    searchStatus: root.searchMode && root.searchServiceForPane(activePane).isSearching
-                        ? "Searching... " + root.searchServiceForPane(activePane).resultCount + " results"
-                        : (root.searchMode && root.searchProxyForPane(activePane).searchActive
-                            ? root.searchProxyForPane(activePane).rowCount() + " results"
+                        : root.panePath(activePaneIndex)
+                    searchStatus: root.searchMode && root.searchServiceForPane(activePaneIndex).isSearching
+                        ? "Searching... " + root.searchServiceForPane(activePaneIndex).resultCount + " results"
+                        : (root.searchMode && root.searchProxyForPane(activePaneIndex).searchActive
+                            ? root.searchProxyForPane(activePaneIndex).rowCount() + " results"
                             : "")
                     selectedCount: root.currentSelectedCount
                     selectedSize: root.currentSelectedSize

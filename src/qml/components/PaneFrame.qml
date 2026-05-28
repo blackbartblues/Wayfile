@@ -18,7 +18,6 @@ Rectangle {
     // (paneModel, panePath, paneDisplayName, etc.) keep working unchanged
     // for now; M7 swaps the dispatch over to indices.
     property int paneIndex: 0
-    property string paneName: ""
     property bool active: false
     property bool splitViewPresented: false
     property real splitTransitionProgress: 0
