@@ -71,23 +71,38 @@ Item {
             anchors.right: addTabBtn.left
             anchors.bottomMargin: 1  // sit above the separator
             clip: true
-            contentWidth: tabRow.implicitWidth
+            // Compute the scrollable content width directly from the same
+            // formula the delegate uses. Row.implicitWidth wasn't tracking
+            // reactively (likely because per-tab width depends on tabScroll.
+            // width through the Row, creating a chain Flickable didn't
+            // re-evaluate). Explicit math keeps Flickable in sync.
+            contentWidth: tabRow.effectiveCount * tabRow.perTabWidth
             contentHeight: height
             interactive: true
             flickableDirection: Flickable.HorizontalFlick
             boundsBehavior: Flickable.StopAtBounds
 
             // Mouse wheel scrolls horizontally. Qt's Flickable doesn't bind
-            // wheel by default — WheelHandler maps vertical wheel ticks
-            // (angleDelta.y, ±120 per notch on most mice) to contentX.
-            WheelHandler {
-                target: null
-                orientation: Qt.Vertical
-                onWheel: (event) => {
-                    if (tabScroll.contentWidth <= tabScroll.width) return
+            // wheel by default; matching the pattern used in FileGridView et
+            // al, an underlying MouseArea with acceptedButtons:NoButton picks
+            // up wheel events while letting click events fall through to the
+            // tab delegates above.
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.NoButton
+                z: -1
+                onWheel: (wheel) => {
+                    if (tabScroll.contentWidth <= tabScroll.width) {
+                        wheel.accepted = false
+                        return
+                    }
                     var maxX = tabScroll.contentWidth - tabScroll.width
+                    var delta = wheel.angleDelta.y !== 0
+                        ? wheel.angleDelta.y
+                        : wheel.angleDelta.x
                     tabScroll.contentX = Math.max(0,
-                        Math.min(maxX, tabScroll.contentX - event.angleDelta.y))
+                        Math.min(maxX, tabScroll.contentX - delta))
+                    wheel.accepted = true
                 }
             }
 
@@ -106,6 +121,13 @@ Item {
             property int effectiveCount: Math.max(tabModel.count - closingCount, 1)
             property int hoveredIndex: -1
 
+            // Single source of truth for the clamped per-tab width. Both the
+            // delegate and Flickable.contentWidth bind to this so they can't
+            // drift out of sync.
+            property real perTabWidth: Math.min(root.maxTabWidth,
+                                                Math.max(root.minTabWidth,
+                                                         tabScroll.width / effectiveCount))
+
             Repeater {
                 id: tabRepeater
                 model: tabModel
@@ -120,15 +142,9 @@ Item {
                     // With 1-3 tabs they stop growing at maxTabWidth; with 10+ they
                     // shrink toward minTabWidth and then overflow into the parent's
                     // clip rect.
-                    // Use the Flickable's width (visible strip) as the divisor.
-                    // When count is high enough that even-share < minTabWidth,
-                    // tabs settle at minTabWidth and the Row overflows the
-                    // Flickable horizontally — that's the scroll trigger.
-                    width: closing
-                        ? 0
-                        : Math.min(root.maxTabWidth,
-                                   Math.max(root.minTabWidth,
-                                            tabScroll.width / tabRow.effectiveCount))
+                    // Pull from tabRow.perTabWidth so contentWidth and
+                    // delegate width can't drift apart.
+                    width: closing ? 0 : tabRow.perTabWidth
                     height: tabRow.height
                     property bool closing: false
 
