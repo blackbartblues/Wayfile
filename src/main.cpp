@@ -265,38 +265,53 @@ int main(int argc, char *argv[])
         : initialPrimaryPath;
     const bool initialSplitViewEnabled = tabModel->activeTab() && tabModel->activeTab()->splitViewEnabled();
 
-    FileSystemModel *fsModel = new FileSystemModel(&app);
-    fsModel->setShowHidden(config->showHidden());
-    fsModel->setRootPath(initialPrimaryPath);
-    mark("Primary fsModel populated");
+    // Phase 1 M5: backend services bundled per pane so adding panes (Phase 2)
+    // is a list append rather than a search-and-replace across main.cpp.  N
+    // is hardcoded to 2 today; future code calls makePaneServices(idx) in a
+    // loop.
+    struct PaneServices {
+        FileSystemModel *fsModel = nullptr;
+        SearchResultsModel *searchResults = nullptr;
+        SearchProxyModel *searchProxy = nullptr;
+        SearchService *searchService = nullptr;
+        GitStatusService *gitService = nullptr;
+    };
 
-    FileSystemModel *splitFsModel = new FileSystemModel(&app);
-    splitFsModel->setShowHidden(config->showHidden());
-    if (initialSplitViewEnabled)
-        splitFsModel->setRootPath(initialSecondaryPath);
-    mark("Secondary fsModel populated");
+    auto makePaneServices = [&](int idx, const QString &initialPath, bool seedRoot) {
+        PaneServices s;
+        s.fsModel = new FileSystemModel(&app);
+        s.fsModel->setShowHidden(config->showHidden());
+        if (seedRoot)
+            s.fsModel->setRootPath(initialPath);
 
+        s.searchResults = new SearchResultsModel(&app);
+        s.searchProxy = new SearchProxyModel(&app);
+        s.searchProxy->setSourceModel(s.searchResults);
+
+        s.searchService = new SearchService(&app);
+        s.searchService->setObjectName(idx == 0 ? QStringLiteral("primary")
+                                                : QStringLiteral("secondary"));
+        s.searchService->setResultsModel(s.searchResults);
+
+        s.gitService = new GitStatusService(&app);
+        s.fsModel->setGitStatusService(s.gitService);
+        return s;
+    };
+
+    QList<PaneServices> paneServices;
+    paneServices.append(makePaneServices(0, initialPrimaryPath, true));
+    mark("Primary pane services populated");
+    paneServices.append(makePaneServices(1, initialSecondaryPath, initialSplitViewEnabled));
+    mark("Secondary pane services populated");
+
+    // Miller view uses its own shared FileSystemModels (parent + preview
+    // columns).  These are NOT per-pane — they're per-miller-instance — so
+    // they stay outside the paneServices list.
     FileSystemModel *millerParentModel = new FileSystemModel(&app);
     millerParentModel->setShowHidden(config->showHidden());
 
     FileSystemModel *millerPreviewModel = new FileSystemModel(&app);
     millerPreviewModel->setShowHidden(config->showHidden());
-
-    SearchResultsModel *searchResults = new SearchResultsModel(&app);
-    SearchProxyModel *searchProxy = new SearchProxyModel(&app);
-    searchProxy->setSourceModel(searchResults);
-
-    SearchResultsModel *splitSearchResults = new SearchResultsModel(&app);
-    SearchProxyModel *splitSearchProxy = new SearchProxyModel(&app);
-    splitSearchProxy->setSourceModel(splitSearchResults);
-
-    SearchService *searchService = new SearchService(&app);
-    searchService->setObjectName("primary");
-    searchService->setResultsModel(searchResults);
-
-    SearchService *splitSearchService = new SearchService(&app);
-    splitSearchService->setObjectName("secondary");
-    splitSearchService->setResultsModel(splitSearchResults);
 
     PreviewService *previewService = new PreviewService(&app);
     MetadataExtractor *metadataExtractor = new MetadataExtractor(&app);
@@ -304,17 +319,13 @@ int main(int argc, char *argv[])
     RemoteAccessService *remoteAccessService = new RemoteAccessService(&app);
     RuntimeFeaturesService *runtimeFeatures = new RuntimeFeaturesService(&app);
     config->setShowWindowControlsDefault(runtimeFeatures->useIntegratedWindowControls());
-    GitStatusService *primaryGitService = new GitStatusService(&app);
-    GitStatusService *secondaryGitService = new GitStatusService(&app);
-    fsModel->setGitStatusService(primaryGitService);
-    splitFsModel->setGitStatusService(secondaryGitService);
 
     // Keep the live UI in sync with persisted config values.
     QObject::connect(config, &ConfigManager::configChanged, [=, &app, &resolveUiFont]() {
         theme->loadTheme(config->theme(), themesDir);
         bookmarks->setBookmarks(config->bookmarks());
-        fsModel->setShowHidden(config->showHidden());
-        splitFsModel->setShowHidden(config->showHidden());
+        for (const PaneServices &s : paneServices)
+            s.fsModel->setShowHidden(config->showHidden());
         millerParentModel->setShowHidden(config->showHidden());
         millerPreviewModel->setShowHidden(config->showHidden());
         app.setFont(resolveUiFont(config->fontFamily()));
@@ -379,18 +390,21 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("undoManager", undoManager);
     engine.rootContext()->setContextProperty("clipboard", clipboard);
     engine.rootContext()->setContextProperty("dragHelper", dragHelper);
-    engine.rootContext()->setContextProperty("fsModel", fsModel);
-    engine.rootContext()->setContextProperty("splitFsModel", splitFsModel);
+    // QML still addresses panes by name ("fsModel" / "splitFsModel" / ...).
+    // M6 swaps the QML side to indexed access; for now the context names
+    // stay so Main.qml keeps building.
+    engine.rootContext()->setContextProperty("fsModel", paneServices[0].fsModel);
+    engine.rootContext()->setContextProperty("splitFsModel", paneServices[1].fsModel);
     engine.rootContext()->setContextProperty("millerParentModel", millerParentModel);
     engine.rootContext()->setContextProperty("millerPreviewModel", millerPreviewModel);
     engine.rootContext()->setContextProperty("devices", devices);
     engine.rootContext()->setContextProperty("recentFiles", recentFiles);
-    engine.rootContext()->setContextProperty("searchProxy", searchProxy);
-    engine.rootContext()->setContextProperty("searchResults", searchResults);
-    engine.rootContext()->setContextProperty("searchService", searchService);
-    engine.rootContext()->setContextProperty("splitSearchProxy", splitSearchProxy);
-    engine.rootContext()->setContextProperty("splitSearchResults", splitSearchResults);
-    engine.rootContext()->setContextProperty("splitSearchService", splitSearchService);
+    engine.rootContext()->setContextProperty("searchProxy", paneServices[0].searchProxy);
+    engine.rootContext()->setContextProperty("searchResults", paneServices[0].searchResults);
+    engine.rootContext()->setContextProperty("searchService", paneServices[0].searchService);
+    engine.rootContext()->setContextProperty("splitSearchProxy", paneServices[1].searchProxy);
+    engine.rootContext()->setContextProperty("splitSearchResults", paneServices[1].searchResults);
+    engine.rootContext()->setContextProperty("splitSearchService", paneServices[1].searchService);
     engine.rootContext()->setContextProperty("previewService", previewService);
     engine.rootContext()->setContextProperty("metadataExtractor", metadataExtractor);
     engine.rootContext()->setContextProperty("diskUsageService", diskUsageService);
