@@ -2842,9 +2842,12 @@ ApplicationWindow {
         onActivated: root.goActivePaneBack()
     }
 
+    // Heimdall convention (Windows-Explorer-like): Backspace navigates up to
+    // the parent directory rather than back in history. Alt+Left (the binding
+    // a few lines above) retains the browser-style history-back semantic.
     Shortcut {
         sequence: "Backspace"
-        onActivated: root.goActivePaneBack()
+        onActivated: root.goActivePaneUp()
     }
 
     Shortcut {

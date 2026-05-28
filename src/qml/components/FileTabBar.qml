@@ -52,6 +52,21 @@ Rectangle {
                             color: Theme.base
                         }
 
+                        // Heimdall identity: gold top stripe on the active tab.
+                        // Matches the design-canvas spec for active-tab indication
+                        // ("gold 1.5px top accent line"). 2px renders crisp at
+                        // integer DPI; the radius is reused so the corners match
+                        // the tab's own rounding.
+                        Rectangle {
+                            visible: tabDelegate.index === tabModel.activeIndex
+                            anchors.top: parent.top
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            height: 2
+                            radius: Theme.radiusSmall
+                            color: Theme.accent
+                        }
+
                         // ── Drop area on tab header ───────────────────────
                         DropArea {
                             id: tabDropArea
