@@ -61,6 +61,14 @@ public:
     Q_INVOKABLE void secondaryGoUp();
     Q_INVOKABLE void resetSecondaryTo(const QString &path);
 
+    // Phase 2 P2-M6: navigate the pane at idx to a new path.  Dispatches to
+    // navigateTo (idx == 0) / navigateSecondaryTo (idx == 1) when those
+    // legacy mutators apply; for supertab panes idx >= 2 it pushes
+    // m_panes[idx].currentPath + history stacks directly and emits
+    // panePathChanged(idx) so Main.qml can re-setRootPath the matching
+    // paneServices slot.
+    Q_INVOKABLE void navigateInPane(int idx, const QString &path);
+
     // Phase 2 P2-M2: grow / shrink the pane list past the original N=2.
     int paneCount() const;
     Q_INVOKABLE int addPane(const QString &path);
@@ -99,6 +107,12 @@ signals:
     // Phase 2 P2-M4: fires when the supertab marker is set / cleared by
     // mergeSelected / unmergeAt / compactToPrimary.
     void supertabChanged();
+    // Phase 2 P2-M6: emitted whenever a pane's currentPath changes (for
+    // the legacy slots 0 / 1 this fires alongside currentPathChanged /
+    // secondaryCurrentPathChanged; for slot >= 2 it's the only signal
+    // QML gets).  Carries the pane index so the handler can re-seed the
+    // matching paneServices slot's fsModel.
+    void panePathChanged(int idx);
 
 private:
     // Phase 2 P2-M4: secondary pane is grown lazily the first time anything

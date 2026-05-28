@@ -20,6 +20,7 @@ set(HEIMDALL_SOURCES
     services/diskusageservice.cpp
     services/remoteaccessservice.cpp
     services/runtimefeaturesservice.cpp
+    services/paneservices.cpp
     services/dependencychecker.cpp
     services/gitstatusservice.cpp
     services/metadataextractor.cpp

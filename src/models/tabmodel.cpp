@@ -390,6 +390,30 @@ bool TabModel::removePane(int idx)
     return true;
 }
 
+void TabModel::navigateInPane(int idx, const QString &path)
+{
+    if (idx < 0 || idx >= m_panes.size() || path.isEmpty())
+        return;
+    if (idx == 0) {
+        navigateTo(path);
+        emit panePathChanged(0);
+        return;
+    }
+    if (idx == 1) {
+        navigateSecondaryTo(path);
+        emit panePathChanged(1);
+        return;
+    }
+    PaneState &p = m_panes[idx];
+    if (p.currentPath == path)
+        return;
+    p.backStack.append(p.currentPath);
+    p.forwardStack.clear();
+    p.currentPath = path;
+    emit panePathChanged(idx);
+    emit titleChanged();
+}
+
 void TabModel::setSupertab(bool on)
 {
     if (m_isSupertab == on)

@@ -46,6 +46,7 @@
 #include "services/metadataextractor.h"
 #include "services/diskusageservice.h"
 #include "services/remoteaccessservice.h"
+#include "services/paneservices.h"
 #include "services/runtimefeaturesservice.h"
 #include "services/dependencychecker.h"
 #include "services/gitstatusservice.h"
@@ -269,14 +270,9 @@ int main(int argc, char *argv[])
     // Phase 1 M5: backend services bundled per pane so adding panes (Phase 2)
     // is a list append rather than a search-and-replace across main.cpp.  N
     // is hardcoded to 2 today; future code calls makePaneServices(idx) in a
-    // loop.
-    struct PaneServices {
-        FileSystemModel *fsModel = nullptr;
-        SearchResultsModel *searchResults = nullptr;
-        SearchProxyModel *searchProxy = nullptr;
-        SearchService *searchService = nullptr;
-        GitStatusService *gitService = nullptr;
-    };
+    // loop.  Phase 2 P2-M6: the PaneServices struct now lives in a header
+    // (services/paneservices.h) alongside PaneServicesProvider so QML can
+    // reach slot idx 2 / 3 by index, not just slots 0 / 1 by name.
 
     auto makePaneServices = [&](int idx, const QString &initialPath, bool seedRoot) {
         PaneServices s;
@@ -413,6 +409,13 @@ int main(int argc, char *argv[])
     // QML still addresses panes by name ("fsModel" / "splitFsModel" / ...).
     // M6 swaps the QML side to indexed access; for now the context names
     // stay so Main.qml keeps building.
+    // Phase 2 P2-M6: indexed access for the N-pane Repeater.  Slots 0 / 1
+    // also stay reachable under fsModel / splitFsModel below for back-compat
+    // with the many Main.qml call sites that grew up around those names.
+    PaneServicesProvider *paneServicesProvider = new PaneServicesProvider(&app);
+    paneServicesProvider->setServices(paneServices);
+    engine.rootContext()->setContextProperty("paneServicesProvider", paneServicesProvider);
+
     engine.rootContext()->setContextProperty("fsModel", paneServices[0].fsModel);
     engine.rootContext()->setContextProperty("splitFsModel", paneServices[1].fsModel);
     engine.rootContext()->setContextProperty("millerParentModel", millerParentModel);

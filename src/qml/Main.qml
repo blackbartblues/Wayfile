@@ -60,6 +60,14 @@ ApplicationWindow {
                 root.syncMillerParentModel(tabModel.activeTab.currentPath)
                 if (tabModel.activeTab.splitViewEnabled)
                     splitFsModel.setRootPath(tabModel.activeTab.secondaryCurrentPath)
+                // Phase 2 P2-M6: supertab tabs carry up to kMaxPanes panes;
+                // seed every fsModel slot so each PaneFrame in the Repeater
+                // shows the right content on the first paint.
+                for (var i = 0; i < tabModel.activeTab.paneCount; ++i) {
+                    var mdl = paneServicesProvider.fsModelAt(i)
+                    if (mdl)
+                        mdl.setRootPath(tabModel.activeTab.paneCurrentPath(i))
+                }
                 root.applyActiveTabSort()
                 root.scheduleActivePaneFocus()
             }
@@ -93,6 +101,31 @@ ApplicationWindow {
                 root.setPaneRecents(1, false)
                 root.clearPaneSearch(1)
                 root.scheduleActivePaneFocus()
+            }
+        }
+        // Phase 2 P2-M6: navigation inside a supertab pane (idx >= 2)
+        // pushes only panePathChanged(idx) — wire each pane's fsModel
+        // slot to follow.
+        function onPanePathChanged(idx) {
+            if (!tabModel.activeTab)
+                return
+            var model = paneServicesProvider.fsModelAt(idx)
+            if (model)
+                model.setRootPath(tabModel.activeTab.paneCurrentPath(idx))
+            root.setPaneRecents(idx, false)
+            root.clearPaneSearch(idx)
+            root.scheduleActivePaneFocus()
+        }
+        // Phase 2 P2-M6: merge / unmerge / compactToPrimary keeps the
+        // active tab the same but restructures its m_panes list; sync the
+        // fsModel slots for every pane the new layout exposes.
+        function onPanesChanged() {
+            if (!tabModel.activeTab)
+                return
+            for (var i = 0; i < tabModel.activeTab.paneCount; ++i) {
+                var mdl = paneServicesProvider.fsModelAt(i)
+                if (mdl)
+                    mdl.setRootPath(tabModel.activeTab.paneCurrentPath(i))
             }
         }
         function onSortChanged() {
@@ -225,8 +258,12 @@ ApplicationWindow {
         return tabModel.activeTab ? tabModel.activeTab.splitViewEnabled : false
     }
 
+    // Phase 2 P2-M6: indexed lookups so the N-pane Repeater can address
+    // pane 2 and 3 the same way the hand-wired primary / secondary panes
+    // used 0 and 1.  paneServicesProvider is the C++ context property
+    // exposing the kMaxPanes-sized list main.cpp built at startup.
     function paneBaseModel(pane) {
-        return pane === 1 ? splitFsModel : fsModel
+        return paneServicesProvider.fsModelAt(pane) || fsModel
     }
 
     function clampedSidebarWidth(width) {
@@ -236,10 +273,8 @@ ApplicationWindow {
     function panePath(pane) {
         if (!tabModel.activeTab)
             return fsModel.homePath()
-
-        return pane === 1
-            ? tabModel.activeTab.secondaryCurrentPath
-            : tabModel.activeTab.currentPath
+        var path = tabModel.activeTab.paneCurrentPath(pane)
+        return path !== "" ? path : tabModel.activeTab.currentPath
     }
 
     function pathDisplayName(path) {
@@ -332,15 +367,15 @@ ApplicationWindow {
     }
 
     function searchProxyForPane(pane) {
-        return pane === 1 ? splitSearchProxy : searchProxy
+        return paneServicesProvider.searchProxyAt(pane) || searchProxy
     }
 
     function searchResultsForPane(pane) {
-        return pane === 1 ? splitSearchResults : searchResults
+        return paneServicesProvider.searchResultsAt(pane) || searchResults
     }
 
     function searchServiceForPane(pane) {
-        return pane === 1 ? splitSearchService : searchService
+        return paneServicesProvider.searchServiceAt(pane) || searchService
     }
 
     function paneSearchMode(pane) {
@@ -412,10 +447,13 @@ ApplicationWindow {
     }
 
     function fileViewForPane(pane) {
-        if (pane === 1)
-            return secondaryPaneLoader.item ? secondaryPaneLoader.item.fileView : null
-
-        return primaryPaneFrame.fileView
+        // Phase 2 P2-M6: paneRow is a Repeater now; itemAt(idx) gives the
+        // PaneFrame for that index, and its 'fileView' alias is the
+        // FileViewContainer the keyboard / drag focus code needs.
+        if (!paneRepeater || pane < 0 || pane >= paneRepeater.count)
+            return null
+        var frame = paneRepeater.itemAt(pane)
+        return frame ? frame.fileView : null
     }
 
     function activeFileView() {
@@ -486,8 +524,13 @@ ApplicationWindow {
     }
 
     function setActivePane(pane) {
+        // Phase 2 P2-M6: any pane index inside the current tab's pane list
+        // is fair game.  Reject out-of-range requests (clamp to primary) so
+        // a stale binding doesn't pin the active onto a slot that hasn't
+        // been merged into existence yet.
         var nextPane = pane
-        if (nextPane === 1 && !splitViewEnabled())
+        var count = tabModel.activeTab ? tabModel.activeTab.paneCount : 1
+        if (nextPane < 0 || nextPane >= count)
             nextPane = 0
 
         if (activePaneIndex === nextPane)
@@ -511,10 +554,18 @@ ApplicationWindow {
 
         root.setPaneRecents(pane, false)
         root.clearPaneSearch(pane)
-        if (pane === 1 && splitViewEnabled())
+        // Phase 2 P2-M6: keep slots 0 / 1 on their legacy mutators so the
+        // existing currentPathChanged / secondaryCurrentPathChanged
+        // signals fire (Main.qml handlers wired around those for years).
+        // Supertab panes 2 / 3 hit navigateInPane so m_panes[pane] gets
+        // updated directly and panePathChanged(pane) drives the matching
+        // paneServices slot.
+        if (pane === 0)
+            tabModel.activeTab.navigateTo(path)
+        else if (pane === 1)
             tabModel.activeTab.navigateSecondaryTo(path)
         else
-            tabModel.activeTab.navigateTo(path)
+            tabModel.activeTab.navigateInPane(pane, path)
         root.scheduleActivePaneFocus()
     }
 
@@ -3491,96 +3542,57 @@ ApplicationWindow {
                     }
                 }
 
+                // Phase 2 P2-M6: paneRow is now a Repeater over the active
+                // tab's paneCount.  Single-pane tab => one PaneFrame fills
+                // the area.  Split view or merged supertab => 2..4 frames
+                // distributed equally via Layout.fillWidth.  Spacing keeps
+                // a visible gutter between frames; PaneFrame's own border
+                // overlay handles the active-pane highlight.
                 RowLayout {
                     id: paneRow
                     anchors.fill: parent
-                    anchors.margins: 8 * root.splitTransitionProgress
-                    spacing: 8 * root.splitTransitionProgress
+                    readonly property bool multiPane: tabModel.activeTab && tabModel.activeTab.paneCount > 1
+                    anchors.margins: multiPane ? 8 : 0
+                    spacing: multiPane ? 8 : 0
 
-                    readonly property real dividerWidth: root.splitTransitionProgress
-                    readonly property real secondaryPreferredWidth: Math.max(
-                        0,
-                        (width - spacing - dividerWidth) * 0.5 * root.splitTransitionProgress
-                    )
+                    Repeater {
+                        id: paneRepeater
+                        // Re-derive the model whenever the active tab or its
+                        // paneCount changes so merge / unmerge / split toggle
+                        // all rebuild the row.
+                        model: tabModel.activeTab ? tabModel.activeTab.paneCount : 1
 
-                    PaneFrame {
-                        id: primaryPaneFrame
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        paneIndex: 0
-                        active: root.activePaneIndex === 0
-                        splitViewPresented: root.splitViewPresented
-                        splitTransitionProgress: root.splitTransitionProgress
-                        paneTitle: root.paneDisplayName(0)
-                        paneFileModel: root.paneModel(0)
-                        paneCurrentPath: root.panePath(0)
-                        paneViewMode: tabModel.activeTab ? tabModel.activeTab.viewMode : "grid"
+                        delegate: PaneFrame {
+                            id: paneCell
+                            required property int index
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
 
-                        onInteractionStarted: root.setActivePane(0)
-                        onFileActivated: (filePath, isDirectory) =>
-                            root.handlePaneFileActivated(0, filePath, isDirectory)
-                        onSelectionChanged: {
-                            root.setActivePane(0)
-                            root.updateSelectionStatus()
-                        }
-                        onTransferRequested: (paths, destinationPath, moveOperation) => {
-                            root.setActivePane(0)
-                            root.beginTransfer(paths, destinationPath, moveOperation, false)
-                        }
-                        onContextMenuRequested: (filePath, isDirectory, position) =>
-                            root.showContextMenuForPane(0, filePath, isDirectory, position)
-                    }
-
-                    Loader {
-                        id: dividerLoader
-                        active: root.splitViewPresented
-                        visible: active
-                        Layout.preferredWidth: paneRow.dividerWidth
-                        Layout.fillHeight: true
-                        opacity: root.splitTransitionProgress
-
-                        sourceComponent: Rectangle {
-                            width: 1
-                            color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.08)
-                        }
-                    }
-
-                    Loader {
-                        id: secondaryPaneLoader
-                        active: root.splitViewPresented
-                        visible: active
-                        enabled: root.splitViewEnabled()
-                        opacity: root.splitTransitionProgress
-                        Layout.preferredWidth: paneRow.secondaryPreferredWidth
-                        Layout.fillHeight: true
-
-                        sourceComponent: PaneFrame {
-                            id: secondaryPaneFrame
-                            opacity: root.splitTransitionProgress
-                            scale: 0.96 + (0.04 * root.splitTransitionProgress)
-                            transformOrigin: Item.Right
-                            paneIndex: 1
-                            active: root.activePaneIndex === 1
-                            splitViewPresented: root.splitViewPresented
-                            splitTransitionProgress: root.splitTransitionProgress
-                            paneTitle: root.paneDisplayName(1)
-                            paneFileModel: root.paneModel(1)
-                            paneCurrentPath: root.panePath(1)
+                            paneIndex: index
+                            active: root.activePaneIndex === index
+                            // splitViewPresented is reused as 'pane chrome
+                            // visible' — the SplitPaneHeader appears whenever
+                            // the row hosts more than one frame.
+                            splitViewPresented: paneRow.multiPane
+                            splitTransitionProgress: paneRow.multiPane ? 1 : 0
+                            paneTitle: root.paneDisplayName(index)
+                            paneFileModel: root.paneModel(index)
+                            paneCurrentPath: root.panePath(index)
                             paneViewMode: tabModel.activeTab ? tabModel.activeTab.viewMode : "grid"
 
-                            onInteractionStarted: root.setActivePane(1)
+                            onInteractionStarted: root.setActivePane(index)
                             onFileActivated: (filePath, isDirectory) =>
-                                root.handlePaneFileActivated(1, filePath, isDirectory)
+                                root.handlePaneFileActivated(index, filePath, isDirectory)
                             onSelectionChanged: {
-                                root.setActivePane(1)
+                                root.setActivePane(index)
                                 root.updateSelectionStatus()
                             }
                             onTransferRequested: (paths, destinationPath, moveOperation) => {
-                                root.setActivePane(1)
+                                root.setActivePane(index)
                                 root.beginTransfer(paths, destinationPath, moveOperation, false)
                             }
                             onContextMenuRequested: (filePath, isDirectory, position) =>
-                                root.showContextMenuForPane(1, filePath, isDirectory, position)
+                                root.showContextMenuForPane(index, filePath, isDirectory, position)
                         }
                     }
                 }
