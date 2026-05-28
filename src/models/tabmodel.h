@@ -65,6 +65,11 @@ signals:
     void sortChanged();
 
 private:
+    // Phase 1 M2: copy mirror-field state into m_panes[idx] after every
+    // mutation, so the parallel storage is always coherent.  Readers still
+    // pull from the mirror in M2; M3 flips them over.
+    void syncPaneFromMirror(int idx);
+
     QString m_currentPath;
     QString m_secondaryCurrentPath;
     QString m_viewMode;

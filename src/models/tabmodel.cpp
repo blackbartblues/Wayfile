@@ -95,6 +95,28 @@ TabModel::TabModel(QObject *parent)
     m_panes.append(secondary);
 }
 
+void TabModel::syncPaneFromMirror(int idx)
+{
+    if (idx < 0 || idx >= m_panes.size())
+        return;
+
+    PaneState &p = m_panes[idx];
+    if (idx == 0) {
+        p.currentPath = m_currentPath;
+        p.backStack = m_backStack;
+        p.forwardStack = m_forwardStack;
+    } else if (idx == 1) {
+        p.currentPath = m_secondaryCurrentPath;
+        p.backStack = m_secondaryBackStack;
+        p.forwardStack = m_secondaryForwardStack;
+    }
+    // viewMode / sortBy / sortAscending are still tab-level mirrors today;
+    // both pane entries get the same value until per-pane controls land.
+    p.viewMode = m_viewMode;
+    p.sortBy = m_sortBy;
+    p.sortAscending = m_sortAscending;
+}
+
 QString TabModel::currentPath() const { return m_currentPath; }
 
 QString TabModel::title() const
@@ -120,6 +142,8 @@ void TabModel::setViewMode(const QString &mode)
 {
     if (m_viewMode != mode) {
         m_viewMode = mode;
+        syncPaneFromMirror(0);
+        syncPaneFromMirror(1);
         emit viewModeChanged();
     }
 }
@@ -132,6 +156,7 @@ void TabModel::setSplitViewEnabled(bool enabled)
     if (enabled && !m_secondaryInitialized) {
         m_secondaryCurrentPath = m_currentPath;
         m_secondaryInitialized = true;
+        syncPaneFromMirror(1);
         emit secondaryCurrentPathChanged();
     }
 
@@ -147,6 +172,7 @@ void TabModel::setSecondaryCurrentPath(const QString &path)
 
     m_secondaryCurrentPath = path;
     m_secondaryInitialized = true;
+    syncPaneFromMirror(1);
     emit secondaryCurrentPathChanged();
     emit titleChanged();
 }
@@ -155,6 +181,8 @@ void TabModel::setSortBy(const QString &column)
 {
     if (m_sortBy != column) {
         m_sortBy = column;
+        syncPaneFromMirror(0);
+        syncPaneFromMirror(1);
         emit sortChanged();
     }
 }
@@ -163,6 +191,8 @@ void TabModel::setSortAscending(bool ascending)
 {
     if (m_sortAscending != ascending) {
         m_sortAscending = ascending;
+        syncPaneFromMirror(0);
+        syncPaneFromMirror(1);
         emit sortChanged();
     }
 }
@@ -174,6 +204,7 @@ void TabModel::navigateTo(const QString &path)
     m_backStack.append(m_currentPath);
     m_forwardStack.clear();
     m_currentPath = path;
+    syncPaneFromMirror(0);
     emit currentPathChanged();
     emit titleChanged();
     emit historyChanged();
@@ -188,6 +219,7 @@ void TabModel::navigateSecondaryTo(const QString &path)
     m_secondaryForwardStack.clear();
     m_secondaryCurrentPath = path;
     m_secondaryInitialized = true;
+    syncPaneFromMirror(1);
     emit secondaryCurrentPathChanged();
     emit titleChanged();
     emit secondaryHistoryChanged();
@@ -199,6 +231,7 @@ void TabModel::goBack()
         return;
     m_forwardStack.append(m_currentPath);
     m_currentPath = m_backStack.takeLast();
+    syncPaneFromMirror(0);
     emit currentPathChanged();
     emit titleChanged();
     emit historyChanged();
@@ -211,6 +244,7 @@ void TabModel::secondaryGoBack()
 
     m_secondaryForwardStack.append(m_secondaryCurrentPath);
     m_secondaryCurrentPath = m_secondaryBackStack.takeLast();
+    syncPaneFromMirror(1);
     emit secondaryCurrentPathChanged();
     emit titleChanged();
     emit secondaryHistoryChanged();
@@ -222,6 +256,7 @@ void TabModel::goForward()
         return;
     m_backStack.append(m_currentPath);
     m_currentPath = m_forwardStack.takeLast();
+    syncPaneFromMirror(0);
     emit currentPathChanged();
     emit titleChanged();
     emit historyChanged();
@@ -234,6 +269,7 @@ void TabModel::secondaryGoForward()
 
     m_secondaryBackStack.append(m_secondaryCurrentPath);
     m_secondaryCurrentPath = m_secondaryForwardStack.takeLast();
+    syncPaneFromMirror(1);
     emit secondaryCurrentPathChanged();
     emit titleChanged();
     emit secondaryHistoryChanged();
@@ -265,6 +301,7 @@ void TabModel::resetSecondaryTo(const QString &path)
     m_secondaryForwardStack.clear();
     m_secondaryCurrentPath = path;
     m_secondaryInitialized = true;
+    syncPaneFromMirror(1);
 
     if (pathChanged) {
         emit secondaryCurrentPathChanged();
