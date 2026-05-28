@@ -117,26 +117,30 @@ void TabModel::syncPaneFromMirror(int idx)
     p.sortAscending = m_sortAscending;
 }
 
-QString TabModel::currentPath() const { return m_currentPath; }
+// Phase 1 M3: public readers pull from m_panes.  Mirror fields still exist
+// (and are still written via syncPaneFromMirror in mutators) but external
+// behaviour is now driven by the pane storage.  If any M2 write-through
+// site was missed, this is where it shows up as stale state.
+QString TabModel::currentPath() const { return m_panes[0].currentPath; }
 
 QString TabModel::title() const
 {
-    const QString primaryTitle = displayNameForPath(m_currentPath);
+    const QString primaryTitle = displayNameForPath(m_panes[0].currentPath);
     if (!m_splitViewEnabled)
         return primaryTitle;
 
-    return primaryTitle + QStringLiteral(" / ") + displayNameForPath(m_secondaryCurrentPath);
+    return primaryTitle + QStringLiteral(" / ") + displayNameForPath(m_panes[1].currentPath);
 }
 
-QString TabModel::viewMode() const { return m_viewMode; }
-bool TabModel::canGoBack() const { return !m_backStack.isEmpty(); }
-bool TabModel::canGoForward() const { return !m_forwardStack.isEmpty(); }
+QString TabModel::viewMode() const { return m_panes[0].viewMode; }
+bool TabModel::canGoBack() const { return !m_panes[0].backStack.isEmpty(); }
+bool TabModel::canGoForward() const { return !m_panes[0].forwardStack.isEmpty(); }
 bool TabModel::splitViewEnabled() const { return m_splitViewEnabled; }
-QString TabModel::secondaryCurrentPath() const { return m_secondaryCurrentPath; }
-bool TabModel::secondaryCanGoBack() const { return !m_secondaryBackStack.isEmpty(); }
-bool TabModel::secondaryCanGoForward() const { return !m_secondaryForwardStack.isEmpty(); }
-QString TabModel::sortBy() const { return m_sortBy; }
-bool TabModel::sortAscending() const { return m_sortAscending; }
+QString TabModel::secondaryCurrentPath() const { return m_panes[1].currentPath; }
+bool TabModel::secondaryCanGoBack() const { return !m_panes[1].backStack.isEmpty(); }
+bool TabModel::secondaryCanGoForward() const { return !m_panes[1].forwardStack.isEmpty(); }
+QString TabModel::sortBy() const { return m_panes[0].sortBy; }
+bool TabModel::sortAscending() const { return m_panes[0].sortAscending; }
 
 void TabModel::setViewMode(const QString &mode)
 {
