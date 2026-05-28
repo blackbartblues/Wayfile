@@ -38,7 +38,58 @@ Item {
             anchors.right: parent.right
             height: 1
             color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.06)
+            z: 2
         }
+
+        // "+" button: always pinned to the right of the strip, click opens a
+        // new tab in the user's home dir (tabModel.addTab() default).
+        HoverRect {
+            id: addTabBtn
+            width: Theme.controlSize
+            height: parent.height - 2  // leave 1 px above bottom separator
+            anchors.right: parent.right
+            anchors.top: parent.top
+            z: 1
+            onClicked: tabModel.addTab()
+
+            IconPlus {
+                anchors.centerIn: parent
+                size: 16
+                color: addTabBtn.hovered ? Theme.text : Theme.subtext
+            }
+        }
+
+        // Flickable scroll area for tabs. When the strip can hold every tab at
+        // minTabWidth or wider, contentWidth == flickable.width and there's
+        // nothing to scroll. Past that point tabs sit at minTabWidth and the
+        // overflow scrolls horizontally via drag or mouse wheel.
+        Flickable {
+            id: tabScroll
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            anchors.right: addTabBtn.left
+            anchors.bottomMargin: 1  // sit above the separator
+            clip: true
+            contentWidth: tabRow.implicitWidth
+            contentHeight: height
+            interactive: true
+            flickableDirection: Flickable.HorizontalFlick
+            boundsBehavior: Flickable.StopAtBounds
+
+            // Mouse wheel scrolls horizontally. Qt's Flickable doesn't bind
+            // wheel by default — WheelHandler maps vertical wheel ticks
+            // (angleDelta.y, ±120 per notch on most mice) to contentX.
+            WheelHandler {
+                target: null
+                orientation: Qt.Vertical
+                onWheel: (event) => {
+                    if (tabScroll.contentWidth <= tabScroll.width) return
+                    var maxX = tabScroll.contentWidth - tabScroll.width
+                    tabScroll.contentX = Math.max(0,
+                        Math.min(maxX, tabScroll.contentX - event.angleDelta.y))
+                }
+            }
 
         // Plain Row (positioner), not RowLayout: with the clamped width below,
         // RowLayout was allocating each tab an even-share slot and rendering it
@@ -47,7 +98,7 @@ Item {
         // at their width; leftover space just stays at the end of the strip.
         Row {
             id: tabRow
-            anchors.fill: parent
+            height: tabScroll.height
             spacing: 0
 
             // Track how many tabs are closing so others can grow immediately.
@@ -69,11 +120,15 @@ Item {
                     // With 1-3 tabs they stop growing at maxTabWidth; with 10+ they
                     // shrink toward minTabWidth and then overflow into the parent's
                     // clip rect.
+                    // Use the Flickable's width (visible strip) as the divisor.
+                    // When count is high enough that even-share < minTabWidth,
+                    // tabs settle at minTabWidth and the Row overflows the
+                    // Flickable horizontally — that's the scroll trigger.
                     width: closing
                         ? 0
                         : Math.min(root.maxTabWidth,
                                    Math.max(root.minTabWidth,
-                                            tabRow.width / tabRow.effectiveCount))
+                                            tabScroll.width / tabRow.effectiveCount))
                     height: tabRow.height
                     property bool closing: false
 
@@ -284,5 +339,6 @@ Item {
                 }
             }
         }
+        }  // Flickable tabScroll
     }
 }
