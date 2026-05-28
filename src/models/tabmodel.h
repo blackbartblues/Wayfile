@@ -65,25 +65,16 @@ signals:
     void sortChanged();
 
 private:
-    // Phase 1 M2: copy mirror-field state into m_panes[idx] after every
-    // mutation, so the parallel storage is always coherent.  Readers still
-    // pull from the mirror in M2; M3 flips them over.
-    void syncPaneFromMirror(int idx);
+    // Phase 1 M4: m_panes is the single source of truth for every per-pane
+    // field (currentPath, viewMode, sortBy, sortAscending, backStack,
+    // forwardStack).  Index 0 == primary, index 1 == secondary today; later
+    // milestones generalise to arbitrary N panes per tab.
+    QList<PaneState> m_panes;
 
-    QString m_currentPath;
-    QString m_secondaryCurrentPath;
-    QString m_viewMode;
-    QStringList m_backStack;
-    QStringList m_forwardStack;
-    QStringList m_secondaryBackStack;
-    QStringList m_secondaryForwardStack;
+    // Tab-level state that isn't per-pane.  splitViewEnabled toggles whether
+    // the secondary pane is rendered; secondaryInitialized tracks whether
+    // the secondary pane has ever been navigated (used to seed it from the
+    // primary path the first time split view is enabled).
     bool m_splitViewEnabled = false;
     bool m_secondaryInitialized = false;
-    QString m_sortBy;
-    bool m_sortAscending;
-
-    // Phase 1: parallel storage that will eventually replace the mirror
-    // fields above.  Index 0 == primary, index 1 == secondary.  Populated in
-    // the constructor; no reader code consults it yet.
-    QList<PaneState> m_panes;
 };

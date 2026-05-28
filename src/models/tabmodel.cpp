@@ -71,50 +71,17 @@ QString parentLocation(const QString &path)
 
 TabModel::TabModel(QObject *parent)
     : QObject(parent)
-    , m_currentPath(QDir::homePath())
-    , m_secondaryCurrentPath(QDir::homePath())
-    , m_viewMode("grid")
-    , m_sortBy("name")
-    , m_sortAscending(true)
 {
-    // Phase 1: seed the parallel pane storage so reader-flip milestones can
-    // adopt it without an empty-state transition.  Two entries match the
-    // current N=2 model; later milestones generalise to arbitrary N.
+    // Phase 1 M4: pane storage is the only state today.  Default-construct
+    // two entries (one per pane) and seed currentPath to the user's home;
+    // viewMode / sortBy / sortAscending pick up their PaneState defaults.
     PaneState primary;
-    primary.currentPath = m_currentPath;
-    primary.viewMode = m_viewMode;
-    primary.sortBy = m_sortBy;
-    primary.sortAscending = m_sortAscending;
+    primary.currentPath = QDir::homePath();
     m_panes.append(primary);
 
     PaneState secondary;
-    secondary.currentPath = m_secondaryCurrentPath;
-    secondary.viewMode = m_viewMode;
-    secondary.sortBy = m_sortBy;
-    secondary.sortAscending = m_sortAscending;
+    secondary.currentPath = QDir::homePath();
     m_panes.append(secondary);
-}
-
-void TabModel::syncPaneFromMirror(int idx)
-{
-    if (idx < 0 || idx >= m_panes.size())
-        return;
-
-    PaneState &p = m_panes[idx];
-    if (idx == 0) {
-        p.currentPath = m_currentPath;
-        p.backStack = m_backStack;
-        p.forwardStack = m_forwardStack;
-    } else if (idx == 1) {
-        p.currentPath = m_secondaryCurrentPath;
-        p.backStack = m_secondaryBackStack;
-        p.forwardStack = m_secondaryForwardStack;
-    }
-    // viewMode / sortBy / sortAscending are still tab-level mirrors today;
-    // both pane entries get the same value until per-pane controls land.
-    p.viewMode = m_viewMode;
-    p.sortBy = m_sortBy;
-    p.sortAscending = m_sortAscending;
 }
 
 // Phase 1 M3: public readers pull from m_panes.  Mirror fields still exist
@@ -144,12 +111,11 @@ bool TabModel::sortAscending() const { return m_panes[0].sortAscending; }
 
 void TabModel::setViewMode(const QString &mode)
 {
-    if (m_viewMode != mode) {
-        m_viewMode = mode;
-        syncPaneFromMirror(0);
-        syncPaneFromMirror(1);
-        emit viewModeChanged();
-    }
+    if (m_panes[0].viewMode == mode)
+        return;
+    m_panes[0].viewMode = mode;
+    m_panes[1].viewMode = mode;
+    emit viewModeChanged();
 }
 
 void TabModel::setSplitViewEnabled(bool enabled)
@@ -158,9 +124,8 @@ void TabModel::setSplitViewEnabled(bool enabled)
         return;
 
     if (enabled && !m_secondaryInitialized) {
-        m_secondaryCurrentPath = m_currentPath;
+        m_panes[1].currentPath = m_panes[0].currentPath;
         m_secondaryInitialized = true;
-        syncPaneFromMirror(1);
         emit secondaryCurrentPathChanged();
     }
 
@@ -171,44 +136,41 @@ void TabModel::setSplitViewEnabled(bool enabled)
 
 void TabModel::setSecondaryCurrentPath(const QString &path)
 {
-    if (path.isEmpty() || m_secondaryCurrentPath == path)
+    if (path.isEmpty() || m_panes[1].currentPath == path)
         return;
 
-    m_secondaryCurrentPath = path;
+    m_panes[1].currentPath = path;
     m_secondaryInitialized = true;
-    syncPaneFromMirror(1);
     emit secondaryCurrentPathChanged();
     emit titleChanged();
 }
 
 void TabModel::setSortBy(const QString &column)
 {
-    if (m_sortBy != column) {
-        m_sortBy = column;
-        syncPaneFromMirror(0);
-        syncPaneFromMirror(1);
-        emit sortChanged();
-    }
+    if (m_panes[0].sortBy == column)
+        return;
+    m_panes[0].sortBy = column;
+    m_panes[1].sortBy = column;
+    emit sortChanged();
 }
 
 void TabModel::setSortAscending(bool ascending)
 {
-    if (m_sortAscending != ascending) {
-        m_sortAscending = ascending;
-        syncPaneFromMirror(0);
-        syncPaneFromMirror(1);
-        emit sortChanged();
-    }
+    if (m_panes[0].sortAscending == ascending)
+        return;
+    m_panes[0].sortAscending = ascending;
+    m_panes[1].sortAscending = ascending;
+    emit sortChanged();
 }
 
 void TabModel::navigateTo(const QString &path)
 {
-    if (path == m_currentPath)
+    PaneState &p = m_panes[0];
+    if (path == p.currentPath)
         return;
-    m_backStack.append(m_currentPath);
-    m_forwardStack.clear();
-    m_currentPath = path;
-    syncPaneFromMirror(0);
+    p.backStack.append(p.currentPath);
+    p.forwardStack.clear();
+    p.currentPath = path;
     emit currentPathChanged();
     emit titleChanged();
     emit historyChanged();
@@ -216,14 +178,14 @@ void TabModel::navigateTo(const QString &path)
 
 void TabModel::navigateSecondaryTo(const QString &path)
 {
-    if (path == m_secondaryCurrentPath || path.isEmpty())
+    PaneState &p = m_panes[1];
+    if (path == p.currentPath || path.isEmpty())
         return;
 
-    m_secondaryBackStack.append(m_secondaryCurrentPath);
-    m_secondaryForwardStack.clear();
-    m_secondaryCurrentPath = path;
+    p.backStack.append(p.currentPath);
+    p.forwardStack.clear();
+    p.currentPath = path;
     m_secondaryInitialized = true;
-    syncPaneFromMirror(1);
     emit secondaryCurrentPathChanged();
     emit titleChanged();
     emit secondaryHistoryChanged();
@@ -231,11 +193,11 @@ void TabModel::navigateSecondaryTo(const QString &path)
 
 void TabModel::goBack()
 {
-    if (m_backStack.isEmpty())
+    PaneState &p = m_panes[0];
+    if (p.backStack.isEmpty())
         return;
-    m_forwardStack.append(m_currentPath);
-    m_currentPath = m_backStack.takeLast();
-    syncPaneFromMirror(0);
+    p.forwardStack.append(p.currentPath);
+    p.currentPath = p.backStack.takeLast();
     emit currentPathChanged();
     emit titleChanged();
     emit historyChanged();
@@ -243,12 +205,12 @@ void TabModel::goBack()
 
 void TabModel::secondaryGoBack()
 {
-    if (m_secondaryBackStack.isEmpty())
+    PaneState &p = m_panes[1];
+    if (p.backStack.isEmpty())
         return;
 
-    m_secondaryForwardStack.append(m_secondaryCurrentPath);
-    m_secondaryCurrentPath = m_secondaryBackStack.takeLast();
-    syncPaneFromMirror(1);
+    p.forwardStack.append(p.currentPath);
+    p.currentPath = p.backStack.takeLast();
     emit secondaryCurrentPathChanged();
     emit titleChanged();
     emit secondaryHistoryChanged();
@@ -256,11 +218,11 @@ void TabModel::secondaryGoBack()
 
 void TabModel::goForward()
 {
-    if (m_forwardStack.isEmpty())
+    PaneState &p = m_panes[0];
+    if (p.forwardStack.isEmpty())
         return;
-    m_backStack.append(m_currentPath);
-    m_currentPath = m_forwardStack.takeLast();
-    syncPaneFromMirror(0);
+    p.backStack.append(p.currentPath);
+    p.currentPath = p.forwardStack.takeLast();
     emit currentPathChanged();
     emit titleChanged();
     emit historyChanged();
@@ -268,12 +230,12 @@ void TabModel::goForward()
 
 void TabModel::secondaryGoForward()
 {
-    if (m_secondaryForwardStack.isEmpty())
+    PaneState &p = m_panes[1];
+    if (p.forwardStack.isEmpty())
         return;
 
-    m_secondaryBackStack.append(m_secondaryCurrentPath);
-    m_secondaryCurrentPath = m_secondaryForwardStack.takeLast();
-    syncPaneFromMirror(1);
+    p.backStack.append(p.currentPath);
+    p.currentPath = p.forwardStack.takeLast();
     emit secondaryCurrentPathChanged();
     emit titleChanged();
     emit secondaryHistoryChanged();
@@ -281,15 +243,15 @@ void TabModel::secondaryGoForward()
 
 void TabModel::goUp()
 {
-    const QString parent = parentLocation(m_currentPath);
-    if (parent != m_currentPath)
+    const QString parent = parentLocation(m_panes[0].currentPath);
+    if (parent != m_panes[0].currentPath)
         navigateTo(parent);
 }
 
 void TabModel::secondaryGoUp()
 {
-    const QString parent = parentLocation(m_secondaryCurrentPath);
-    if (parent != m_secondaryCurrentPath)
+    const QString parent = parentLocation(m_panes[1].currentPath);
+    if (parent != m_panes[1].currentPath)
         navigateSecondaryTo(parent);
 }
 
@@ -298,14 +260,14 @@ void TabModel::resetSecondaryTo(const QString &path)
     if (path.isEmpty())
         return;
 
-    const bool pathChanged = m_secondaryCurrentPath != path;
-    const bool historyChanged = !m_secondaryBackStack.isEmpty() || !m_secondaryForwardStack.isEmpty();
+    PaneState &p = m_panes[1];
+    const bool pathChanged = p.currentPath != path;
+    const bool historyChanged = !p.backStack.isEmpty() || !p.forwardStack.isEmpty();
 
-    m_secondaryBackStack.clear();
-    m_secondaryForwardStack.clear();
-    m_secondaryCurrentPath = path;
+    p.backStack.clear();
+    p.forwardStack.clear();
+    p.currentPath = path;
     m_secondaryInitialized = true;
-    syncPaneFromMirror(1);
 
     if (pathChanged) {
         emit secondaryCurrentPathChanged();
