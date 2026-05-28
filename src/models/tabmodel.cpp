@@ -276,3 +276,61 @@ void TabModel::resetSecondaryTo(const QString &path)
     if (historyChanged)
         emit secondaryHistoryChanged();
 }
+
+
+// --- Phase 2 P2-M2: pane list growth -----------------------------------------
+
+int TabModel::paneCount() const
+{
+    return m_panes.size();
+}
+
+int TabModel::addPane(const QString &path)
+{
+    PaneState p;
+    p.currentPath = path.isEmpty() ? QDir::homePath() : path;
+    // Inherit the per-tab view + sort settings from pane 0 so a newly added
+    // pane visually matches its siblings instead of dropping back to the
+    // PaneState struct defaults.
+    if (!m_panes.isEmpty()) {
+        const PaneState &seed = m_panes.first();
+        p.viewMode = seed.viewMode;
+        p.sortBy = seed.sortBy;
+        p.sortAscending = seed.sortAscending;
+    }
+    m_panes.append(p);
+    emit panesChanged();
+    emit titleChanged();
+    return m_panes.size() - 1;
+}
+
+bool TabModel::removePane(int idx)
+{
+    // Floor at 2 for now so the existing primary / secondary Q_PROPERTY
+    // surface (and the paneRow layout that still relies on it) keeps
+    // working.  P2-M8 (close-pane-within-supertab) will revisit this and
+    // demote a 2-pane tab back to single-pane via TabListModel logic.
+    if (idx < 0 || idx >= m_panes.size())
+        return false;
+    if (m_panes.size() <= 2)
+        return false;
+    m_panes.removeAt(idx);
+    emit panesChanged();
+    emit titleChanged();
+    return true;
+}
+
+QString TabModel::paneCurrentPath(int idx) const
+{
+    if (idx < 0 || idx >= m_panes.size())
+        return {};
+    return m_panes.at(idx).currentPath;
+}
+
+QString TabModel::paneViewMode(int idx) const
+{
+    if (idx < 0 || idx >= m_panes.size())
+        return {};
+    return m_panes.at(idx).viewMode;
+}
+

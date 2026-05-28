@@ -22,6 +22,9 @@ class TabModel : public QObject
     Q_PROPERTY(bool secondaryCanGoForward READ secondaryCanGoForward NOTIFY secondaryHistoryChanged)
     Q_PROPERTY(QString sortBy READ sortBy WRITE setSortBy NOTIFY sortChanged)
     Q_PROPERTY(bool sortAscending READ sortAscending WRITE setSortAscending NOTIFY sortChanged)
+    // Phase 2 P2-M2: pane list size, exposed so the future N-pane paneRow
+    // (P2-M6) can use Repeater { model: tabModel.activeTab.paneCount }.
+    Q_PROPERTY(int paneCount READ paneCount NOTIFY panesChanged)
 
 public:
     explicit TabModel(QObject *parent = nullptr);
@@ -54,6 +57,15 @@ public:
     Q_INVOKABLE void secondaryGoUp();
     Q_INVOKABLE void resetSecondaryTo(const QString &path);
 
+    // Phase 2 P2-M2: grow / shrink the pane list past the original N=2.
+    int paneCount() const;
+    Q_INVOKABLE int addPane(const QString &path);
+    Q_INVOKABLE bool removePane(int idx);
+    // Per-pane getters for the future N-pane Repeater (P2-M6).  primaryX /
+    // secondaryX Q_PROPERTYs stay alive while paneRow is still hand-wired.
+    Q_INVOKABLE QString paneCurrentPath(int idx) const;
+    Q_INVOKABLE QString paneViewMode(int idx) const;
+
 signals:
     void currentPathChanged();
     void titleChanged();
@@ -63,6 +75,11 @@ signals:
     void secondaryCurrentPathChanged();
     void secondaryHistoryChanged();
     void sortChanged();
+    // Phase 2 P2-M2: emitted whenever m_panes grows or shrinks.  Per-pane
+    // currentPath / viewMode mutations still emit the existing fine-grained
+    // signals (currentPathChanged, viewModeChanged, etc.) — only the
+    // structural list shape change uses this.
+    void panesChanged();
 
 private:
     // Phase 1 M4: m_panes is the single source of truth for every per-pane
