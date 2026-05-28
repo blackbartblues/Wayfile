@@ -315,6 +315,75 @@ void TabListModel::mergeSelected()
     emit sessionChanged();
 }
 
+void TabListModel::unmergeAt(int idx)
+{
+    if (idx < 0 || idx >= m_tabs.size())
+        return;
+    TabModel *supertab = m_tabs[idx];
+    if (!supertab->isSupertab())
+        return;
+    if (supertab->paneCount() < 2)
+        return;
+
+    // Snapshot every pane's currentPath before we mutate anything.
+    QStringList panePaths;
+    panePaths.reserve(supertab->paneCount());
+    for (int i = 0; i < supertab->paneCount(); ++i)
+        panePaths.append(supertab->paneCurrentPath(i));
+
+    // Shrink the supertab to just its primary pane and drop the supertab
+    // marker; the receiver now looks like an ordinary single-pane tab
+    // showing panePaths[0].
+    supertab->compactToPrimary();
+    supertab->setSupertab(false);
+
+    // Spawn one new tab for each remaining pane path, inserted right after
+    // the receiver so the unmerged tabs stay in their original order.
+    for (int i = 1; i < panePaths.size(); ++i) {
+        const int insertIdx = idx + i;
+        beginInsertRows(QModelIndex(), insertIdx, insertIdx);
+        auto *spawn = new TabModel(this);
+        spawn->navigateTo(panePaths[i]);
+        m_tabs.insert(insertIdx, spawn);
+        connectTab(insertIdx, spawn);
+        endInsertRows();
+    }
+
+    // Selection follows the unmerge: every tab spawned from the supertab
+    // (idx..idx+spawned) lands selected so the user can re-merge them
+    // immediately if the unmerge was a mis-click.  Earlier selections
+    // past the supertab are preserved, shifted upward by `spawned`.
+    const int spawned = panePaths.size() - 1;
+    QSet<int> rebuilt;
+    for (int sel : std::as_const(m_selectedIndices)) {
+        if (sel == idx)
+            continue;
+        if (sel > idx)
+            rebuilt.insert(sel + spawned);
+        else
+            rebuilt.insert(sel);
+    }
+    for (int i = 0; i <= spawned; ++i)
+        rebuilt.insert(idx + i);
+    m_selectedIndices = std::move(rebuilt);
+
+    if (m_activeIndex != idx) {
+        m_activeIndex = idx;
+        emit activeIndexChanged();
+    }
+
+    // Nudge views: receiver lost its supertab title (now just primary),
+    // and every spawned row gained the selection flag.
+    const QModelIndex midx = createIndex(idx, 0);
+    emit dataChanged(midx, midx, {TitleRole, PathRole, IsSelectedRole});
+    for (int i = 1; i <= spawned; ++i)
+        emitIsSelectedChanged(idx + i);
+
+    emit countChanged();
+    emit selectionChanged();
+    emit sessionChanged();
+}
+
 void TabListModel::activateAndCollapseSelection(int index)
 {
     if (index < 0 || index >= m_tabs.size())
@@ -454,8 +523,12 @@ void TabListModel::restoreSession(const QJsonArray &tabs, int activeIdx)
     }
     endResetModel();
 
-    m_activeIndex = qBound(0, activeIdx, m_tabs.size() - 1);
-    emit activeIndexChanged();
+    // Phase 2 P2-M1: route through setActiveIndex so the active ∈ selected
+    // invariant is established for the restored layout — otherwise the
+    // outline doesn't appear on the active tab until the user clicks it.
+    const int restoredActive = qBound(0, activeIdx, m_tabs.size() - 1);
+    m_activeIndex = -1;  // force the setter to take the change-path
+    setActiveIndex(restoredActive);
     emit countChanged();
     emit sessionChanged();
 }

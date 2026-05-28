@@ -60,6 +60,13 @@ public:
     // when the selection has fewer than 2 entries.
     Q_INVOKABLE void mergeSelected();
 
+    // Phase 2 P2-M8: dissolve the supertab at idx back into N individual
+    // tabs.  m_panes[0]..m_panes[N-1] become tabs inserted in-place at
+    // idx, idx+1, ..., idx+N-1.  The supertab flag is cleared.  No-op for
+    // a non-supertab or paneCount < 2.
+    Q_INVOKABLE void unmergeAt(int idx);
+    Q_INVOKABLE void unmergeActive() { unmergeAt(m_activeIndex); }
+
     QJsonArray saveSession() const;
     void restoreSession(const QJsonArray &tabs, int activeIdx);
 

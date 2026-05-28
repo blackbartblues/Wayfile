@@ -395,6 +395,7 @@ void TabModel::setSupertab(bool on)
     if (m_isSupertab == on)
         return;
     m_isSupertab = on;
+    emit supertabChanged();
     emit titleChanged();
 }
 

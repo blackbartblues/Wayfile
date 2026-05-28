@@ -25,6 +25,10 @@ class TabModel : public QObject
     // Phase 2 P2-M2: pane list size, exposed so the future N-pane paneRow
     // (P2-M6) can use Repeater { model: tabModel.activeTab.paneCount }.
     Q_PROPERTY(int paneCount READ paneCount NOTIFY panesChanged)
+    // Phase 2 P2-M4: lets QML bind merge / unmerge button state to the
+    // current tab's supertab flag without round-tripping through a
+    // Q_INVOKABLE call (toggleMergeOrUnmerge needs it on every press).
+    Q_PROPERTY(bool isSupertab READ isSupertab NOTIFY supertabChanged)
 
 public:
     explicit TabModel(QObject *parent = nullptr);
@@ -92,6 +96,9 @@ signals:
     // signals (currentPathChanged, viewModeChanged, etc.) — only the
     // structural list shape change uses this.
     void panesChanged();
+    // Phase 2 P2-M4: fires when the supertab marker is set / cleared by
+    // mergeSelected / unmergeAt / compactToPrimary.
+    void supertabChanged();
 
 private:
     // Phase 2 P2-M4: secondary pane is grown lazily the first time anything

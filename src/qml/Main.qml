@@ -752,26 +752,56 @@ ApplicationWindow {
             tabModel.activeTab.goUp()
     }
 
-    function toggleSplitView() {
+    // Phase 2 P2-merge-unmerge: the historical split-view toggle now drives
+    // the merge / unmerge gesture instead.  Behaviour:
+    //   * active tab is a supertab        -> unmerge it
+    //   * selectedCount >= 2              -> merge the selection
+    //   * selectedCount == 1, count > 1   -> extend selection to the
+    //                                        nearest right neighbour
+    //                                        (wrap to left if active is
+    //                                        the rightmost), then merge
+    //   * selectedCount == 1, count == 1  -> spawn a new tab on the right
+    //                                        and merge against it so the
+    //                                        gesture never feels like a
+    //                                        no-op for the user
+    // The toolbar split button + F3 + the close-split context action all
+    // dispatch through this single function.
+    function toggleMergeOrUnmerge() {
         if (!tabModel.activeTab)
             return
-
-        var enable = !tabModel.activeTab.splitViewEnabled
-        if (enable) {
-            root.clearPaneSearch(1)
-            root.setPaneRecents(1, false)
-            tabModel.activeTab.resetSecondaryTo(tabModel.activeTab.currentPath)
+        if (tabModel.activeTab.isSupertab) {
+            tabModel.unmergeActive()
+            return
         }
 
-        if (!enable) {
-            root.clearPaneSearch(1)
-            root.setPaneRecents(1, false)
-            if (activePaneIndex === 1)
-                activePaneIndex = 0
+        if (tabModel.selectedCount >= 2) {
+            tabModel.mergeSelected()
+            return
         }
 
-        tabModel.activeTab.splitViewEnabled = enable
-        root.updateSelectionStatus()
+        // selectedCount == 1 — extend automatically.
+        var active = tabModel.activeIndex
+        var count = tabModel.count
+
+        if (count <= 1) {
+            // Lone tab.  Spawn a fresh one; addTab makes the new tab the
+            // only-selected active, so re-arm the original via toggle then
+            // merge.
+            tabModel.addTab()
+            tabModel.toggleSelected(active)
+            tabModel.mergeSelected()
+            return
+        }
+
+        // Multi-tab, single selection.  Prefer the right neighbour; fall
+        // back to the left when the active is already the rightmost tab.
+        var neighbour = active + 1
+        if (neighbour >= count)
+            neighbour = active - 1
+        if (neighbour < 0)
+            return  // shouldn't happen — count > 1 guarantees a neighbour
+        tabModel.toggleSelected(neighbour)
+        tabModel.mergeSelected()
     }
 
     function activePaneCanGoBack() {
@@ -2697,7 +2727,7 @@ ApplicationWindow {
 
         onCustomActionRequested: (action) => {
             if (action === "close_split")
-                root.toggleSplitView()
+                root.toggleMergeOrUnmerge()
         }
 
         onViewModeRequested: (mode) => {
@@ -2799,6 +2829,14 @@ ApplicationWindow {
         onActivated: tabModel.mergeSelected()
     }
 
+    // Phase 2 P2-M8 temporary trigger: Ctrl+Shift+M dissolves the active
+    // supertab back into its constituent tabs.  Same toolbar button as
+    // merge will likely host this too (chain-link toggle).
+    Shortcut {
+        sequence: "Ctrl+Shift+M"
+        onActivated: tabModel.unmergeActive()
+    }
+
     Shortcut {
         sequence: config.shortcutMap["reopen_tab"]
         onActivated: tabModel.reopenClosedTab()
@@ -2871,7 +2909,7 @@ ApplicationWindow {
 
     Shortcut {
         sequence: config.shortcutMap["split_view"]
-        onActivated: root.toggleSplitView()
+        onActivated: root.toggleMergeOrUnmerge()
     }
 
     Shortcut {
@@ -3390,7 +3428,7 @@ ApplicationWindow {
                         fileOps.restoreFromTrash(paths)
                 }
                 onEmptyTrashRequested: emptyTrashConfirmDialog.open()
-                onSplitViewToggled: root.toggleSplitView()
+                onSplitViewToggled: root.toggleMergeOrUnmerge()
                 onHomeClicked: {
                     root.navigateActivePaneTo(fsModel.homePath())
                 }
