@@ -16,11 +16,13 @@ ApplicationWindow {
     visibility: Window.Windowed
     title: "HyprFM"
     color: "transparent"
-    flags: Qt.platform.os === "linux" && runtimeFeatures.useIntegratedWindowControls
+    // Heimdall fork: always frameless on Linux. Compositor (Hyprland) handles
+    // close/minimize/maximize via keybinds; in-app controls are intentionally
+    // dropped (see Toolbar.qml — showWindowControls is hardcoded false below).
+    flags: Qt.platform.os === "linux"
         ? (Qt.Window | Qt.FramelessWindowHint) : Qt.Window
 
-    readonly property bool useIntegratedWindowControls: Qt.platform.os === "linux"
-        && config.showWindowControls
+    readonly property bool useIntegratedWindowControls: false
 
     property bool primaryPaneIsRecents: false
     property bool secondaryPaneIsRecents: false
@@ -3370,7 +3372,7 @@ ApplicationWindow {
                 isTrashView: root.isTrashView
                 isRemoteView: root.isRemoteView
                 searchMode: root.searchMode
-                showWindowControls: root.useIntegratedWindowControls
+                showWindowControls: false
                 windowButtonLayout: config.windowButtonLayout
                 currentSearchQuery: root.searchProxyForPane(activePane).searchQuery
                 searchTypeFilter: root.searchProxyForPane(activePane).fileTypeFilter

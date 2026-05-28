@@ -91,8 +91,11 @@ Rectangle {
     implicitHeight: toolbarColumn.implicitHeight
     color: Theme.mantle
 
+    // Heimdall fork: window is always frameless on Linux, so the toolbar is
+    // the only drag region. Enable the handler whenever a window is present
+    // rather than gating it on the now-removed in-app window controls.
     DragHandler {
-        enabled: root.showWindowControls && root.window
+        enabled: root.window !== null
         target: null
         acceptedButtons: Qt.LeftButton
         onActiveChanged: {
