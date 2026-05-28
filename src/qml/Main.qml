@@ -3252,12 +3252,26 @@ ApplicationWindow {
     }
 
     // ── Layout ──────────────────────────────────────────────────────────────
-    RowLayout {
+    // Browser-style: TabBar runs full window width above everything, then a
+    // RowLayout splits Sidebar | (Toolbar over Content over StatusBar).
+    ColumnLayout {
         id: mainContent
         anchors.fill: parent
         spacing: 0
         LayoutMirroring.enabled: config.sidebarPosition === "right"
         LayoutMirroring.childrenInherit: false
+
+        TabBar {
+            id: tabBar
+            Layout.fillWidth: true
+            onTransferRequested: (paths, destinationPath, moveOperation) =>
+                root.beginTransfer(paths, destinationPath, moveOperation, false)
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            spacing: 0
 
         // Sidebar (full height, animated)
         Item {
@@ -3632,6 +3646,7 @@ ApplicationWindow {
                     selectedSizePending: root.currentSelectedSizePending
                 }
             }
+        }
         }
     }
 

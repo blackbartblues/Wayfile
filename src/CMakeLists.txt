@@ -82,7 +82,7 @@ list(APPEND heimdall_qml_module_args
         qml/components/StatusBar.qml
         qml/components/OperationsBar.qml
         qml/components/Sidebar.qml
-        qml/components/FileTabBar.qml
+        qml/components/TabBar.qml
         qml/components/Breadcrumb.qml
         qml/components/Toolbar.qml
         qml/components/HoverRect.qml
