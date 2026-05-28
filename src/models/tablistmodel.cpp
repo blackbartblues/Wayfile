@@ -258,6 +258,41 @@ void TabListModel::mergeSelected()
     if (m_selectedIndices.size() < 2)
         return;
 
+    // Phase 2: pre-flight check.  Sum the panes the merge would actually
+    // need to host — selected supertabs contribute their full paneCount
+    // because we dissolve them before merging so their content survives.
+    int totalPanes = 0;
+    for (int idx : std::as_const(m_selectedIndices)) {
+        if (idx >= 0 && idx < m_tabs.size())
+            totalPanes += m_tabs[idx]->paneCount();
+    }
+    if (totalPanes > kMaxPanes) {
+        emit selectionLimitReached(
+            tr("Merge would exceed %1 panes").arg(kMaxPanes));
+        return;
+    }
+
+    // Phase 2: if any selected tab is already a supertab, dissolve it
+    // first so its panes participate in the new merge instead of being
+    // silently dropped by the receiver's compactToPrimary.  unmergeAt
+    // re-selects the spawned tabs, so the next iteration picks them up.
+    bool unmergedAny = true;
+    while (unmergedAny) {
+        unmergedAny = false;
+        const QList<int> sortedSelection = selectedIndices();
+        for (int i = sortedSelection.size() - 1; i >= 0; --i) {
+            const int idx = sortedSelection[i];
+            if (idx >= 0 && idx < m_tabs.size() && m_tabs[idx]->isSupertab()) {
+                unmergeAt(idx);
+                unmergedAny = true;
+                break;  // selection set changed; re-query
+            }
+        }
+    }
+
+    if (m_selectedIndices.size() < 2)
+        return;
+
     const QList<int> sorted = selectedIndices();  // ascending
     const int receiverIdx = sorted.first();
     TabModel *receiver = m_tabs[receiverIdx];
