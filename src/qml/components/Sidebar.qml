@@ -80,7 +80,7 @@ Rectangle {
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.verticalCenter: parent.verticalCenter
-                text: "Hyprfm"
+                text: "Heimdall"
                 color: Theme.text
                 font.pointSize: Theme.fontLarge
                 font.weight: Font.Bold

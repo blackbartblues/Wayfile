@@ -211,12 +211,11 @@ int main(int argc, char *argv[])
     if (themesDir.isEmpty())
         qWarning() << "Heimdall: unable to locate themes directory";
 
-    // Heimdall fork: Bifröst is the signature dark theme. Catppuccin variants
-    // remain shipped as user-selectable alternatives but are no longer the
-    // first-launch default.
-    const QString systemDefaultTheme = app.styleHints()->colorScheme() == Qt::ColorScheme::Light
-        ? QStringLiteral("catppuccin-latte")
-        : QStringLiteral("bifrost");
+    // Heimdall fork: Bifröst is the signature theme. There's no Bifröst-light
+    // variant yet, so we ignore the system colorScheme hint on first launch
+    // and always seed bifrost. Once a light Bifröst token set ships, restore
+    // the colorScheme-aware branch and pick between bifrost / bifrost-light.
+    const QString systemDefaultTheme = QStringLiteral("bifrost");
 
     // Create backend instances
     ConfigManager *config = new ConfigManager(configPath, &app, themesDir, systemDefaultTheme);
