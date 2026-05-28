@@ -89,7 +89,6 @@ Rectangle {
             text: statusBar.activePath
             color: Theme.subtext
             font.pointSize: Theme.fontSmall
-            font.styleHint: Font.Monospace
             font.family: "monospace"
             elide: Text.ElideMiddle
             horizontalAlignment: Text.AlignHCenter
