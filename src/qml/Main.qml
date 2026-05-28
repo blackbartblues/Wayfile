@@ -548,6 +548,24 @@ ApplicationWindow {
         root.setActivePane(activePaneIndex === 0 ? 1 : 0)
     }
 
+    // Phase 2 P2-M9: close the pane at idx.  If the tab is single-pane
+    // after this we let the underlying TabModel demote it out of supertab
+    // / split-view mode automatically; if it was already single-pane
+    // (the keyboard shortcut path on a non-supertab tab) we route the
+    // close through TabListModel so the whole tab goes instead.
+    function closePaneAt(idx) {
+        if (!tabModel.activeTab)
+            return
+        if (tabModel.activeTab.paneCount > 1) {
+            // Drop the active marker back to primary if we just nuked it.
+            if (root.activePaneIndex === idx)
+                root.activePaneIndex = 0
+            tabModel.activeTab.removePane(idx)
+        } else if (tabModel.count > 1) {
+            tabModel.closeTab(tabModel.activeIndex)
+        }
+    }
+
     function navigatePaneTo(pane, path) {
         if (!tabModel.activeTab || !path)
             return
@@ -2868,7 +2886,10 @@ ApplicationWindow {
     Shortcut {
         sequence: config.shortcutMap["close_tab"]
         onActivated: {
-            if (tabModel.count > 1) tabModel.closeTab(tabModel.activeIndex)
+            // Phase 2 P2-M9: Ctrl+W contextually closes the active pane
+            // when the tab has >1 pane (supertab / split view), and the
+            // whole tab otherwise — 'close what I'm currently looking at'.
+            root.closePaneAt(root.activePaneIndex)
         }
     }
 
@@ -3593,6 +3614,7 @@ ApplicationWindow {
                             }
                             onContextMenuRequested: (filePath, isDirectory, position) =>
                                 root.showContextMenuForPane(index, filePath, isDirectory, position)
+                            onCloseRequested: root.closePaneAt(index)
                         }
                     }
                 }

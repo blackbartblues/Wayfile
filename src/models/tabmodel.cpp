@@ -376,17 +376,32 @@ int TabModel::addPane(const QString &path)
 
 bool TabModel::removePane(int idx)
 {
-    // Floor at 2 for now so the existing primary / secondary Q_PROPERTY
-    // surface (and the paneRow layout that still relies on it) keeps
-    // working.  P2-M8 (close-pane-within-supertab) will revisit this and
-    // demote a 2-pane tab back to single-pane via TabListModel logic.
+    // Phase 2 P2-M9: allow shrinking down to 1 pane.  When it does drop to
+    // single-pane the tab demotes out of supertab / split-view mode so
+    // title() goes back to just the primary name and Main.qml's Repeater
+    // collapses to one frame.
     if (idx < 0 || idx >= m_panes.size())
         return false;
-    if (m_panes.size() <= 2)
+    if (m_panes.size() <= 1)
         return false;
     m_panes.removeAt(idx);
     emit panesChanged();
     emit titleChanged();
+
+    if (m_panes.size() == 1) {
+        if (m_isSupertab) {
+            m_isSupertab = false;
+            emit supertabChanged();
+            emit titleChanged();
+        }
+        if (m_splitViewEnabled) {
+            m_splitViewEnabled = false;
+            emit splitViewEnabledChanged();
+        }
+        m_secondaryInitialized = false;
+        emit secondaryCurrentPathChanged();
+        emit secondaryHistoryChanged();
+    }
     return true;
 }
 

@@ -33,6 +33,10 @@ Rectangle {
     signal selectionChanged()
     signal transferRequested(var paths, string destinationPath, bool moveOperation)
     signal contextMenuRequested(string filePath, bool isDirectory, var position)
+    // Phase 2 P2-M9: user-driven 'close this pane' (X button or Ctrl+W).
+    // Main.qml routes this to TabModel.removePane(paneIndex); the receiver
+    // handles the demote-to-single-pane / kill-the-tab edge cases.
+    signal closeRequested()
 
     // Expose the inner FileViewContainer so Main.qml's fileViewForPane() can
     // still reach it through primaryPaneFrame.fileView or
@@ -98,5 +102,42 @@ Rectangle {
                           ? 0.08 * paneFrame.splitTransitionProgress
                           : 0.08)
         Behavior on border.color { ColorAnimation { duration: Theme.animDuration } }
+    }
+
+    // Phase 2 P2-M9: close-this-pane button.  Shown only when the row is
+    // already multi-pane (splitViewPresented) — single-pane tabs use the
+    // tab strip's × instead.  Sits above the border overlay so it stays
+    // clickable.
+    Rectangle {
+        id: closePaneButton
+        visible: paneFrame.splitViewPresented
+        width: 22
+        height: 22
+        radius: 11
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.topMargin: 6
+        anchors.rightMargin: 6
+        z: 11
+        color: closePaneHover.hovered
+            ? Qt.rgba(Theme.error.r, Theme.error.g, Theme.error.b, 0.85)
+            : Qt.rgba(Theme.mantle.r, Theme.mantle.g, Theme.mantle.b, 0.55)
+        Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+        opacity: closePaneHover.hovered || closePaneArea.containsMouse ? 1 : 0.65
+
+        IconX {
+            anchors.centerIn: parent
+            size: 11
+            color: closePaneHover.hovered ? Theme.base : Theme.text
+        }
+
+        MouseArea {
+            id: closePaneArea
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.LeftButton
+            onClicked: paneFrame.closeRequested()
+        }
+        HoverHandler { id: closePaneHover; cursorShape: Qt.PointingHandCursor }
     }
 }
