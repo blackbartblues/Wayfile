@@ -22,6 +22,11 @@ Rectangle {
     property bool selectedSizePending: false
     property string searchStatus: ""
 
+    // Heimdall design-canvas: active pane absolute path shown in mono font,
+    // middle-truncated. Empty hides the segment so trash/recents/search views
+    // (which don't have a meaningful path) don't render a stale label.
+    property string activePath: ""
+
     height: 28
     color: Theme.mantle
     clip: false
@@ -64,9 +69,9 @@ Rectangle {
         anchors.fill: parent
         anchors.leftMargin: Theme.spacing
         anchors.rightMargin: Theme.spacing
+        spacing: Theme.spacing
 
         Text {
-            Layout.fillWidth: true
             text: {
                 const files = statusBar.itemCount - statusBar.folderCount
                 return statusBar.itemCount + " items (" + statusBar.folderCount + " folders, " + files + " files)"
@@ -75,6 +80,24 @@ Rectangle {
             font.pointSize: Theme.fontSmall
             verticalAlignment: Text.AlignVCenter
         }
+
+        // Active-pane path. Mono font + middle-elide give a stable visual
+        // anchor even when paths are long ("/home/blacku/.../some-folder").
+        Text {
+            Layout.fillWidth: true
+            visible: statusBar.activePath !== ""
+            text: statusBar.activePath
+            color: Theme.subtext
+            font.pointSize: Theme.fontSmall
+            font.styleHint: Font.Monospace
+            font.family: "monospace"
+            elide: Text.ElideMiddle
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+        }
+
+        // Spacer when the path is hidden so selected/search hug the right edge.
+        Item { Layout.fillWidth: true; visible: statusBar.activePath === "" }
 
         Text {
             visible: statusBar.selectedCount > 0

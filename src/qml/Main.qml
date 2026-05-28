@@ -3616,6 +3616,12 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     itemCount: root.activeItemCount()
                     folderCount: root.activeFolderCount()
+                    // Heimdall design-canvas: active-pane absolute path in mono.
+                    // Hidden during search (the result-count message replaces it)
+                    // and for virtual views (recents) where there's no real path.
+                    activePath: (root.searchMode || root.isRecentsView)
+                        ? ""
+                        : root.panePath(activePane)
                     searchStatus: root.searchMode && root.searchServiceForPane(activePane).isSearching
                         ? "Searching... " + root.searchServiceForPane(activePane).resultCount + " results"
                         : (root.searchMode && root.searchProxyForPane(activePane).searchActive
