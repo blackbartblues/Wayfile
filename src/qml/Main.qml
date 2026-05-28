@@ -14,7 +14,7 @@ ApplicationWindow {
     minimumWidth: 760
     minimumHeight: 520
     visibility: Window.Windowed
-    title: "HyprFM"
+    title: "Heimdall"
     color: "transparent"
     // Heimdall fork: always frameless on Linux. Compositor (Hyprland) handles
     // close/minimize/maximize via keybinds; in-app controls are intentionally

@@ -115,9 +115,9 @@ int main(int argc, char *argv[])
     }
 
     QGuiApplication app(argc, argv);
-    app.setApplicationName("HyprFM");
-    app.setOrganizationName("hyprfm");
-    app.setDesktopFileName("hyprfm");
+    app.setApplicationName("Heimdall");
+    app.setOrganizationName("Heimdall");
+    app.setDesktopFileName("heimdall");
 
     // Startup timing: opt-in via HYPRFM_TIMING=1 so normal runs stay quiet.
     // Prints milliseconds from QGuiApplication construction at each phase.
@@ -172,8 +172,13 @@ int main(int argc, char *argv[])
     };
 
     // Ensure config directory exists
+    // Heimdall fork: user-visible config dir is ~/.config/heimdall. The CMake
+    // install-time data dir macros (HYPRFM_DATA_DIR, HYPRFM_SOURCE_DIR) still
+    // reference the upstream name — they're rebuild-time paths for finding
+    // shipped themes, not user config — and will be renamed in a follow-up
+    // CMakeLists pass.
     const QString configDir = QStandardPaths::writableLocation(QStandardPaths::HomeLocation)
-                              + "/.config/hyprfm";
+                              + "/.config/heimdall";
     QDir().mkpath(configDir);
     const QString configPath = configDir + "/config.toml";
 
