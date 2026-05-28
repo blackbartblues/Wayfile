@@ -83,6 +83,8 @@ list(APPEND heimdall_qml_module_args
         qml/components/OperationsBar.qml
         qml/components/Sidebar.qml
         qml/components/TabBar.qml
+        qml/components/PaneFrame.qml
+        qml/components/SplitPaneHeader.qml
         qml/components/Breadcrumb.qml
         qml/components/Toolbar.qml
         qml/components/HoverRect.qml

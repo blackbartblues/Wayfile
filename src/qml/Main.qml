@@ -272,41 +272,9 @@ ApplicationWindow {
         return root.pathDisplayName(root.panePath(pane))
     }
 
-    component SplitPaneHeader: Item {
-        id: splitPaneHeader
-
-        property string title: ""
-        property bool activePaneHeader: false
-
-        Layout.fillWidth: true
-        Layout.preferredHeight: 34
-
-        Rectangle {
-            anchors.fill: parent
-            radius: Theme.radiusMedium
-            color: Qt.rgba(Theme.mantle.r, Theme.mantle.g, Theme.mantle.b, 0.7)
-        }
-
-        Rectangle {
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.bottom: parent.bottom
-            height: Theme.radiusMedium
-            color: Qt.rgba(Theme.mantle.r, Theme.mantle.g, Theme.mantle.b, 0.7)
-        }
-
-        Text {
-            anchors.fill: parent
-            anchors.leftMargin: 12
-            anchors.rightMargin: 12
-            text: splitPaneHeader.title
-            color: splitPaneHeader.activePaneHeader ? Theme.accent : Theme.text
-            font.pointSize: Theme.fontNormal
-            font.weight: Font.DemiBold
-            elide: Text.ElideRight
-            verticalAlignment: Text.AlignVCenter
-        }
-    }
+    // SplitPaneHeader moved to components/SplitPaneHeader.qml so PaneFrame
+    // (which also lives in the Heimdall module) can reach it via plain
+    // `import Heimdall` rather than depending on this inline-component scope.
 
     function parentDirForPath(path) {
         var slashIndex = path.lastIndexOf("/")
@@ -438,7 +406,7 @@ ApplicationWindow {
         if (pane === "secondary")
             return secondaryPaneLoader.item ? secondaryPaneLoader.item.fileView : null
 
-        return primaryFileViewContainer
+        return primaryPaneFrame.fileView
     }
 
     function activeFileView() {
@@ -3480,62 +3448,33 @@ ApplicationWindow {
                         (width - spacing - dividerWidth) * 0.5 * root.splitTransitionProgress
                     )
 
-                    Rectangle {
+                    PaneFrame {
                         id: primaryPaneFrame
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        radius: Theme.radiusMedium * root.splitTransitionProgress
-                        clip: true
-                        // Fill stays opaque the entire time so the pane never
-                        // flashes transparent at progress ≈ 0 during close.
-                        // Only the split-specific border tint fades.
-                        color: Theme.containerColor(Theme.crust, 0.14)
+                        paneIndex: 0
+                        paneName: "primary"
+                        active: root.activePane === "primary"
+                        splitViewPresented: root.splitViewPresented
+                        splitTransitionProgress: root.splitTransitionProgress
+                        paneTitle: root.paneDisplayName("primary")
+                        paneFileModel: root.paneModel("primary")
+                        paneCurrentPath: root.panePath("primary")
+                        paneViewMode: tabModel.activeTab ? tabModel.activeTab.viewMode : "grid"
 
-                        ColumnLayout {
-                            anchors.fill: parent
-                            spacing: 0
-
-                            SplitPaneHeader {
-                                Layout.preferredHeight: visible ? 34 : 0
-                                visible: root.splitViewPresented
-                                title: root.paneDisplayName("primary")
-                                activePaneHeader: root.activePane === "primary"
-                            }
-
-                            FileViewContainer {
-                                id: primaryFileViewContainer
-                                Layout.fillWidth: true
-                                Layout.fillHeight: true
-                                fileModel: root.paneModel("primary")
-                                viewMode: tabModel.activeTab ? tabModel.activeTab.viewMode : "grid"
-                                currentPath: root.panePath("primary")
-
-                                onInteractionStarted: root.setActivePane("primary")
-                                onFileActivated: (filePath, isDirectory) => root.handlePaneFileActivated("primary", filePath, isDirectory)
-                                onSelectionChanged: {
-                                    root.setActivePane("primary")
-                                    root.updateSelectionStatus()
-                                }
-                                onTransferRequested: (paths, destinationPath, moveOperation) => {
-                                    root.setActivePane("primary")
-                                    root.beginTransfer(paths, destinationPath, moveOperation, false)
-                                }
-                                onContextMenuRequested: (filePath, isDirectory, position) =>
-                                    root.showContextMenuForPane("primary", filePath, isDirectory, position)
-                            }
+                        onInteractionStarted: root.setActivePane("primary")
+                        onFileActivated: (filePath, isDirectory) =>
+                            root.handlePaneFileActivated("primary", filePath, isDirectory)
+                        onSelectionChanged: {
+                            root.setActivePane("primary")
+                            root.updateSelectionStatus()
                         }
-
-                        Rectangle {
-                            anchors.fill: parent
-                            z: 10
-                            color: "transparent"
-                            radius: primaryPaneFrame.radius
-                            border.width: root.splitTransitionProgress
-                            border.color: root.activePane === "primary"
-                                ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.45 * root.splitTransitionProgress)
-                                : Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.08 * root.splitTransitionProgress)
-                            Behavior on border.color { ColorAnimation { duration: Theme.animDuration } }
+                        onTransferRequested: (paths, destinationPath, moveOperation) => {
+                            root.setActivePane("primary")
+                            root.beginTransfer(paths, destinationPath, moveOperation, false)
                         }
+                        onContextMenuRequested: (filePath, isDirectory, position) =>
+                            root.showContextMenuForPane("primary", filePath, isDirectory, position)
                     }
 
                     Loader {
@@ -3561,59 +3500,34 @@ ApplicationWindow {
                         Layout.preferredWidth: paneRow.secondaryPreferredWidth
                         Layout.fillHeight: true
 
-                        sourceComponent: Rectangle {
+                        sourceComponent: PaneFrame {
                             id: secondaryPaneFrame
-                            property alias fileView: secondaryFileViewContainer
                             opacity: root.splitTransitionProgress
                             scale: 0.96 + (0.04 * root.splitTransitionProgress)
                             transformOrigin: Item.Right
-                            radius: Theme.radiusMedium
-                            clip: true
-                            color: Theme.containerColor(Theme.crust, 0.14)
+                            paneIndex: 1
+                            paneName: "secondary"
+                            active: root.activePane === "secondary"
+                            splitViewPresented: root.splitViewPresented
+                            splitTransitionProgress: root.splitTransitionProgress
+                            paneTitle: root.paneDisplayName("secondary")
+                            paneFileModel: root.paneModel("secondary")
+                            paneCurrentPath: root.panePath("secondary")
+                            paneViewMode: tabModel.activeTab ? tabModel.activeTab.viewMode : "grid"
 
-                            ColumnLayout {
-                                anchors.fill: parent
-                                spacing: 0
-
-                                SplitPaneHeader {
-                                    title: root.paneDisplayName("secondary")
-                                    activePaneHeader: root.activePane === "secondary"
-                                }
-
-                                FileViewContainer {
-                                    id: secondaryFileViewContainer
-                                    Layout.fillWidth: true
-                                    Layout.fillHeight: true
-                                    fileModel: root.paneModel("secondary")
-                                    viewMode: tabModel.activeTab ? tabModel.activeTab.viewMode : "grid"
-                                    currentPath: root.panePath("secondary")
-
-                                    onInteractionStarted: root.setActivePane("secondary")
-                                    onFileActivated: (filePath, isDirectory) => root.handlePaneFileActivated("secondary", filePath, isDirectory)
-                                    onSelectionChanged: {
-                                        root.setActivePane("secondary")
-                                        root.updateSelectionStatus()
-                                    }
-                                    onTransferRequested: (paths, destinationPath, moveOperation) => {
-                                        root.setActivePane("secondary")
-                                        root.beginTransfer(paths, destinationPath, moveOperation, false)
-                                    }
-                                    onContextMenuRequested: (filePath, isDirectory, position) =>
-                                        root.showContextMenuForPane("secondary", filePath, isDirectory, position)
-                                }
+                            onInteractionStarted: root.setActivePane("secondary")
+                            onFileActivated: (filePath, isDirectory) =>
+                                root.handlePaneFileActivated("secondary", filePath, isDirectory)
+                            onSelectionChanged: {
+                                root.setActivePane("secondary")
+                                root.updateSelectionStatus()
                             }
-
-                            Rectangle {
-                                anchors.fill: parent
-                                z: 10
-                                color: "transparent"
-                                radius: secondaryPaneFrame.radius
-                                border.width: 1
-                                border.color: root.activePane === "secondary"
-                                    ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.45)
-                                    : Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.08)
-                                Behavior on border.color { ColorAnimation { duration: Theme.animDuration } }
+                            onTransferRequested: (paths, destinationPath, moveOperation) => {
+                                root.setActivePane("secondary")
+                                root.beginTransfer(paths, destinationPath, moveOperation, false)
                             }
+                            onContextMenuRequested: (filePath, isDirectory, position) =>
+                                root.showContextMenuForPane("secondary", filePath, isDirectory, position)
                         }
                     }
                 }
