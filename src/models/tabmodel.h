@@ -66,6 +66,18 @@ public:
     Q_INVOKABLE QString paneCurrentPath(int idx) const;
     Q_INVOKABLE QString paneViewMode(int idx) const;
 
+    // Phase 2 P2-M4: supertab marker.  Set by TabListModel::mergeSelected
+    // on the receiver tab; cleared when the supertab dissolves back to a
+    // single pane (P2-M9 close-pane-in-supertab).  Lets title() distinguish
+    // '2-pane merged supertab' (show 'A · B') from '2-pane that used to be
+    // split but isn't right now' (show just primary).
+    bool isSupertab() const { return m_isSupertab; }
+    Q_INVOKABLE void setSupertab(bool on);
+    // Drop every pane past index 0 and turn split view off, so a merge
+    // action starts with a clean primary pane regardless of the tab's
+    // prior split state.
+    void compactToPrimary();
+
 signals:
     void currentPathChanged();
     void titleChanged();
@@ -82,6 +94,11 @@ signals:
     void panesChanged();
 
 private:
+    // Phase 2 P2-M4: secondary pane is grown lazily the first time anything
+    // reaches for it.  Keeps a fresh tab at paneCount == 1 so merge actions
+    // don't pull along a stale home-dir constructor leftover.
+    void ensureSecondaryPane();
+
     // Phase 1 M4: m_panes is the single source of truth for every per-pane
     // field (currentPath, viewMode, sortBy, sortAscending, backStack,
     // forwardStack).  Index 0 == primary, index 1 == secondary today; later
@@ -91,7 +108,9 @@ private:
     // Tab-level state that isn't per-pane.  splitViewEnabled toggles whether
     // the secondary pane is rendered; secondaryInitialized tracks whether
     // the secondary pane has ever been navigated (used to seed it from the
-    // primary path the first time split view is enabled).
+    // primary path the first time split view is enabled).  isSupertab is
+    // set when this tab is the receiver of a merge gesture.
     bool m_splitViewEnabled = false;
     bool m_secondaryInitialized = false;
+    bool m_isSupertab = false;
 };

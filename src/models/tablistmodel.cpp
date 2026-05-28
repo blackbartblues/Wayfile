@@ -253,6 +253,68 @@ void TabListModel::toggleSelected(int index)
     emit selectionChanged();
 }
 
+void TabListModel::mergeSelected()
+{
+    if (m_selectedIndices.size() < 2)
+        return;
+
+    const QList<int> sorted = selectedIndices();  // ascending
+    const int receiverIdx = sorted.first();
+    TabModel *receiver = m_tabs[receiverIdx];
+
+    // Snapshot the donor paths before we touch anything else; once we
+    // start removing rows the indices in `sorted` go stale.
+    QStringList donorPaths;
+    for (int i = 1; i < sorted.size(); ++i)
+        donorPaths.append(m_tabs[sorted[i]]->currentPath());
+
+    // Phase 2 P2-M4: reset the receiver to a clean single-pane state
+    // before appending donors.  Any stored secondary (live split or
+    // hidden after split-off) gets discarded — merge takes 'visible
+    // now' state only.
+    receiver->compactToPrimary();
+
+    // Push donors into the receiver as new panes.  addPane refuses past
+    // kMaxPanes so this is bounded automatically.
+    for (const QString &path : donorPaths) {
+        if (receiver->addPane(path) < 0)
+            break;
+    }
+
+    // Mark the receiver as a supertab so title() joins every pane's name.
+    receiver->setSupertab(true);
+
+    // Remove donor rows from the high end down so earlier indices remain
+    // valid while we work.
+    QList<int> donorIndices = sorted.mid(1);
+    std::sort(donorIndices.begin(), donorIndices.end(), std::greater<int>());
+    for (int idx : donorIndices) {
+        beginRemoveRows(QModelIndex(), idx, idx);
+        TabModel *donor = m_tabs.takeAt(idx);
+        donor->deleteLater();
+        endRemoveRows();
+    }
+
+    // Selection collapses to {receiver}; receiver's row index didn't shift
+    // because it was the lowest of the sorted set.
+    m_selectedIndices.clear();
+    m_selectedIndices.insert(receiverIdx);
+
+    if (m_activeIndex != receiverIdx) {
+        m_activeIndex = receiverIdx;
+        emit activeIndexChanged();
+    }
+
+    // Receiver's TitleRole now reflects the joined supertab title; nudge
+    // the view layer.
+    const QModelIndex midx = createIndex(receiverIdx, 0);
+    emit dataChanged(midx, midx, {TitleRole, PathRole, IsSelectedRole});
+
+    emit countChanged();
+    emit selectionChanged();
+    emit sessionChanged();
+}
+
 void TabListModel::activateAndCollapseSelection(int index)
 {
     if (index < 0 || index >= m_tabs.size())
@@ -330,7 +392,11 @@ void TabListModel::reopenClosedTab()
     auto *tab = new TabModel(this);
     tab->navigateTo(info.path);
     tab->setViewMode(info.viewMode);
-    tab->setSecondaryCurrentPath(info.secondaryPath);
+    // Phase 2 P2-M4: only grow the secondary pane if the closed tab actually
+    // had split view on.  A non-split tab stays at paneCount == 1 so a later
+    // merge gesture doesn't pull along a stale secondary path.
+    if (info.splitViewEnabled && !info.secondaryPath.isEmpty())
+        tab->setSecondaryCurrentPath(info.secondaryPath);
     tab->setSortBy(info.sortBy);
     tab->setSortAscending(info.sortAscending);
     tab->setSplitViewEnabled(info.splitViewEnabled);
@@ -372,8 +438,15 @@ void TabListModel::restoreSession(const QJsonArray &tabs, int activeIdx)
         auto *tab = new TabModel(this);
         tab->navigateTo(normalizedSessionPath(obj.value("path").toString()));
         tab->setViewMode(obj.value("viewMode").toString("grid"));
-        tab->setSplitViewEnabled(obj.value("splitViewEnabled").toBool(false));
-        tab->setSecondaryCurrentPath(normalizedSessionPath(obj.value("secondaryPath").toString(tab->currentPath())));
+        const bool splitEnabled = obj.value("splitViewEnabled").toBool(false);
+        tab->setSplitViewEnabled(splitEnabled);
+        // Phase 2 P2-M4: skip secondary restore for non-split tabs so they
+        // come back at paneCount == 1 (matches the lazy-grow constructor).
+        if (splitEnabled) {
+            const QString secondaryPath = normalizedSessionPath(
+                obj.value("secondaryPath").toString(tab->currentPath()));
+            tab->setSecondaryCurrentPath(secondaryPath);
+        }
         tab->setSortBy(obj.value("sortBy").toString("name"));
         tab->setSortAscending(obj.value("sortAscending").toBool(true));
         m_tabs.append(tab);

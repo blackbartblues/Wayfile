@@ -71,7 +71,10 @@ private slots:
         TabModel tab;
 
         QCOMPARE(tab.splitViewEnabled(), false);
-        QCOMPARE(tab.secondaryCurrentPath(), QDir::homePath());
+        // Phase 2 P2-M4: secondary pane is lazy.  Before split is enabled
+        // (and before merge / setSecondaryCurrentPath / etc.), paneCount
+        // stays at 1 and the secondary accessors report empty / false.
+        QCOMPARE(tab.secondaryCurrentPath(), QString());
         QCOMPARE(tab.secondaryCanGoBack(), false);
         QCOMPARE(tab.secondaryCanGoForward(), false);
 
@@ -378,7 +381,12 @@ private slots:
         QJsonObject tab;
         tab["path"] = "/definitely/missing/path/for/heimdall";
         tab["viewMode"] = "grid";
-        tab["splitViewEnabled"] = false;
+        // Phase 2 P2-M4: the secondary pane is grown lazily only when the
+        // saved splitViewEnabled is true.  Restoring a non-split tab leaves
+        // paneCount == 1 (secondaryCurrentPath returns empty), which is the
+        // intentional new behaviour — non-split tabs no longer carry along
+        // a stale secondary path waiting to surface in a merge supertab.
+        tab["splitViewEnabled"] = true;
         tab["secondaryPath"] = "/another/missing/path";
         tab["sortBy"] = "name";
         tab["sortAscending"] = true;

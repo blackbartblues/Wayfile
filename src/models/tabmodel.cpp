@@ -72,16 +72,29 @@ QString parentLocation(const QString &path)
 TabModel::TabModel(QObject *parent)
     : QObject(parent)
 {
-    // Phase 1 M4: pane storage is the only state today.  Default-construct
-    // two entries (one per pane) and seed currentPath to the user's home;
-    // viewMode / sortBy / sortAscending pick up their PaneState defaults.
+    // Phase 2 P2-M4 fix: only the primary pane is seeded up-front.  The
+    // secondary pane is grown lazily by ensureSecondaryPane() the moment
+    // anything actually needs it (split view toggle, setSecondaryCurrentPath,
+    // navigateSecondaryTo, resetSecondaryTo, session restore with a
+    // saved splitViewEnabled=true).  This keeps the merge action clean —
+    // a freshly merged supertab doesn't drag along a leftover home-dir
+    // PaneState[1] that would show up as 'home' in the joined title.
     PaneState primary;
     primary.currentPath = QDir::homePath();
     m_panes.append(primary);
+}
 
+void TabModel::ensureSecondaryPane()
+{
+    if (m_panes.size() >= 2)
+        return;
     PaneState secondary;
-    secondary.currentPath = QDir::homePath();
+    secondary.currentPath = m_panes[0].currentPath;
+    secondary.viewMode = m_panes[0].viewMode;
+    secondary.sortBy = m_panes[0].sortBy;
+    secondary.sortAscending = m_panes[0].sortAscending;
     m_panes.append(secondary);
+    emit panesChanged();
 }
 
 // Phase 1 M3: public readers pull from m_panes.  Mirror fields still exist
@@ -92,20 +105,53 @@ QString TabModel::currentPath() const { return m_panes[0].currentPath; }
 
 QString TabModel::title() const
 {
-    const QString primaryTitle = displayNameForPath(m_panes[0].currentPath);
-    if (!m_splitViewEnabled)
-        return primaryTitle;
+    if (m_panes.isEmpty())
+        return {};
+    const QString name0 = displayNameForPath(m_panes[0].currentPath);
 
-    return primaryTitle + QStringLiteral(" / ") + displayNameForPath(m_panes[1].currentPath);
+    // Phase 2 P2-M4: merged supertab — every pane is live, join names with
+    // ' · ' per the Heimdall design canvas.  This is the only place where
+    // a tab can legitimately surface m_panes[1+] outside split view.
+    if (m_isSupertab) {
+        QStringList names;
+        names.reserve(m_panes.size());
+        for (const PaneState &p : m_panes)
+            names.append(displayNameForPath(p.currentPath));
+        return names.join(QStringLiteral(" · "));
+    }
+
+    // Single-pane tab or supertab dissolved: just primary.
+    if (m_panes.size() == 1)
+        return name0;
+
+    // 2-pane with split view active keeps the HyprFM 'primary / secondary'.
+    if (m_splitViewEnabled)
+        return name0 + QStringLiteral(" / ") + displayNameForPath(m_panes[1].currentPath);
+
+    // 2-pane with split currently OFF: the secondary is stored but hidden,
+    // so the title shows only what the user can see.
+    return name0;
 }
 
 QString TabModel::viewMode() const { return m_panes[0].viewMode; }
 bool TabModel::canGoBack() const { return !m_panes[0].backStack.isEmpty(); }
 bool TabModel::canGoForward() const { return !m_panes[0].forwardStack.isEmpty(); }
 bool TabModel::splitViewEnabled() const { return m_splitViewEnabled; }
-QString TabModel::secondaryCurrentPath() const { return m_panes[1].currentPath; }
-bool TabModel::secondaryCanGoBack() const { return !m_panes[1].backStack.isEmpty(); }
-bool TabModel::secondaryCanGoForward() const { return !m_panes[1].forwardStack.isEmpty(); }
+// Phase 2 P2-M4: secondary getters guard against the lazy-grown m_panes
+// not having a [1] slot yet.  Callers see empty path / no history until
+// something (split toggle, restore, merge) seeds the secondary pane.
+QString TabModel::secondaryCurrentPath() const
+{
+    return m_panes.size() >= 2 ? m_panes[1].currentPath : QString();
+}
+bool TabModel::secondaryCanGoBack() const
+{
+    return m_panes.size() >= 2 && !m_panes[1].backStack.isEmpty();
+}
+bool TabModel::secondaryCanGoForward() const
+{
+    return m_panes.size() >= 2 && !m_panes[1].forwardStack.isEmpty();
+}
 QString TabModel::sortBy() const { return m_panes[0].sortBy; }
 bool TabModel::sortAscending() const { return m_panes[0].sortAscending; }
 
@@ -114,7 +160,10 @@ void TabModel::setViewMode(const QString &mode)
     if (m_panes[0].viewMode == mode)
         return;
     m_panes[0].viewMode = mode;
-    m_panes[1].viewMode = mode;
+    // Mirror to every other pane if any exist; lazy-grown layouts may have
+    // size 1 (single-pane tab) or any size up to kMaxPanes.
+    for (int i = 1; i < m_panes.size(); ++i)
+        m_panes[i].viewMode = mode;
     emit viewModeChanged();
 }
 
@@ -124,6 +173,7 @@ void TabModel::setSplitViewEnabled(bool enabled)
         return;
 
     if (enabled && !m_secondaryInitialized) {
+        ensureSecondaryPane();
         m_panes[1].currentPath = m_panes[0].currentPath;
         m_secondaryInitialized = true;
         emit secondaryCurrentPathChanged();
@@ -136,7 +186,10 @@ void TabModel::setSplitViewEnabled(bool enabled)
 
 void TabModel::setSecondaryCurrentPath(const QString &path)
 {
-    if (path.isEmpty() || m_panes[1].currentPath == path)
+    if (path.isEmpty())
+        return;
+    ensureSecondaryPane();
+    if (m_panes[1].currentPath == path)
         return;
 
     m_panes[1].currentPath = path;
@@ -150,7 +203,8 @@ void TabModel::setSortBy(const QString &column)
     if (m_panes[0].sortBy == column)
         return;
     m_panes[0].sortBy = column;
-    m_panes[1].sortBy = column;
+    for (int i = 1; i < m_panes.size(); ++i)
+        m_panes[i].sortBy = column;
     emit sortChanged();
 }
 
@@ -159,7 +213,8 @@ void TabModel::setSortAscending(bool ascending)
     if (m_panes[0].sortAscending == ascending)
         return;
     m_panes[0].sortAscending = ascending;
-    m_panes[1].sortAscending = ascending;
+    for (int i = 1; i < m_panes.size(); ++i)
+        m_panes[i].sortAscending = ascending;
     emit sortChanged();
 }
 
@@ -178,8 +233,11 @@ void TabModel::navigateTo(const QString &path)
 
 void TabModel::navigateSecondaryTo(const QString &path)
 {
+    if (path.isEmpty())
+        return;
+    ensureSecondaryPane();
     PaneState &p = m_panes[1];
-    if (path == p.currentPath || path.isEmpty())
+    if (path == p.currentPath)
         return;
 
     p.backStack.append(p.currentPath);
@@ -205,6 +263,8 @@ void TabModel::goBack()
 
 void TabModel::secondaryGoBack()
 {
+    if (m_panes.size() < 2)
+        return;
     PaneState &p = m_panes[1];
     if (p.backStack.isEmpty())
         return;
@@ -230,6 +290,8 @@ void TabModel::goForward()
 
 void TabModel::secondaryGoForward()
 {
+    if (m_panes.size() < 2)
+        return;
     PaneState &p = m_panes[1];
     if (p.forwardStack.isEmpty())
         return;
@@ -250,6 +312,8 @@ void TabModel::goUp()
 
 void TabModel::secondaryGoUp()
 {
+    if (m_panes.size() < 2)
+        return;
     const QString parent = parentLocation(m_panes[1].currentPath);
     if (parent != m_panes[1].currentPath)
         navigateSecondaryTo(parent);
@@ -259,6 +323,7 @@ void TabModel::resetSecondaryTo(const QString &path)
 {
     if (path.isEmpty())
         return;
+    ensureSecondaryPane();
 
     PaneState &p = m_panes[1];
     const bool pathChanged = p.currentPath != path;
@@ -323,6 +388,34 @@ bool TabModel::removePane(int idx)
     emit panesChanged();
     emit titleChanged();
     return true;
+}
+
+void TabModel::setSupertab(bool on)
+{
+    if (m_isSupertab == on)
+        return;
+    m_isSupertab = on;
+    emit titleChanged();
+}
+
+void TabModel::compactToPrimary()
+{
+    bool changed = false;
+    while (m_panes.size() > 1) {
+        m_panes.removeLast();
+        changed = true;
+    }
+    if (m_splitViewEnabled) {
+        m_splitViewEnabled = false;
+        emit splitViewEnabledChanged();
+    }
+    m_secondaryInitialized = false;
+    if (changed) {
+        emit panesChanged();
+        emit secondaryCurrentPathChanged();
+        emit secondaryHistoryChanged();
+        emit titleChanged();
+    }
 }
 
 QString TabModel::paneCurrentPath(int idx) const

@@ -53,6 +53,13 @@ public:
     // the UI talks to the model.
     Q_INVOKABLE void activateAndCollapseSelection(int index);
 
+    // Phase 2 P2-M4: collapse the current selection (>= 2 tabs) into one
+    // supertab.  The lowest-indexed selected tab is the receiver: it keeps
+    // its row, and each other selected tab donates its currentPath to a
+    // new pane via receiver.addPane(...).  Donor tabs are removed.  No-op
+    // when the selection has fewer than 2 entries.
+    Q_INVOKABLE void mergeSelected();
+
     QJsonArray saveSession() const;
     void restoreSession(const QJsonArray &tabs, int activeIdx);
 

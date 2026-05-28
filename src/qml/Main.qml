@@ -2791,6 +2791,14 @@ ApplicationWindow {
         }
     }
 
+    // Phase 2 P2-M4 temporary trigger: Ctrl+M collapses the current Ctrl-
+    // click selection into a supertab.  P2-M5 will replace this with a
+    // chain-link merge button in the toolbar.
+    Shortcut {
+        sequence: "Ctrl+M"
+        onActivated: tabModel.mergeSelected()
+    }
+
     Shortcut {
         sequence: config.shortcutMap["reopen_tab"]
         onActivated: tabModel.reopenClosedTab()
