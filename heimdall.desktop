@@ -1,10 +1,13 @@
 [Desktop Entry]
+Type=Application
 Name=Heimdall
-Comment=File manager for Hyprland
-Exec=heimdall %U
+GenericName=File Manager
+Comment=Bifröst-tinted file manager for Wayland
+Exec=heimdall %F
 Icon=system-file-manager
 Terminal=false
-Type=Application
-Categories=System;FileManager;
+StartupNotify=true
+StartupWMClass=Heimdall
+Categories=System;FileManager;FileTools;
 MimeType=inode/directory;
-StartupWMClass=heimdall
+Keywords=files;file manager;explorer;folder;heimdall;bifrost;
