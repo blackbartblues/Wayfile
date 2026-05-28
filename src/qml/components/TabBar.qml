@@ -9,12 +9,21 @@ import Heimdall
 // moved above the breadcrumb row.
 //
 // Always visible — even with a single tab — per Heimdall design canvas.
+//
+// Width policy: each tab caps at maxTabWidth so they don't stretch into giant
+// banners when only one tab is open. With many tabs they shrink toward the
+// even-share width but never below minTabWidth — past that point the strip
+// overflows the parent's clip (no scroll for now).
 Item {
     id: root
 
     // Forward this so Main.qml can route drops onto a tab into a real
     // copy/move via UndoManager (same handler signature as Toolbar's).
     signal transferRequested(var paths, string destinationPath, bool moveOperation)
+
+    // Chrome-ish bounds. Tune here if the design canvas tightens these later.
+    readonly property int minTabWidth: 100
+    readonly property int maxTabWidth: 220
 
     implicitHeight: Math.round(36 * Theme.uiScale)
 
@@ -52,7 +61,15 @@ Item {
                     required property var model
 
                     Layout.fillHeight: true
-                    Layout.preferredWidth: closing ? 0 : tabRow.width / tabRow.effectiveCount
+                    // Chrome-style clamp: even-share within [minTabWidth, maxTabWidth].
+                    // With 1-3 tabs they stop growing at maxTabWidth; with 10+ they
+                    // shrink toward minTabWidth and then overflow into clip.
+                    Layout.preferredWidth: closing
+                        ? 0
+                        : Math.min(root.maxTabWidth,
+                                   Math.max(root.minTabWidth,
+                                            tabRow.width / tabRow.effectiveCount))
+                    Layout.maximumWidth: root.maxTabWidth
                     property bool closing: false
 
                     Behavior on Layout.preferredWidth {
