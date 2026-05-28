@@ -40,7 +40,12 @@ Item {
             color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.06)
         }
 
-        RowLayout {
+        // Plain Row (positioner), not RowLayout: with the clamped width below,
+        // RowLayout was allocating each tab an even-share slot and rendering it
+        // at its capped width, leaving dead space inside the slot ("tab sticks
+        // to the left half of its slice" bug). Row packs items left-to-right
+        // at their width; leftover space just stays at the end of the strip.
+        Row {
             id: tabRow
             anchors.fill: parent
             spacing: 0
@@ -60,19 +65,19 @@ Item {
                     required property int index
                     required property var model
 
-                    Layout.fillHeight: true
                     // Chrome-style clamp: even-share within [minTabWidth, maxTabWidth].
                     // With 1-3 tabs they stop growing at maxTabWidth; with 10+ they
-                    // shrink toward minTabWidth and then overflow into clip.
-                    Layout.preferredWidth: closing
+                    // shrink toward minTabWidth and then overflow into the parent's
+                    // clip rect.
+                    width: closing
                         ? 0
                         : Math.min(root.maxTabWidth,
                                    Math.max(root.minTabWidth,
                                             tabRow.width / tabRow.effectiveCount))
-                    Layout.maximumWidth: root.maxTabWidth
+                    height: tabRow.height
                     property bool closing: false
 
-                    Behavior on Layout.preferredWidth {
+                    Behavior on width {
                         NumberAnimation {
                             duration: Theme.animDuration
                             easing.type: Theme.animEasingTransition
