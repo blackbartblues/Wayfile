@@ -419,6 +419,47 @@ void TabListModel::unmergeAt(int idx)
     emit sessionChanged();
 }
 
+void TabListModel::moveTab(int from, int to)
+{
+    if (from < 0 || from >= m_tabs.size() || to < 0 || to >= m_tabs.size())
+        return;
+    if (from == to)
+        return;
+
+    // beginMoveRows wants the dest row in pre-removal coordinates: if we're
+    // moving forward, the destination is one past the target slot.
+    const int dest = (to > from) ? to + 1 : to;
+    if (!beginMoveRows(QModelIndex(), from, from, QModelIndex(), dest))
+        return;
+
+    m_tabs.move(from, to);
+
+    auto shiftIndex = [from, to](int sel) {
+        if (sel == from)
+            return to;
+        if (from < to && sel > from && sel <= to)
+            return sel - 1;
+        if (from > to && sel >= to && sel < from)
+            return sel + 1;
+        return sel;
+    };
+
+    QSet<int> rebuilt;
+    for (int sel : std::as_const(m_selectedIndices))
+        rebuilt.insert(shiftIndex(sel));
+    m_selectedIndices = std::move(rebuilt);
+
+    const int newActive = shiftIndex(m_activeIndex);
+    const bool activeMoved = (newActive != m_activeIndex);
+    m_activeIndex = newActive;
+
+    endMoveRows();
+    if (activeMoved)
+        emit activeIndexChanged();
+    emit selectionChanged();
+    emit sessionChanged();
+}
+
 void TabListModel::selectRangeTo(int idx)
 {
     if (idx < 0 || idx >= m_tabs.size())

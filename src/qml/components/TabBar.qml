@@ -41,23 +41,10 @@ Item {
             z: 2
         }
 
-        // "+" button: always pinned to the right of the strip, click opens a
-        // new tab in the user's home dir (tabModel.addTab() default).
-        HoverRect {
-            id: addTabBtn
-            width: Theme.controlSize
-            height: parent.height - 2  // leave 1 px above bottom separator
-            anchors.right: parent.right
-            anchors.top: parent.top
-            z: 1
-            onClicked: tabModel.addTab()
-
-            IconPlus {
-                anchors.centerIn: parent
-                size: 16
-                color: addTabBtn.hovered ? Theme.text : Theme.subtext
-            }
-        }
+        // Phase 2: "+" lives INSIDE the Row positioner below so it sits
+        // right next to the last tab when few are open and scrolls with
+        // the rest once the strip overflows.  The old anchored-right
+        // version pinned it to the bar edge regardless of tab count.
 
         // Flickable scroll area for tabs. When the strip can hold every tab at
         // minTabWidth or wider, contentWidth == flickable.width and there's
@@ -68,7 +55,7 @@ Item {
             anchors.left: parent.left
             anchors.top: parent.top
             anchors.bottom: parent.bottom
-            anchors.right: addTabBtn.left
+            anchors.right: parent.right
             anchors.bottomMargin: 1  // sit above the separator
             clip: true
             // Compute the scrollable content width directly from the same
@@ -76,7 +63,7 @@ Item {
             // reactively (likely because per-tab width depends on tabScroll.
             // width through the Row, creating a chain Flickable didn't
             // re-evaluate). Explicit math keeps Flickable in sync.
-            contentWidth: tabRow.effectiveCount * tabRow.perTabWidth
+            contentWidth: tabRow.effectiveCount * tabRow.perTabWidth + tabRow.addBtnWidth
             contentHeight: height
             interactive: true
             flickableDirection: Flickable.HorizontalFlick
@@ -121,12 +108,37 @@ Item {
             property int effectiveCount: Math.max(tabModel.count - closingCount, 1)
             property int hoveredIndex: -1
 
+            // Phase 2 drag-reorder visual state.  draggingIndex is the tab
+            // currently lifted under the cursor; dropTargetIndex is the
+            // slot the cursor is hovering.  Both -1 when no plain drag is
+            // in progress.  Non-dragged tabs read these to decide whether
+            // to slide left/right by one slot, mirroring browser behaviour.
+            property int draggingIndex: -1
+            property int dropTargetIndex: -1
+
+            // Animate slot reflow when the model commits a moveTab() so the
+            // dropped tab and its neighbours slide rather than jump.
+            move: Transition {
+                NumberAnimation {
+                    properties: "x"
+                    duration: 220
+                    easing.type: Easing.OutCubic
+                }
+            }
+
+            // Width reserved for the inline "+" button at the end of the
+            // strip so the tab-width clamp knows there's something else
+            // sharing the row.
+            readonly property real addBtnWidth: Theme.controlSize
+
             // Single source of truth for the clamped per-tab width. Both the
             // delegate and Flickable.contentWidth bind to this so they can't
-            // drift out of sync.
+            // drift out of sync.  Subtract the "+" footprint so tabs and the
+            // add button never overlap inside the visible strip.
             property real perTabWidth: Math.min(root.maxTabWidth,
                                                 Math.max(root.minTabWidth,
-                                                         tabScroll.width / effectiveCount))
+                                                         (tabScroll.width - addBtnWidth)
+                                                             / effectiveCount))
 
             Repeater {
                 id: tabRepeater
@@ -140,6 +152,70 @@ Item {
                     // Phase 2 P2-M1: per-tab selected flag, read from the
                     // tablistmodel's new IsSelectedRole.
                     required property bool isSelected
+
+                    // Phase 2: drag-lift visual.  Mirrors tabMouseArea's
+                    // drag state through transforms — a Scale pops the tab
+                    // above its neighbours and a Translate slides it along
+                    // the strip following the cursor in real time.  Snaps
+                    // back to 0 on release so the Row positioner re-slots
+                    // the delegate cleanly.
+                    readonly property bool dragLifted: tabMouseArea.dragStarted
+                                                       && !tabMouseArea.ctrlSweepArmed
+
+                    // Browser-style slot reflow: while another tab is being
+                    // dragged over this one's slot, shift sideways by one
+                    // slot to make room.  Direction depends on whether the
+                    // dragged tab started left or right of us.
+                    readonly property real slotShift: {
+                        const dIdx = tabRow.draggingIndex
+                        const tIdx = tabRow.dropTargetIndex
+                        if (dIdx === -1 || tIdx === -1 || dIdx === tIdx)
+                            return 0
+                        if (index === dIdx)
+                            return 0
+                        const w = tabRow.perTabWidth
+                        if (tIdx > dIdx && index > dIdx && index <= tIdx)
+                            return -w
+                        if (tIdx < dIdx && index >= tIdx && index < dIdx)
+                            return w
+                        return 0
+                    }
+
+                    z: dragLifted ? 10 : 0
+                    transform: [
+                        Scale {
+                            origin.x: tabDelegate.width / 2
+                            origin.y: tabDelegate.height / 2
+                            xScale: tabDelegate.dragLifted ? 1.06 : 1
+                            yScale: tabDelegate.dragLifted ? 1.06 : 1
+                            Behavior on xScale {
+                                NumberAnimation { duration: 110; easing.type: Easing.OutCubic }
+                            }
+                            Behavior on yScale {
+                                NumberAnimation { duration: 110; easing.type: Easing.OutCubic }
+                            }
+                        },
+                        Translate {
+                            id: tabDragTranslate
+                            x: tabDelegate.dragLifted
+                                ? tabMouseArea.dragOffsetX
+                                : tabDelegate.slotShift
+                            // Animate the slot shift for neighbours, but
+                            // leave the dragged tab unsmoothed so it tracks
+                            // the cursor 1:1.  Duration + easing match the
+                            // Row.move transition below so that translate
+                            // shrinks at the same rate Row.x grows — the
+                            // two cancel out, keeping every tab visually
+                            // stationary across the model reorder.
+                            Behavior on x {
+                                enabled: !tabDelegate.dragLifted
+                                NumberAnimation {
+                                    duration: 220
+                                    easing.type: Easing.OutCubic
+                                }
+                            }
+                        }
+                    ]
 
                     // Chrome-style clamp: even-share within [minTabWidth, maxTabWidth].
                     // With 1-3 tabs they stop growing at maxTabWidth; with 10+ they
@@ -259,6 +335,28 @@ Item {
                         Behavior on opacity { NumberAnimation { duration: Theme.animDuration } }
                     }
 
+                    // Release-snap animation: drives dragOffsetX → 0 in lock-
+                    // step with the Row.move transition that's animating
+                    // Row.x from old slot to new slot.  Same duration and
+                    // easing, so the sum (scene position) stays constant
+                    // while one shrinks and the other grows — the tab
+                    // slides smoothly from cursor to its new slot without
+                    // ever visiting the old slot.  dragStarted stays true
+                    // for the whole animation so dragLifted (and the
+                    // dragOffsetX binding on Translate.x) doesn't toggle
+                    // mid-flight.
+                    NumberAnimation {
+                        id: releaseSnap
+                        target: tabMouseArea
+                        property: "dragOffsetX"
+                        to: 0
+                        duration: 220
+                        easing.type: Easing.OutCubic
+                        onStopped: {
+                            tabMouseArea.dragStarted = false
+                        }
+                    }
+
                     HoverHandler {
                         id: tabDelegateHover
                         onHoveredChanged: {
@@ -269,14 +367,136 @@ Item {
                     }
 
                     MouseArea {
+                        id: tabMouseArea
                         anchors.fill: parent
                         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
                         cursorShape: Qt.PointingHandCursor
+                        // Phase 2: track drag-vs-click state so plain drag
+                        // reorders and Ctrl+drag sweep-selects without
+                        // double-firing the click handler.
+                        // Local-coords pressPoint is only used for the
+                        // drag-threshold check.  The follow-cursor maths use
+                        // pressPointRow (tabRow space) instead so it isn't
+                        // contaminated by our own Translate transform —
+                        // otherwise dx halves every frame and the tab lags
+                        // behind the cursor.
+                        property point pressPoint
+                        property point pressPointRow
+                        property bool dragStarted: false
+                        property bool ctrlSweepArmed: false
+                        property int sweepLastIdx: -1
+                        // Live x-offset for the drag-lift Translate.  Set
+                        // every mouse move during a plain reorder drag;
+                        // reset on press / release.
+                        property real dragOffsetX: 0
+                        readonly property int dragThreshold: 6
+
+                        onPressed: (mouse) => {
+                            // Abort any in-flight release snap from the
+                            // previous gesture so the new press starts
+                            // from a clean slate.
+                            if (releaseSnap.running)
+                                releaseSnap.stop()
+                            pressPoint = Qt.point(mouse.x, mouse.y)
+                            const inRow = tabMouseArea.mapToItem(tabRow, mouse.x, mouse.y)
+                            pressPointRow = Qt.point(inRow.x, inRow.y)
+                            dragStarted = false
+                            ctrlSweepArmed = (mouse.modifiers & Qt.ControlModifier) !== 0
+                            sweepLastIdx = -1
+                            dragOffsetX = 0
+                        }
+
+                        onPositionChanged: (mouse) => {
+                            if (!pressed)
+                                return
+                            const dxLocal = mouse.x - pressPoint.x
+                            const dyLocal = mouse.y - pressPoint.y
+                            if (!dragStarted
+                                && (Math.abs(dxLocal) > dragThreshold
+                                    || Math.abs(dyLocal) > dragThreshold))
+                                dragStarted = true
+                            // Plain reorder drag: map to tabRow space so
+                            // the offset isn't disturbed by our own
+                            // Translate, then update the lift offset and
+                            // hovered drop slot in one place.
+                            if (dragStarted && !ctrlSweepArmed) {
+                                const cur = tabMouseArea.mapToItem(tabRow, mouse.x, mouse.y)
+                                dragOffsetX = cur.x - pressPointRow.x
+                                if (tabRow.draggingIndex !== tabDelegate.index)
+                                    tabRow.draggingIndex = tabDelegate.index
+                                const w = tabRow.perTabWidth
+                                let slot = w > 0 ? Math.floor(cur.x / w) : tabDelegate.index
+                                slot = Math.max(0, Math.min(tabModel.count - 1, slot))
+                                tabRow.dropTargetIndex = slot
+                            }
+                            if (!dragStarted || !ctrlSweepArmed)
+                                return
+                            // Lazy-arm: the first movement also adds the
+                            // original tab so a 1-cell sweep still works.
+                            if (sweepLastIdx === -1) {
+                                sweepLastIdx = tabDelegate.index
+                                if (!tabModel.isSelected(tabDelegate.index))
+                                    tabModel.toggleSelected(tabDelegate.index)
+                            }
+                            const localPos = tabMouseArea.mapToItem(tabRow, mouse.x, mouse.y)
+                            const under = tabRow.childAt(localPos.x, tabRow.height / 2)
+                            if (under && under.index !== undefined && under.index !== sweepLastIdx) {
+                                sweepLastIdx = under.index
+                                if (!tabModel.isSelected(under.index))
+                                    tabModel.toggleSelected(under.index)
+                            }
+                        }
+
+                        onReleased: (mouse) => {
+                            if (dragStarted && !ctrlSweepArmed) {
+                                // Plain drag => reorder.  Use the slot the
+                                // visual reflow has been tracking; falls
+                                // back to a fresh childAt() lookup if the
+                                // drop target was never set (e.g. release
+                                // immediately after threshold cross).
+                                let target = tabRow.dropTargetIndex
+                                if (target === -1) {
+                                    const lp = tabMouseArea.mapToItem(tabRow, mouse.x, mouse.y)
+                                    const drop = tabRow.childAt(lp.x, tabRow.height / 2)
+                                    if (drop && drop.index !== undefined)
+                                        target = drop.index
+                                }
+                                // Clear the drag-state first so neighbours'
+                                // slotShift collapses to 0 and their
+                                // Behavior on translate.x animates -w → 0
+                                // in lock-step with Row.move.
+                                tabRow.draggingIndex = -1
+                                tabRow.dropTargetIndex = -1
+                                if (target !== -1 && target !== tabDelegate.index)
+                                    tabModel.moveTab(tabDelegate.index, target)
+                                // Kick off the dragged tab's own snap.
+                                // We deliberately leave dragStarted=true
+                                // so dragLifted stays true: Translate.x's
+                                // binding remains on dragOffsetX (which the
+                                // animation drives to 0) instead of
+                                // switching to slotShift mid-flight.
+                                // dragStarted resets in releaseSnap.onStopped.
+                                releaseSnap.from = dragOffsetX
+                                releaseSnap.restart()
+                            } else {
+                                tabRow.draggingIndex = -1
+                                tabRow.dropTargetIndex = -1
+                                dragStarted = false
+                                dragOffsetX = 0
+                            }
+                            ctrlSweepArmed = false
+                        }
+
                         onClicked: (mouse) => {
                             if (mouse.button === Qt.MiddleButton) {
                                 tabDelegate.startClose()
                                 return
                             }
+                            // Skip the click branch when the gesture was a
+                            // drag (Ctrl-sweep or plain reorder); those
+                            // already mutated state in their own handlers.
+                            if (dragStarted)
+                                return
                             // Phase 2 P2-M1: modifiers drive the selection.
                             //   Shift+click — range-select [active..clicked]
                             //   Ctrl+click  — toggle clicked in / out of the
@@ -383,6 +603,22 @@ Item {
                             cursorShape: Qt.PointingHandCursor
                         }
                     }
+                }
+            }
+
+            // Phase 2: inline "+" tucked behind the last tab.  As soon as
+            // a new tab is added it shifts right by one slot; with many
+            // tabs it rides the overflow into the Flickable's scroll.
+            HoverRect {
+                id: addTabBtn
+                width: tabRow.addBtnWidth
+                height: tabRow.height
+                onClicked: tabModel.addTab()
+
+                IconPlus {
+                    anchors.centerIn: parent
+                    size: 16
+                    color: addTabBtn.hovered ? Theme.text : Theme.subtext
                 }
             }
         }

@@ -46,6 +46,27 @@ ApplicationWindow {
     readonly property bool isTrashView: fileOps.isTrashPath(panePath(activePaneIndex))
     readonly property bool isRemoteView: fileOps.isRemotePath(panePath(activePaneIndex))
 
+    // ── Click-anywhere-clears: any plain LMB press anywhere in the window
+    // collapses a >1 tab selection down to just the active tab.  Sits on
+    // top of all content with mouse.accepted=false so it observes the
+    // press then lets it propagate normally to the actual click target.
+    // Shift/Ctrl are skipped so multi-select gestures (Ctrl-click,
+    // Shift-click range) still work on the tab strip.
+    MouseArea {
+        anchors.fill: parent
+        z: 9999
+        acceptedButtons: Qt.LeftButton
+        hoverEnabled: false
+        propagateComposedEvents: true
+        onPressed: (mouse) => {
+            if (mouse.modifiers === Qt.NoModifier
+                && tabModel.selectedCount > 1) {
+                tabModel.activateAndCollapseSelection(tabModel.activeIndex)
+            }
+            mouse.accepted = false
+        }
+    }
+
     // ── Sync fsModel when active tab changes; quit on last tab closed ───────
     Connections {
         target: tabModel

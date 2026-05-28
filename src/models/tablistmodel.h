@@ -59,6 +59,12 @@ public:
     // cap, it's trimmed from the far end and selectionLimitReached fires.
     Q_INVOKABLE void selectRangeTo(int idx);
 
+    // Phase 2: reorder tabs via drag-and-drop.  Moves the tab at `from`
+    // into the position currently occupied by the tab at `to`.  Adjusts
+    // m_activeIndex and m_selectedIndices so the user's notion of which
+    // tab is which doesn't shift under them.
+    Q_INVOKABLE void moveTab(int from, int to);
+
     // Phase 2 P2-M4: collapse the current selection (>= 2 tabs) into one
     // supertab.  The lowest-indexed selected tab is the receiver: it keeps
     // its row, and each other selected tab donates its currentPath to a
