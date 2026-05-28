@@ -62,6 +62,11 @@ signals:
     void lastTabClosed();
     void sessionChanged();
     void selectionChanged();
+    // Phase 2: fired when toggleSelected refused to add a tab because the
+    // selection set already holds kMaxPanes entries.  QML hangs a toast off
+    // it instead of leaving the user wondering why the outline didn't
+    // appear.
+    void selectionLimitReached(const QString &message);
 
 private:
     void connectTab(int row, TabModel *tab);

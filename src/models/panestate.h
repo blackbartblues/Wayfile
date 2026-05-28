@@ -3,6 +3,14 @@
 #include <QString>
 #include <QStringList>
 
+// Phase 2: hard cap on how many panes a single tab can hold (and therefore on
+// the selection-set size for the merge gesture).  Lives here so TabListModel
+// (selection limit), TabModel (addPane refusal), and main.cpp (paneServices
+// pre-allocation) all share one source of truth.  4 covers the realistic
+// UX ceiling — 3 panes is already tight in a 1024 px window — without
+// dragging in dynamic-growth complexity.
+inline constexpr int kMaxPanes = 4;
+
 // Per-pane navigation + view state.
 //
 // Phase 1 of the primary/secondary -> panes[N] cleanup.  This struct is the

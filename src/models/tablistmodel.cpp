@@ -236,6 +236,16 @@ void TabListModel::toggleSelected(int index)
             emit sessionChanged();
         }
     } else {
+        // Phase 2: cap the merge selection at kMaxPanes.  Past 4 the
+        // user can't merge them all into one supertab anyway, so the
+        // outline + the merge button would just be lying.  Surface the
+        // refusal through a signal so the QML side can fade in a toast
+        // rather than leave the user staring at an un-changed tab.
+        if (m_selectedIndices.size() >= kMaxPanes) {
+            emit selectionLimitReached(
+                tr("Maximum %1 tabs can be merged").arg(kMaxPanes));
+            return;
+        }
         m_selectedIndices.insert(index);
     }
 

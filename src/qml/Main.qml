@@ -67,6 +67,12 @@ ApplicationWindow {
         function onLastTabClosed() {
             Qt.quit()
         }
+        // Phase 2: tabs.selectionLimitReached fires when Ctrl-click tries
+        // to push the merge selection past the cap; fade in a brief toast
+        // so the user understands why the outline didn't appear.
+        function onSelectionLimitReached(message) {
+            toast.show(message, "info")
+        }
     }
 
     Connections {

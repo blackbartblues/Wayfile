@@ -287,6 +287,11 @@ int TabModel::paneCount() const
 
 int TabModel::addPane(const QString &path)
 {
+    // Phase 2: respect the same kMaxPanes ceiling the selection enforces, so
+    // a runaway caller can't drift a tab into a paneCount the merge UI
+    // refuses to create.
+    if (m_panes.size() >= kMaxPanes)
+        return -1;
     PaneState p;
     p.currentPath = path.isEmpty() ? QDir::homePath() : path;
     // Inherit the per-tab view + sort settings from pane 0 so a newly added
