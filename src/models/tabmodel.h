@@ -4,6 +4,9 @@
 #include <QString>
 #include <QStringList>
 #include <QDir>
+#include <QList>
+
+#include "models/panestate.h"
 
 class TabModel : public QObject
 {
@@ -73,4 +76,9 @@ private:
     bool m_secondaryInitialized = false;
     QString m_sortBy;
     bool m_sortAscending;
+
+    // Phase 1: parallel storage that will eventually replace the mirror
+    // fields above.  Index 0 == primary, index 1 == secondary.  Populated in
+    // the constructor; no reader code consults it yet.
+    QList<PaneState> m_panes;
 };

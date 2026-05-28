@@ -77,6 +77,22 @@ TabModel::TabModel(QObject *parent)
     , m_sortBy("name")
     , m_sortAscending(true)
 {
+    // Phase 1: seed the parallel pane storage so reader-flip milestones can
+    // adopt it without an empty-state transition.  Two entries match the
+    // current N=2 model; later milestones generalise to arbitrary N.
+    PaneState primary;
+    primary.currentPath = m_currentPath;
+    primary.viewMode = m_viewMode;
+    primary.sortBy = m_sortBy;
+    primary.sortAscending = m_sortAscending;
+    m_panes.append(primary);
+
+    PaneState secondary;
+    secondary.currentPath = m_secondaryCurrentPath;
+    secondary.viewMode = m_viewMode;
+    secondary.sortBy = m_sortBy;
+    secondary.sortAscending = m_sortAscending;
+    m_panes.append(secondary);
 }
 
 QString TabModel::currentPath() const { return m_currentPath; }
