@@ -2,6 +2,7 @@
 
 #include <QAbstractListModel>
 #include <QList>
+#include <QSet>
 #include <QJsonArray>
 #include "models/tabmodel.h"
 
@@ -11,12 +12,17 @@ class TabListModel : public QAbstractListModel
     Q_PROPERTY(int activeIndex READ activeIndex WRITE setActiveIndex NOTIFY activeIndexChanged)
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
     Q_PROPERTY(TabModel* activeTab READ activeTab NOTIFY activeIndexChanged)
+    // Phase 2 P2-M1: multi-tab selection set.  Ctrl-click on a tab toggles its
+    // membership in this set; the merge button (P2-M5) becomes available
+    // once the count is >= 2.
+    Q_PROPERTY(int selectedCount READ selectedCount NOTIFY selectionChanged)
 
 public:
     enum Roles {
         TitleRole = Qt::UserRole + 1,
         PathRole,
         TabObjectRole,
+        IsSelectedRole,
     };
 
     explicit TabListModel(QObject *parent = nullptr);
@@ -35,6 +41,18 @@ public:
     Q_INVOKABLE void closeTab(int index);
     Q_INVOKABLE void reopenClosedTab();
 
+    // Phase 2 P2-M1: multi-tab selection for the merge gesture.
+    int selectedCount() const;
+    Q_INVOKABLE bool isSelected(int index) const;
+    Q_INVOKABLE void toggleSelected(int index);
+    Q_INVOKABLE void clearSelection();
+    Q_INVOKABLE QList<int> selectedIndices() const;
+    // Atomic "the user plain-clicked this tab": collapse the selection to
+    // exactly {index} and make it the active tab in one shot, so the
+    // active ∈ selected invariant doesn't pass through a stale state when
+    // the UI talks to the model.
+    Q_INVOKABLE void activateAndCollapseSelection(int index);
+
     QJsonArray saveSession() const;
     void restoreSession(const QJsonArray &tabs, int activeIdx);
 
@@ -43,11 +61,17 @@ signals:
     void countChanged();
     void lastTabClosed();
     void sessionChanged();
+    void selectionChanged();
 
 private:
     void connectTab(int row, TabModel *tab);
+    // Phase 2 P2-M1: emit dataChanged on IsSelectedRole for the rows whose
+    // selected state changed.  Used by both toggleSelected and clearSelection.
+    void emitIsSelectedChanged(int row);
+
     QList<TabModel *> m_tabs;
     int m_activeIndex = 0;
+    QSet<int> m_selectedIndices;
 
     struct ClosedTabInfo {
         QString path;

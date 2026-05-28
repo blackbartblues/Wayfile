@@ -137,6 +137,9 @@ Item {
 
                     required property int index
                     required property var model
+                    // Phase 2 P2-M1: per-tab selected flag, read from the
+                    // tablistmodel's new IsSelectedRole.
+                    required property bool isSelected
 
                     // Chrome-style clamp: even-share within [minTabWidth, maxTabWidth].
                     // With 1-3 tabs they stop growing at maxTabWidth; with 10+ they
@@ -270,10 +273,20 @@ Item {
                         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
                         cursorShape: Qt.PointingHandCursor
                         onClicked: (mouse) => {
-                            if (mouse.button === Qt.MiddleButton)
+                            if (mouse.button === Qt.MiddleButton) {
                                 tabDelegate.startClose()
+                                return
+                            }
+                            // Phase 2 P2-M1: Ctrl-click toggles this tab's
+                            // membership in the merge-selection set; plain
+                            // click activates the tab and collapses the
+                            // selection to just {this tab} in one atomic
+                            // call (separate clear + setActive lets the old
+                            // active linger in the set as a stale outline).
+                            if (mouse.modifiers & Qt.ControlModifier)
+                                tabModel.toggleSelected(tabDelegate.index)
                             else
-                                tabModel.activeIndex = tabDelegate.index
+                                tabModel.activateAndCollapseSelection(tabDelegate.index)
                         }
                     }
 
@@ -297,16 +310,32 @@ Item {
                         border.color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.08)
                     }
 
-                    // Heimdall identity: gold top stripe on the active tab.
-                    // Matches the design-canvas spec ("gold 1.5px top accent
-                    // line"); 2px renders crisp at integer DPI.
+                    // Phase 2 P2-M1: unified active+selected visual.  The
+                    // backend invariant guarantees the active tab is always
+                    // a member of the selection set, so this single outline
+                    // covers both states — no separate top-stripe for
+                    // active.  Inset slightly so it doesn't fight the bar's
+                    // bottom separator.
                     Rectangle {
-                        visible: tabDelegate.index === tabModel.activeIndex
-                        anchors.top: parent.top
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        height: 2
-                        color: Theme.accent
+                        visible: tabDelegate.isSelected
+                        anchors.fill: parent
+                        anchors.margins: 3
+                        color: "transparent"
+                        radius: Theme.radiusSmall
+                        border.color: Theme.accent
+                        border.width: 1
+                        z: 2
+                    }
+                    Rectangle {
+                        visible: tabDelegate.isSelected
+                        anchors.fill: parent
+                        anchors.margins: 1
+                        color: "transparent"
+                        radius: Theme.radiusSmall
+                        border.color: Qt.rgba(Theme.accent.r, Theme.accent.g,
+                                              Theme.accent.b, 0.32)
+                        border.width: 1
+                        z: 1
                     }
 
                     Text {
