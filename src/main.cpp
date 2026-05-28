@@ -33,6 +33,7 @@
 #include "services/clipboardmanager.h"
 #include "services/draghelper.h"
 #include "models/filesystemmodel.h"
+#include "models/panestate.h"  // kMaxPanes
 #include "models/tablistmodel.h"
 #include "models/bookmarkmodel.h"
 #include "models/devicemodel.h"
@@ -289,8 +290,12 @@ int main(int argc, char *argv[])
         s.searchProxy->setSourceModel(s.searchResults);
 
         s.searchService = new SearchService(&app);
+        // Slots 0 / 1 keep the historical names so any logging or QML lookup
+        // that grew up around them still matches; slots 2..N use a numeric
+        // tag so the merge supertab can tell them apart in logs.
         s.searchService->setObjectName(idx == 0 ? QStringLiteral("primary")
-                                                : QStringLiteral("secondary"));
+                                       : idx == 1 ? QStringLiteral("secondary")
+                                                  : QStringLiteral("pane%1").arg(idx));
         s.searchService->setResultsModel(s.searchResults);
 
         s.gitService = new GitStatusService(&app);
@@ -298,11 +303,26 @@ int main(int argc, char *argv[])
         return s;
     };
 
+    // Phase 2 P2-M3: pre-allocate the full pane services array up to the
+    // kMaxPanes ceiling so the merge action (P2-M4) doesn't need to grow
+    // the list at runtime.  Slots 0 and 1 keep the primary / secondary
+    // seeded paths so the existing split-view UI flow is unchanged; slots
+    // 2 and 3 sit on the user's home directory with no root applied
+    // until the future merge plumbing points an active pane at them.
     QList<PaneServices> paneServices;
-    paneServices.append(makePaneServices(0, initialPrimaryPath, true));
-    mark("Primary pane services populated");
-    paneServices.append(makePaneServices(1, initialSecondaryPath, initialSplitViewEnabled));
-    mark("Secondary pane services populated");
+    for (int i = 0; i < kMaxPanes; ++i) {
+        QString seedPath = homePath;
+        bool seedRoot = false;
+        if (i == 0) {
+            seedPath = initialPrimaryPath;
+            seedRoot = true;
+        } else if (i == 1) {
+            seedPath = initialSecondaryPath;
+            seedRoot = initialSplitViewEnabled;
+        }
+        paneServices.append(makePaneServices(i, seedPath, seedRoot));
+    }
+    mark("Pane services populated");
 
     // Miller view uses its own shared FileSystemModels (parent + preview
     // columns).  These are NOT per-pane — they're per-miller-instance — so
