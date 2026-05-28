@@ -209,9 +209,12 @@ int main(int argc, char *argv[])
     if (themesDir.isEmpty())
         qWarning() << "HyprFM: unable to locate themes directory";
 
+    // Heimdall fork: Bifröst is the signature dark theme. Catppuccin variants
+    // remain shipped as user-selectable alternatives but are no longer the
+    // first-launch default.
     const QString systemDefaultTheme = app.styleHints()->colorScheme() == Qt::ColorScheme::Light
         ? QStringLiteral("catppuccin-latte")
-        : QStringLiteral("catppuccin-mocha");
+        : QStringLiteral("bifrost");
 
     // Create backend instances
     ConfigManager *config = new ConfigManager(configPath, &app, themesDir, systemDefaultTheme);

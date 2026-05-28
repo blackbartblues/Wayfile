@@ -1,0 +1,17 @@
+# Bifröst — Heimdall's signature dark theme.
+# Warm, low-saturation earth-stone surfaces; muted gold accent.
+# Derived from the design canvas in heimdall/design_handoff_heimdall.
+[colors]
+base = "#221f1b"
+mantle = "#1a1815"
+crust = "#181613"
+surface = "#2a2620"
+overlay = "#332e26"
+text = "#e6e1d6"
+subtext = "#a89e8c"
+muted = "#6e6555"
+accent = "#d4a85a"
+success = "#7ab87a"
+warning = "#c9956a"
+error = "#c97070"
+purple = "#b89be0"
