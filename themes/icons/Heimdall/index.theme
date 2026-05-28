@@ -1,0 +1,26 @@
+[Icon Theme]
+Name=Heimdall
+Comment=Bifröst-tinted icon set for the Heimdall file manager
+Inherits=Adwaita,hicolor
+Directories=scalable/places,scalable/actions,scalable/mimetypes
+
+[scalable/places]
+Size=48
+MinSize=8
+MaxSize=512
+Type=Scalable
+Context=Places
+
+[scalable/actions]
+Size=24
+MinSize=8
+MaxSize=512
+Type=Scalable
+Context=Actions
+
+[scalable/mimetypes]
+Size=48
+MinSize=8
+MaxSize=512
+Type=Scalable
+Context=MimeTypes

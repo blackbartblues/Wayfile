@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <linearGradient id="bifrost-folder" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#D4AA6A" stop-opacity="0.92"/>
+      <stop offset="100%" stop-color="#D4AA6A" stop-opacity="0.55"/>
+    </linearGradient>
+  </defs>
+  <path d="M3 7a2 2 0 0 1 2-2h4l2 3h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"
+        fill="url(#bifrost-folder)"
+        stroke="#D4AA6A"
+        stroke-opacity="0.6"
+        stroke-width="1"
+        stroke-linejoin="round"/>
+</svg>
