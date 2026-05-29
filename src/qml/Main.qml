@@ -91,6 +91,7 @@ ApplicationWindow {
                 }
                 root.applyActiveTabSort()
                 root.scheduleActivePaneFocus()
+                root.refreshActivePanePath()
             }
         }
         function onLastTabClosed() {
@@ -114,6 +115,7 @@ ApplicationWindow {
                 root.setPaneRecents(0, false)
                 root.clearPaneSearch(0)
                 root.scheduleActivePaneFocus()
+                root.refreshActivePanePath()
             }
         }
         function onSecondaryCurrentPathChanged() {
@@ -122,6 +124,7 @@ ApplicationWindow {
                 root.setPaneRecents(1, false)
                 root.clearPaneSearch(1)
                 root.scheduleActivePaneFocus()
+                root.refreshActivePanePath()
             }
         }
         // Phase 2 P2-M6: navigation inside a supertab pane (idx >= 2)
@@ -136,6 +139,7 @@ ApplicationWindow {
             root.setPaneRecents(idx, false)
             root.clearPaneSearch(idx)
             root.scheduleActivePaneFocus()
+            root.refreshActivePanePath()
         }
         // Phase 2 P2-M6: merge / unmerge / compactToPrimary keeps the
         // active tab the same but restructures its m_panes list; sync the
@@ -148,6 +152,7 @@ ApplicationWindow {
                 if (mdl)
                     mdl.setRootPath(tabModel.activeTab.paneCurrentPath(i))
             }
+            root.refreshActivePanePath()
         }
         function onSortChanged() {
             root.applyActiveTabSort()
@@ -192,6 +197,7 @@ ApplicationWindow {
             root.syncMillerParentModel(tabModel.activeTab.currentPath)
             root.applyActiveTabSort()
         }
+        root.refreshActivePanePath()
 
         // Bridge Heimdall theme into Quill theme singleton
         Q.Theme.background = Qt.binding(() => Theme.base)
@@ -258,6 +264,18 @@ ApplicationWindow {
     // generalises to arbitrary N when merged supertabs land.
     property int debouncePane: 0
     property int activePaneIndex: 0
+    // Reactive mirror of panePath(activePaneIndex). panePath() reads
+    // paneCurrentPath(), a Q_INVOKABLE method QML's binding engine cannot
+    // track, so a plain `panePath(activePaneIndex)` binding never re-fires on
+    // navigation. Consumers that must follow the active pane's path (sidebar
+    // highlight, status bar) bind to this property instead; it is refreshed
+    // from the path-change signals in the Connections blocks above and on
+    // activePaneIndex changes.
+    property string activePanePath: ""
+    function refreshActivePanePath() {
+        activePanePath = panePath(activePaneIndex)
+    }
+    onActivePaneIndexChanged: refreshActivePanePath()
     readonly property bool searchMode: paneSearchMode(activePaneIndex)
     property real splitTransitionProgress: splitViewEnabled() ? 1 : 0
     readonly property bool splitViewPresented: splitViewEnabled() || splitTransitionProgress > 0.001
@@ -3440,7 +3458,7 @@ ApplicationWindow {
                     width: root.sidebarWidth
                     height: parent.height
                     tooltipLayer: sidebarTooltipLayer
-                    currentPath: panePath(activePaneIndex)
+                    currentPath: root.activePanePath
                     trashPath: root.unifiedTrashPath
                     isRecentsView: root.isRecentsView
                     onBookmarkClicked: (path) => {
@@ -3694,7 +3712,7 @@ ApplicationWindow {
                     // and for virtual views (recents) where there's no real path.
                     activePath: (root.searchMode || root.isRecentsView)
                         ? ""
-                        : root.panePath(activePaneIndex)
+                        : root.activePanePath
                     searchStatus: root.searchMode && root.searchServiceForPane(activePaneIndex).isSearching
                         ? "Searching... " + root.searchServiceForPane(activePaneIndex).resultCount + " results"
                         : (root.searchMode && root.searchProxyForPane(activePaneIndex).searchActive
