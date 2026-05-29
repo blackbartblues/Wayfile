@@ -745,15 +745,17 @@ GridView {
                 root.forceActiveFocus()
                 if (mouse.button === Qt.RightButton) {
                     var mapped = ma.mapToItem(null, mouse.x, mouse.y)
-                    if (delegateItem.isSelected) {
-                        root.contextMenuRequested(
-                            delegateItem.filePath,
-                            delegateItem.isDir,
-                            Qt.point(mapped.x, mapped.y)
-                        )
-                    } else {
-                        root.contextMenuRequested("", false, Qt.point(mapped.x, mapped.y))
-                    }
+                    // Right-clicking an unselected item selects it first
+                    // (single-select), so the menu targets the clicked file
+                    // — standard file-manager behaviour. An already-selected
+                    // item keeps the (possibly multi-) selection.
+                    if (!delegateItem.isSelected)
+                        root.selectIndex(delegateItem.index, false, false)
+                    root.contextMenuRequested(
+                        delegateItem.filePath,
+                        delegateItem.isDir,
+                        Qt.point(mapped.x, mapped.y)
+                    )
                     return
                 }
                 root.selectIndex(

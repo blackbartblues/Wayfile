@@ -121,6 +121,21 @@ Item {
         menuContainer.opacity = 0
         menuContainer.scale = 0.88
         root.visible = true
+
+        // First-ever open grows menuColumn from 0 → H and is driven by
+        // onHeightChanged below. But reopening at the SAME size (e.g. two
+        // right-clicks producing identical menus) leaves the height
+        // unchanged, so that signal never fires and the menu would stay
+        // stuck at opacity 0. Drive the reveal directly once layout is
+        // valid; the guard keeps it from double-running with onHeightChanged.
+        Qt.callLater(root._revealIfPending)
+    }
+
+    function _revealIfPending() {
+        if (root._pendingPopup && menuColumn.height > 0) {
+            root._pendingPopup = false
+            root._reposition()
+        }
     }
 
     // Once menuColumn has its real height, position and animate
@@ -363,10 +378,19 @@ Item {
         }
     }
 
-    // Click outside to close
+    // Click outside to close. Close on press and let the event fall through
+    // (accepted = false) so the same left-click also lands on the file view
+    // underneath and selects the item there — Windows-Explorer behaviour, one
+    // click to dismiss-and-select rather than two. Menu items sit above this
+    // overlay, so only genuine outside-clicks reach here. Right-clicks aren't
+    // accepted (default acceptedButtons = LeftButton), so they propagate to the
+    // view and reopen the menu at the new target.
     MouseArea {
         anchors.fill: parent
-        onClicked: root.close()
+        onPressed: (mouse) => {
+            root.close()
+            mouse.accepted = false
+        }
         onWheel: (wheel) => { wheel.accepted = true }
     }
 
