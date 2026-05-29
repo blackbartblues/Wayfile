@@ -19,6 +19,7 @@ Item {
 
     // Forward this so Main.qml can route drops onto a tab into a real
     // copy/move via UndoManager (same handler signature as Toolbar's).
+    signal newTabRequested()
     signal transferRequested(var paths, string destinationPath, bool moveOperation)
 
     // P2-M7: which sub-pane within the active supertab currently has
@@ -739,7 +740,7 @@ Item {
                 id: addTabBtn
                 width: tabRow.addBtnWidth
                 height: tabRow.height
-                onClicked: tabModel.addTab()
+                onClicked: root.newTabRequested()
 
                 IconPlus {
                     anchors.centerIn: parent

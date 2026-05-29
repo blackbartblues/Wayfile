@@ -849,6 +849,44 @@ private slots:
         QVERIFY2(checked >= 40,
                  qPrintable(QStringLiteral("Expected at least 40 rebindable actions, only saw %1").arg(checked)));
     }
+
+    // --- P3 M3: persist default_view / sort_by / sort_ascending ---
+
+    void testSaveViewAndSortDefaults()
+    {
+        QTemporaryDir dir;
+        const QString path = dir.path() + "/config.toml";
+
+        ConfigManager mgr(path);
+        mgr.saveSettings(QVariantMap{
+            {"defaultView", "detailed"},
+            {"sortBy", "size"},
+            {"sortAscending", false}
+        });
+
+        // Fresh instance against the same file must restore the values.
+        ConfigManager mgr2(path);
+        QCOMPARE(mgr2.defaultView(), QString("detailed"));
+        QCOMPARE(mgr2.sortBy(), QString("size"));
+        QCOMPARE(mgr2.sortAscending(), false);
+    }
+
+    void testSaveViewDefaultsRejectsEmptyStrings()
+    {
+        QTemporaryDir dir;
+        const QString path = dir.path() + "/config.toml";
+
+        ConfigManager mgr(path);
+        // Empty strings must not overwrite the sensible defaults.
+        mgr.saveSettings(QVariantMap{
+            {"defaultView", ""},
+            {"sortBy", ""}
+        });
+
+        ConfigManager mgr2(path);
+        QCOMPARE(mgr2.defaultView(), QString("grid"));
+        QCOMPARE(mgr2.sortBy(), QString("name"));
+    }
 };
 
 QTEST_MAIN(TestConfigManager)

@@ -612,12 +612,26 @@ ApplicationWindow {
         navigatePaneTo(activePaneIndex, path)
     }
 
+    // Spawn a new tab and seed its view/sort from the configured defaults.
+    // TabModel's own defaults are hardcoded (grid / name / ascending); this
+    // is the single point where config.defaultView/sortBy/sortAscending
+    // actually take effect. Session restore does NOT go through here, so
+    // restored tabs keep their saved view/sort.
+    function createTabWithDefaults() {
+        tabModel.addTab()
+        if (tabModel.activeTab) {
+            tabModel.activeTab.viewMode = config.defaultView
+            tabModel.activeTab.sortBy = config.sortBy
+            tabModel.activeTab.sortAscending = config.sortAscending
+        }
+    }
+
     function openPathInNewTab(path) {
         if (!path)
             return
 
         root.setPaneRecents(root.activePaneIndex, false)
-        tabModel.addTab()
+        root.createTabWithDefaults()
         if (tabModel.activeTab)
             tabModel.activeTab.navigateTo(path)
         root.scheduleActivePaneFocus()
@@ -2931,7 +2945,7 @@ ApplicationWindow {
     // Tab management
     Shortcut {
         sequence: config.shortcutMap["new_tab"]
-        onActivated: tabModel.addTab()
+        onActivated: root.createTabWithDefaults()
     }
 
     Shortcut {
@@ -3391,6 +3405,7 @@ ApplicationWindow {
             // mini folder icons can highlight which pane currently has
             // keyboard focus.
             activePaneIndex: root.activePaneIndex
+            onNewTabRequested: root.createTabWithDefaults()
             onTransferRequested: (paths, destinationPath, moveOperation) =>
                 root.beginTransfer(paths, destinationPath, moveOperation, false)
             // P2-M7: clicking a mini folder icon inside a merged supertab

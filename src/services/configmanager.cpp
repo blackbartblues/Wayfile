@@ -515,6 +515,27 @@ void ConfigManager::saveSettings(const QVariantMap &settings)
         general.insert_or_assign("show_hidden", m_showHidden);
     }
 
+    if (settings.contains("defaultView")) {
+        const QString view = settings.value("defaultView").toString().trimmed();
+        if (!view.isEmpty()) {
+            m_defaultView = view;
+            general.insert_or_assign("default_view", view.toStdString());
+        }
+    }
+
+    if (settings.contains("sortBy")) {
+        const QString sortBy = settings.value("sortBy").toString().trimmed();
+        if (!sortBy.isEmpty()) {
+            m_sortBy = sortBy;
+            general.insert_or_assign("sort_by", sortBy.toStdString());
+        }
+    }
+
+    if (settings.contains("sortAscending")) {
+        m_sortAscending = settings.value("sortAscending").toBool();
+        general.insert_or_assign("sort_ascending", m_sortAscending);
+    }
+
     if (!general.empty())
         config.insert_or_assign("general", std::move(general));
 

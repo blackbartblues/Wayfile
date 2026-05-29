@@ -47,6 +47,10 @@ Window {
     readonly property string defaultAnimCurveTransition: "Bezier"
     readonly property bool defaultShowWindowControls: false
     readonly property string defaultWindowButtonLayout: ":minimize,maximize,close"
+    readonly property bool defaultBuiltinIcons: true
+    readonly property string defaultView: "grid"
+    readonly property string defaultSortBy: "name"
+    readonly property bool defaultSortAscending: true
 
     property bool currentShowHidden: false
     property bool currentSidebarVisible: true
@@ -61,10 +65,15 @@ Window {
     property bool optionSourcesPrimed: false
     property bool syncingFromConfig: false
     property bool pendingSettingsDirty: false
+    property bool confirmReset: false
 
     property string draftTheme: config.theme
     property string draftFontFamily: config.fontFamily
     property string draftIconTheme: config.iconTheme
+    property bool draftBuiltinIcons: config.builtinIcons
+    property string draftDefaultView: config.defaultView
+    property string draftSortBy: config.sortBy
+    property bool draftSortAscending: config.sortAscending
     property bool draftDarkMode: true
     property bool draftShowHidden: currentShowHidden
     property bool draftSidebarVisible: currentSidebarVisible
@@ -84,6 +93,11 @@ Window {
     property string draftAnimCurveTransition: config.animCurveTransition
 
     readonly property var curveOptions: ["OutCubic", "InOutCubic", "InCubic", "OutQuad", "InOutQuad", "OutExpo", "InOutExpo", "OutBack", "Linear", "Bezier"]
+
+    readonly property var viewModeValues: ["grid", "miller", "detailed"]
+    readonly property var viewModeLabels: ["Grid", "Miller columns", "Detailed list"]
+    readonly property var sortByValues: ["name", "size", "modified", "type"]
+    readonly property var sortByLabels: ["Name", "Size", "Date modified", "Type"]
 
     property bool draftShowWindowControls: config.showWindowControls
     property string draftWindowButtonLayout: config.windowButtonLayout
@@ -227,7 +241,11 @@ Window {
         setDraftTheme(defaultThemeName)
         draftFontFamily = ""
         draftIconTheme = defaultIconThemeName
+        draftBuiltinIcons = defaultBuiltinIcons
         draftShowHidden = false
+        draftDefaultView = defaultView
+        draftSortBy = defaultSortBy
+        draftSortAscending = defaultSortAscending
         draftSidebarVisible = true
         draftSidebarPosition = defaultSidebarPosition
         draftSidebarWidth = defaultSidebarWidth
@@ -261,8 +279,12 @@ Window {
 
             draftIconTheme = config.iconTheme
             iconThemeOptions = buildOptions(availableIconThemeValues, draftIconTheme, "Adwaita")
+            draftBuiltinIcons = config.builtinIcons
 
             draftShowHidden = currentShowHidden
+            draftDefaultView = config.defaultView
+            draftSortBy = config.sortBy
+            draftSortAscending = config.sortAscending
             draftSidebarVisible = currentSidebarVisible
             draftSidebarPosition = config.sidebarPosition
             draftSidebarWidth = currentSidebarWidth
@@ -300,6 +322,8 @@ Window {
     }
 
     function closePanel() {
+        confirmReset = false
+        resetConfirmTimer.stop()
         flushPendingChanges()
         root.hide()
         root.closed()
@@ -325,7 +349,11 @@ Window {
             theme: draftTheme,
             fontFamily: draftFontFamily,
             iconTheme: draftIconTheme,
+            builtinIcons: draftBuiltinIcons,
             showHidden: draftShowHidden,
+            defaultView: draftDefaultView,
+            sortBy: draftSortBy,
+            sortAscending: draftSortAscending,
             sidebarVisible: draftSidebarVisible,
             sidebarPosition: draftSidebarPosition,
             sidebarWidth: draftSidebarWidth,
@@ -389,6 +417,13 @@ Window {
         id: settingsApplyTimer
         interval: 140
         onTriggered: root.applyPendingSettings()
+    }
+
+    Timer {
+        id: resetConfirmTimer
+        interval: 3000
+        repeat: false
+        onTriggered: root.confirmReset = false
     }
 
     // Close on Escape
@@ -468,6 +503,16 @@ Window {
                 currentIndex: root.optionIndex(root.iconThemeOptions, root.draftIconTheme, 0)
                 onSelected: (_, value) => {
                     root.draftIconTheme = value
+                    root.applySettingsNow()
+                }
+            }
+
+            Q.Toggle {
+                Layout.fillWidth: true
+                label: "Use built-in icons as fallback"
+                checked: root.draftBuiltinIcons
+                onToggled: (value) => {
+                    root.draftBuiltinIcons = value
                     root.applySettingsNow()
                 }
             }
@@ -576,6 +621,38 @@ Window {
                 checked: root.draftShowHidden
                 onToggled: (value) => {
                     root.draftShowHidden = value
+                    root.applySettingsNow()
+                }
+            }
+
+            Q.Dropdown {
+                Layout.fillWidth: true
+                label: "Default view for new tabs"
+                model: root.viewModeLabels
+                currentIndex: Math.max(0, root.viewModeValues.indexOf(root.draftDefaultView))
+                onSelected: (index, _) => {
+                    root.draftDefaultView = root.viewModeValues[index]
+                    root.applySettingsNow()
+                }
+            }
+
+            Q.Dropdown {
+                Layout.fillWidth: true
+                label: "Default sort for new tabs"
+                model: root.sortByLabels
+                currentIndex: Math.max(0, root.sortByValues.indexOf(root.draftSortBy))
+                onSelected: (index, _) => {
+                    root.draftSortBy = root.sortByValues[index]
+                    root.applySettingsNow()
+                }
+            }
+
+            Q.Toggle {
+                Layout.fillWidth: true
+                label: "Sort ascending by default"
+                checked: root.draftSortAscending
+                onToggled: (value) => {
+                    root.draftSortAscending = value
                     root.applySettingsNow()
                 }
             }
@@ -900,6 +977,23 @@ Window {
                     onClicked: root.openDependencyCheck()
                 }
             }
+
+            Text {
+                text: "Bookmarks"
+                color: Theme.accent
+                font.pointSize: Theme.fontSmall
+                font.bold: true
+                Layout.topMargin: 12
+                Layout.bottomMargin: 4
+            }
+
+            Text {
+                Layout.fillWidth: true
+                text: "Pinned folders are managed from the sidebar — right-click a folder and choose Pin (or drag it onto the sidebar). They live in one place, so there is no separate editor here."
+                color: Theme.subtext
+                font.pointSize: Theme.fontSmall
+                wrapMode: Text.WordWrap
+            }
         }
     }
 
@@ -999,9 +1093,20 @@ Window {
                                 Layout.leftMargin: 12
                                 Layout.rightMargin: 12
                                 Layout.topMargin: 8
-                                text: "Reset to Defaults"
+                                text: root.confirmReset
+                                    ? "Click again to confirm reset"
+                                    : "Reset to Defaults"
                                 variant: "ghost"
-                                onClicked: root.resetToDefaults()
+                                onClicked: {
+                                    if (root.confirmReset) {
+                                        root.confirmReset = false
+                                        resetConfirmTimer.stop()
+                                        root.resetToDefaults()
+                                    } else {
+                                        root.confirmReset = true
+                                        resetConfirmTimer.restart()
+                                    }
+                                }
                             }
                         }
                     }
