@@ -398,6 +398,33 @@ private slots:
         QVERIFY(QFileInfo::exists(model.activeTab()->currentPath()));
         QVERIFY(QFileInfo::exists(model.activeTab()->secondaryCurrentPath()));
     }
+
+    void testSessionPersistsMergedSupertab()
+    {
+        TabListModel model;
+
+        // Build a 3-pane merged supertab on the active tab.
+        TabModel *tab = model.activeTab();
+        tab->navigateTo("/tmp");
+        tab->addPane("/usr");
+        tab->addPane("/home");
+        tab->setSupertab(true);
+        QCOMPARE(tab->paneCount(), 3);
+        QVERIFY(tab->isSupertab());
+
+        // Round-trip through the session JSON.
+        const QJsonArray saved = model.saveSession();
+        TabListModel restored;
+        restored.restoreSession(saved, 0);
+
+        TabModel *rtab = restored.activeTab();
+        QVERIFY(rtab != nullptr);
+        QCOMPARE(rtab->paneCount(), 3);          // merge group survived
+        QVERIFY(rtab->isSupertab());
+        QCOMPARE(rtab->paneCurrentPath(0), QString("/tmp"));
+        QCOMPARE(rtab->paneCurrentPath(1), QString("/usr"));
+        QCOMPARE(rtab->paneCurrentPath(2), QString("/home"));
+    }
 };
 
 QTEST_MAIN(TestTabModel)

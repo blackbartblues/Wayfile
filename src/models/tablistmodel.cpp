@@ -652,6 +652,13 @@ QJsonArray TabListModel::saveSession() const
 {
     QJsonArray arr;
     for (const auto *tab : m_tabs) {
+        // Persist the full pane list so merged supertabs survive a restart.
+        // Merges use the N-pane system (m_panes + isSupertab), which the
+        // legacy splitViewEnabled/secondaryPath fields don't capture.
+        QJsonArray panes;
+        for (int i = 0; i < tab->paneCount(); ++i)
+            panes.append(tab->paneCurrentPath(i));
+
         arr.append(QJsonObject{
             {"path", tab->currentPath()},
             {"viewMode", tab->viewMode()},
@@ -659,6 +666,8 @@ QJsonArray TabListModel::saveSession() const
             {"secondaryPath", tab->secondaryCurrentPath()},
             {"sortBy", tab->sortBy()},
             {"sortAscending", tab->sortAscending()},
+            {"panes", panes},
+            {"isSupertab", tab->isSupertab()},
         });
     }
     return arr;
@@ -676,19 +685,38 @@ void TabListModel::restoreSession(const QJsonArray &tabs, int activeIdx)
     for (const auto &val : tabs) {
         QJsonObject obj = val.toObject();
         auto *tab = new TabModel(this);
-        tab->navigateTo(normalizedSessionPath(obj.value("path").toString()));
+
+        const QJsonArray panes = obj.value("panes").toArray();
+        const bool isSupertab = obj.value("isSupertab").toBool(false);
+
+        // Pane 0 path: prefer the panes array, fall back to the legacy "path"
+        // field for sessions written before merge persistence existed.
+        const QString firstPath = panes.isEmpty()
+            ? obj.value("path").toString()
+            : panes.first().toString();
+        tab->navigateTo(normalizedSessionPath(firstPath));
         tab->setViewMode(obj.value("viewMode").toString("grid"));
-        const bool splitEnabled = obj.value("splitViewEnabled").toBool(false);
-        tab->setSplitViewEnabled(splitEnabled);
-        // Phase 2 P2-M4: skip secondary restore for non-split tabs so they
-        // come back at paneCount == 1 (matches the lazy-grow constructor).
-        if (splitEnabled) {
-            const QString secondaryPath = normalizedSessionPath(
-                obj.value("secondaryPath").toString(tab->currentPath()));
-            tab->setSecondaryCurrentPath(secondaryPath);
-        }
         tab->setSortBy(obj.value("sortBy").toString("name"));
         tab->setSortAscending(obj.value("sortAscending").toBool(true));
+
+        if (isSupertab && panes.size() > 1) {
+            // Recreate the merged supertab: one pane per saved path, then mark
+            // it so title() joins every pane's name — mirrors mergeSelected().
+            for (int i = 1; i < panes.size(); ++i)
+                tab->addPane(normalizedSessionPath(panes.at(i).toString()));
+            tab->setSupertab(true);
+        } else {
+            // Legacy 2-pane split restore. Skip secondary for non-split tabs so
+            // they come back at paneCount == 1 (matches the lazy-grow ctor).
+            const bool splitEnabled = obj.value("splitViewEnabled").toBool(false);
+            tab->setSplitViewEnabled(splitEnabled);
+            if (splitEnabled) {
+                const QString secondaryPath = normalizedSessionPath(
+                    obj.value("secondaryPath").toString(tab->currentPath()));
+                tab->setSecondaryCurrentPath(secondaryPath);
+            }
+        }
+
         m_tabs.append(tab);
         connectTab(m_tabs.size() - 1, tab);
     }
