@@ -581,10 +581,17 @@ ApplicationWindow {
     }
 
     function focusNextPane() {
-        if (!splitViewEnabled())
+        var count = tabModel.activeTab ? tabModel.activeTab.paneCount : 1
+        if (count <= 1)
             return
+        root.setActivePane((activePaneIndex + 1) % count)
+    }
 
-        root.setActivePane(activePaneIndex === 0 ? 1 : 0)
+    function focusPreviousPane() {
+        var count = tabModel.activeTab ? tabModel.activeTab.paneCount : 1
+        if (count <= 1)
+            return
+        root.setActivePane((activePaneIndex - 1 + count) % count)
     }
 
     // Phase 2 P2-M9: close the pane at idx.  If the tab is single-pane
@@ -3068,7 +3075,7 @@ ApplicationWindow {
 
     Shortcut {
         sequence: config.shortcutMap["focus_previous_pane"]
-        onActivated: root.focusNextPane()
+        onActivated: root.focusPreviousPane()
     }
 
     // View mode switching
@@ -3260,17 +3267,34 @@ ApplicationWindow {
 
     Shortcut {
         sequence: "Escape"
-        enabled: root.searchMode
-                 && !quickPreview.active
-                 && !bulkRenameDialog.visible
-                 && !settingsPanel.visible
-                 && !shortcutsDialog.visible
-                 && !renameDialog.visible
-                 && !newFolderDialog.visible
-                 && !newFileDialog.visible
-                 && !deleteConfirmDialog.visible
-                 && !emptyTrashConfirmDialog.visible
-        onActivated: root.closeSearch()
+        // Context menus are in-scene overlays with no Escape handling of
+        // their own, so the global shortcut closes them (highest priority).
+        // Otherwise it closes search. Modal dialogs and QuickPreview keep
+        // self-handling Escape, so the shortcut stays disabled while one of
+        // those is open (it would otherwise swallow the key before them).
+        enabled: contextMenu.visible
+                 || sidebarContextMenu.visible
+                 || (root.searchMode
+                     && !quickPreview.active
+                     && !bulkRenameDialog.visible
+                     && !settingsPanel.visible
+                     && !shortcutsDialog.visible
+                     && !renameDialog.visible
+                     && !newFolderDialog.visible
+                     && !newFileDialog.visible
+                     && !deleteConfirmDialog.visible
+                     && !emptyTrashConfirmDialog.visible)
+        onActivated: {
+            if (contextMenu.visible) {
+                contextMenu.close()
+                return
+            }
+            if (sidebarContextMenu.visible) {
+                sidebarContextMenu.close()
+                return
+            }
+            root.closeSearch()
+        }
     }
 
     function sidebarMenuItems(item) {
