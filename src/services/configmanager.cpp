@@ -4,14 +4,47 @@
 #include "third_party/toml.hpp"
 
 #include <QFile>
+#include <QSaveFile>
 #include <QDir>
 #include <QDebug>
 #include <QFileInfo>
 #include <QFontDatabase>
 #include <QStandardPaths>
 #include <fstream>
+#include <sstream>
 
 namespace {
+
+// Serialise the config and write it atomically (write-temp + rename) so a
+// crash mid-write can never leave the user with a truncated or empty
+// config.toml. std::ofstream truncates the target before writing, which is
+// exactly the failure mode this avoids.
+bool writeTomlAtomic(const QString &path, const toml::table &config)
+{
+    std::ostringstream oss;
+    oss << config;
+    const std::string text = oss.str();
+
+    QSaveFile file(path);
+    if (!file.open(QIODevice::WriteOnly)) {
+        qWarning() << "ConfigManager: cannot open config for writing:" << path
+                   << file.errorString();
+        return false;
+    }
+    const QByteArray bytes(text.data(), static_cast<qsizetype>(text.size()));
+    if (file.write(bytes) != bytes.size()) {
+        qWarning() << "ConfigManager: failed to write config:" << path
+                   << file.errorString();
+        file.cancelWriting();
+        return false;
+    }
+    if (!file.commit()) {
+        qWarning() << "ConfigManager: failed to commit config:" << path
+                   << file.errorString();
+        return false;
+    }
+    return true;
+}
 
 struct ShortcutSpec {
     const char *action;
@@ -659,11 +692,7 @@ void ConfigManager::saveSettings(const QVariantMap &settings)
             config.insert_or_assign("window", std::move(windowTbl));
     }
 
-    std::ofstream ofs(m_configPath.toStdString());
-    if (ofs.is_open()) {
-        ofs << config;
-        ofs.close();
-    }
+    writeTomlAtomic(m_configPath, config);
 
     if (QFile::exists(m_configPath))
         m_watcher.addPath(m_configPath);
@@ -702,11 +731,7 @@ void ConfigManager::saveShortcuts(const QVariantMap &shortcuts)
 
     config.insert_or_assign("shortcuts", std::move(shortcutTable));
 
-    std::ofstream ofs(m_configPath.toStdString());
-    if (ofs.is_open()) {
-        ofs << config;
-        ofs.close();
-    }
+    writeTomlAtomic(m_configPath, config);
 
     if (QFile::exists(m_configPath))
         m_watcher.addPath(m_configPath);
@@ -737,11 +762,7 @@ void ConfigManager::saveBookmarks(const QStringList &paths)
     config.insert_or_assign("bookmarks", toml::table{{"paths", std::move(arr)}});
 
     // Write back
-    std::ofstream ofs(m_configPath.toStdString());
-    if (ofs.is_open()) {
-        ofs << config;
-        ofs.close();
-    }
+    writeTomlAtomic(m_configPath, config);
 
     if (QFile::exists(m_configPath))
         m_watcher.addPath(m_configPath);
