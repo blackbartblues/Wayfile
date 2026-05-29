@@ -33,6 +33,9 @@ Rectangle {
     signal selectionChanged()
     signal transferRequested(var paths, string destinationPath, bool moveOperation)
     signal contextMenuRequested(string filePath, bool isDirectory, var position)
+    // Column-header sort from this pane's detailed view; Main.qml applies it
+    // tab-wide (see FileViewContainer.sortRequested).
+    signal sortRequested(string column, bool ascending)
     // Phase 2 P2-M9: user-driven 'close this pane' (X button or Ctrl+W).
     // Main.qml routes this to TabModel.removePane(paneIndex); the receiver
     // handles the demote-to-single-pane / kill-the-tab edge cases.
@@ -79,6 +82,8 @@ Rectangle {
                 paneFrame.transferRequested(paths, destinationPath, moveOperation)
             onContextMenuRequested: (filePath, isDirectory, position) =>
                 paneFrame.contextMenuRequested(filePath, isDirectory, position)
+            onSortRequested: (column, ascending) =>
+                paneFrame.sortRequested(column, ascending)
         }
     }
 

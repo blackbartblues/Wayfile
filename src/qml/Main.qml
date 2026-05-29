@@ -193,12 +193,37 @@ ApplicationWindow {
         }
     }
 
+    // Connect each pane slot's search-finished + directory-watch signals once.
+    // The PaneServices backends are allocated for the app's lifetime in
+    // main.cpp, so a single imperative connect (rather than static slot-0/1
+    // Connections) reaches panes 2/3 too and never needs tearing down.
+    function wirePaneServiceSignals() {
+        for (var i = 0; i < paneServicesProvider.count; ++i) {
+            (function(idx) {
+                var svc = paneServicesProvider.searchServiceAt(idx)
+                if (svc)
+                    svc.searchFinished.connect(function() { root.selectFirstSearchResult(idx) })
+                var mdl = paneServicesProvider.fsModelAt(idx)
+                if (mdl)
+                    mdl.watchedDirectoryChanged.connect(function(path) { diskUsageService.invalidatePath(path) })
+            })(i)
+        }
+    }
+
     // Force initial load after QML is fully set up
     Component.onCompleted: {
+        root.wirePaneServiceSignals()
         if (tabModel.activeTab) {
             fsModel.setRootPath(tabModel.activeTab.currentPath)
             if (tabModel.activeTab.splitViewEnabled)
                 splitFsModel.setRootPath(tabModel.activeTab.secondaryCurrentPath)
+            // Seed every pane of a (possibly session-restored) supertab, not
+            // just slots 0/1 — panes 2/3 otherwise start with no root path.
+            for (var i = 0; i < tabModel.activeTab.paneCount; ++i) {
+                var mdl = paneServicesProvider.fsModelAt(i)
+                if (mdl)
+                    mdl.setRootPath(tabModel.activeTab.paneCurrentPath(i))
+            }
             root.syncMillerParentModel(tabModel.activeTab.currentPath)
             root.applyActiveTabSort()
         }
@@ -315,6 +340,41 @@ ApplicationWindow {
     // exposing the kMaxPanes-sized list main.cpp built at startup.
     function paneBaseModel(pane) {
         return paneServicesProvider.fsModelAt(pane) || fsModel
+    }
+
+    // #9 follow-up: per-pane fan-out helpers.  A merged supertab renders up to
+    // paneServicesProvider.count panes, each backed by its own fsModelAt(i).
+    // Operations that historically touched only fsModel (slot 0) + splitFsModel
+    // (slot 1) must reach every live pane, or panes 2/3 go stale (wrong sort,
+    // no refresh after a file op, etc.).
+    function forEachLivePaneModel(fn) {
+        var n = tabModel.activeTab ? tabModel.activeTab.paneCount : 1
+        for (var i = 0; i < n; ++i) {
+            var mdl = paneServicesProvider.fsModelAt(i)
+            if (mdl)
+                fn(mdl, i)
+        }
+    }
+
+    function refreshAllPanes() {
+        forEachLivePaneModel(function(mdl) { mdl.refresh() })
+    }
+
+    // Sort is tab-level: TabModel mirrors sortBy/sortAscending across every
+    // pane, so a UI sort request (context menu or column header) updates the
+    // tab metadata and re-sorts all live panes through applyActiveTabSort().
+    function applySortFromUi(column, ascending) {
+        if (!tabModel.activeTab)
+            return
+        // Setting sortBy/sortAscending fires sortChanged, whose handler runs
+        // applyActiveTabSort() across all panes. Only sort explicitly when the
+        // metadata is unchanged (no signal would fire) so we don't sort twice.
+        var changed = tabModel.activeTab.sortBy !== column
+            || tabModel.activeTab.sortAscending !== ascending
+        tabModel.activeTab.sortBy = column
+        tabModel.activeTab.sortAscending = ascending
+        if (!changed)
+            root.applyActiveTabSort()
     }
 
     function clampedSidebarWidth(width) {
@@ -1044,9 +1104,9 @@ ApplicationWindow {
         if (!tabModel.activeTab)
             return
 
-        fsModel.sortByColumn(tabModel.activeTab.sortBy, tabModel.activeTab.sortAscending)
-        if (tabModel.activeTab.splitViewEnabled)
-            splitFsModel.sortByColumn(tabModel.activeTab.sortBy, tabModel.activeTab.sortAscending)
+        var sortBy = tabModel.activeTab.sortBy
+        var ascending = tabModel.activeTab.sortAscending
+        forEachLivePaneModel(function(mdl) { mdl.sortByColumn(sortBy, ascending) })
     }
 
     function updateSelectionStatus() {
@@ -1367,7 +1427,9 @@ ApplicationWindow {
     }
 
     function selectFirstSearchResult(pane) {
-        var targetPane = pane || activePaneIndex
+        // Nullish (not ||) so pane 0 isn't treated as "unspecified" and
+        // silently redirected to the active pane.
+        var targetPane = pane ?? activePaneIndex
         if (!paneSearchMode(targetPane) || searchProxyForPane(targetPane).rowCount() === 0)
             return
 
@@ -1379,15 +1441,10 @@ ApplicationWindow {
         }
     }
 
-    Connections {
-        target: searchService
-        function onSearchFinished() { root.selectFirstSearchResult(0) }
-    }
-
-    Connections {
-        target: splitSearchService
-        function onSearchFinished() { root.selectFirstSearchResult(1) }
-    }
+    // Per-pane search-finished + directory-watch connections are wired
+    // imperatively for every pane slot in Component.onCompleted (see
+    // wirePaneServiceSignals) — the pane backends are app-lifetime objects, so
+    // a one-time connect reaches panes 2/3 without static slot-0/1 Connections.
 
     Connections {
         target: diskUsageService
@@ -1482,8 +1539,7 @@ ApplicationWindow {
                     renameErrorText.text = result.error || "Rename failed"
                     return
                 }
-                fsModel.refresh()
-                splitFsModel.refresh()
+                root.refreshAllPanes()
             } else {
                 undoManager.rename(renameTargetPath, name)
             }
@@ -1647,8 +1703,7 @@ ApplicationWindow {
             }
             if (fileOps.isRemotePath(newItemParentPath)) {
                 fileOps.createFolder(newItemParentPath, name)
-                fsModel.refresh()
-                splitFsModel.refresh()
+                root.refreshAllPanes()
             } else {
                 undoManager.createFolder(newItemParentPath, name)
             }
@@ -1812,8 +1867,7 @@ ApplicationWindow {
             }
             if (fileOps.isRemotePath(newItemParentPath)) {
                 fileOps.createFile(newItemParentPath, name)
-                fsModel.refresh()
-                splitFsModel.refresh()
+                root.refreshAllPanes()
             } else {
                 undoManager.createFile(newItemParentPath, name)
             }
@@ -2941,14 +2995,7 @@ ApplicationWindow {
             if (tabModel.activeTab) tabModel.activeTab.viewMode = mode
         }
 
-        onSortRequested: (column, ascending) => {
-            if (tabModel.activeTab) {
-                tabModel.activeTab.sortBy = column
-                tabModel.activeTab.sortAscending = ascending
-            }
-            if (fsModel) fsModel.sortByColumn(column, ascending)
-            if (splitFsModel) splitFsModel.sortByColumn(column, ascending)
-        }
+        onSortRequested: (column, ascending) => root.applySortFromUi(column, ascending)
     }
 
     ContextMenu {
@@ -3077,16 +3124,18 @@ ApplicationWindow {
 
     Shortcut {
         sequence: config.shortcutMap["refresh"]
-        onActivated: {
-            fsModel.refresh()
-            splitFsModel.refresh()
-        }
+        onActivated: root.refreshAllPanes()
     }
 
-    // Toggle hidden files
+    // Toggle hidden files. showHidden is a view-wide preference, so flip every
+    // live pane together (keyed off the active pane's current state) rather
+    // than just slot 0 — otherwise panes 1/2/3 of a supertab stay out of sync.
     Shortcut {
         sequence: config.shortcutMap["toggle_hidden"]
-        onActivated: fsModel.showHidden = !fsModel.showHidden
+        onActivated: {
+            var show = !root.paneBaseModel(root.activePaneIndex).showHidden
+            root.forEachLivePaneModel(function(mdl) { mdl.showHidden = show })
+        }
     }
 
     // Toggle path bar focus (Ctrl+L-like)
@@ -3106,6 +3155,9 @@ ApplicationWindow {
         onActivated: root.toggleMergeOrUnmerge()
     }
 
+    // Absolute leftmost / rightmost pane. Relative motion (next/previous) has
+    // its own shortcuts below; right pane is the last live pane, not a
+    // hardcoded slot 1, so it works for 3-4 pane supertabs.
     Shortcut {
         sequence: config.shortcutMap["focus_left_pane"]
         onActivated: root.setActivePane(0)
@@ -3113,7 +3165,7 @@ ApplicationWindow {
 
     Shortcut {
         sequence: config.shortcutMap["focus_right_pane"]
-        onActivated: root.setActivePane(1)
+        onActivated: root.setActivePane((tabModel.activeTab ? tabModel.activeTab.paneCount : 1) - 1)
     }
 
     Shortcut {
@@ -3779,6 +3831,10 @@ ApplicationWindow {
                             }
                             onContextMenuRequested: (filePath, isDirectory, position) =>
                                 root.showContextMenuForPane(index, filePath, isDirectory, position)
+                            onSortRequested: (column, ascending) => {
+                                root.setActivePane(index)
+                                root.applySortFromUi(column, ascending)
+                            }
                             onCloseRequested: root.closePaneAt(index)
                         }
                     }
@@ -3865,8 +3921,7 @@ ApplicationWindow {
         }
 
         function onOperationFinished(success, error) {
-            fsModel.refresh()
-            splitFsModel.refresh()
+            root.refreshAllPanes()
             root.updateSelectionStatus()
             if (propertiesDialog.visible && propertiesDialog.props.path) {
                 propertiesDialog.props = propertiesDialog.fileModelRef.fileProperties(propertiesDialog.props.path)
@@ -3886,17 +3941,7 @@ ApplicationWindow {
         }
     }
 
-    Connections {
-        target: fsModel
-        function onWatchedDirectoryChanged(path) {
-            diskUsageService.invalidatePath(path)
-        }
-    }
-
-    Connections {
-        target: splitFsModel
-        function onWatchedDirectoryChanged(path) {
-            diskUsageService.invalidatePath(path)
-        }
-    }
+    // fsModel / splitFsModel directory-watch was wired per-slot here; it is now
+    // connected for every pane in wirePaneServiceSignals() (Component.onCompleted)
+    // so panes 2/3 invalidate disk-usage cache on directory changes too.
 }

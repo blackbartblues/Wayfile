@@ -14,6 +14,10 @@ Item {
     signal selectionChanged()
     signal interactionStarted()
     signal transferRequested(var paths, string destinationPath, bool moveOperation)
+    // Column-header sort. Routed up to Main.qml (rather than sorting this one
+    // pane's model locally) so the request updates tab metadata and re-sorts
+    // every pane in a merged supertab — sort is a tab-level setting.
+    signal sortRequested(string column, bool ascending)
 
     function selectAll() {
         if (viewMode === "grid") gridView.selectAll()
@@ -55,9 +59,7 @@ Item {
 
         onFileActivated: (fp, isDir) => root.fileActivated(fp, isDir)
         onContextMenuRequested: (fp, isDir, pos) => root.contextMenuRequested(fp, isDir, pos)
-        onSortRequested: (col, asc) => {
-            if (root.fileModel) root.fileModel.sortByColumn(col, asc)
-        }
+        onSortRequested: (col, asc) => root.sortRequested(col, asc)
         onSelectedIndicesChanged: root.selectionChanged()
         onInteractionStarted: root.interactionStarted()
         onTransferRequested: (paths, destinationPath, moveOperation) => root.transferRequested(paths, destinationPath, moveOperation)
