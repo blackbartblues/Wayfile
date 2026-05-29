@@ -19,7 +19,10 @@ void SearchWorker::search(const QString &rootPath, const QString &pattern, bool 
     QDir::Filters filters = QDir::AllEntries | QDir::NoDotAndDotDot;
     if (showHidden) filters |= QDir::Hidden;
 
-    QDirIterator it(rootPath, filters, QDirIterator::Subdirectories | QDirIterator::FollowSymlinks);
+    // Deliberately NOT following symlinks: a single symlink cycle
+    // (dir/link -> dir) makes a recursive QDirIterator loop forever, pegging a
+    // CPU core and flooding the results model until the user cancels.
+    QDirIterator it(rootPath, filters, QDirIterator::Subdirectories);
 
     bool isGlob = pattern.contains('*') || pattern.contains('?') || pattern.contains('[');
     QRegularExpression regex;
@@ -134,8 +137,13 @@ void SearchService::cancelSearch()
 
     if (worker)
         worker->cancel();
-    if (thread)
+    if (thread) {
         thread->quit();
+        // Join the worker thread: its finished() lambda captures `this`, so it
+        // must not still be running once this service is destroyed. cancel()
+        // above makes the search loop exit promptly, so this is bounded.
+        thread->wait(3000);
+    }
 
     if (m_searching) {
         m_searching = false;
