@@ -850,34 +850,20 @@ ApplicationWindow {
         }
     }
 
-    // True when the active pane is the secondary (index 1) of a multi-pane
-    // tab. The split layout now comes from the merge system (paneCount > 1);
-    // the legacy splitViewEnabled flag stays false, so it must NOT be used to
-    // gate per-pane navigation — doing so always fell through to the primary
-    // pane (goBack/goForward/goUp operated on pane 0 regardless of focus).
-    function activeIsSecondaryPane() {
-        return activePaneIndex === 1
-            && tabModel.activeTab && tabModel.activeTab.paneCount > 1
-    }
-
+    // #9: every pane's history navigation goes through the indexed
+    // paneGoBack/Forward/Up entry points, dispatched by activePaneIndex.
+    // TabModel routes slots 0/1 to the legacy mutators and slots >= 2 to the
+    // generic per-pane path, so this no longer has to know which pane is
+    // "secondary" — the old activeIsSecondaryPane() fork (which silently fell
+    // through to pane 0) is gone.
     function goActivePaneBack() {
-        if (!tabModel.activeTab)
-            return
-
-        if (activeIsSecondaryPane())
-            tabModel.activeTab.secondaryGoBack()
-        else
-            tabModel.activeTab.goBack()
+        if (tabModel.activeTab)
+            tabModel.activeTab.paneGoBack(activePaneIndex)
     }
 
     function goActivePaneForward() {
-        if (!tabModel.activeTab)
-            return
-
-        if (activeIsSecondaryPane())
-            tabModel.activeTab.secondaryGoForward()
-        else
-            tabModel.activeTab.goForward()
+        if (tabModel.activeTab)
+            tabModel.activeTab.paneGoForward(activePaneIndex)
     }
 
     function goActivePaneUp() {
@@ -905,10 +891,7 @@ ApplicationWindow {
             return
         }
 
-        if (activeIsSecondaryPane())
-            tabModel.activeTab.secondaryGoUp()
-        else
-            tabModel.activeTab.goUp()
+        tabModel.activeTab.paneGoUp(activePaneIndex)
     }
 
     // Phase 2 P2-merge-unmerge: the historical split-view toggle now drives
@@ -993,22 +976,22 @@ ApplicationWindow {
         return "Merge with neighbour tab"
     }
 
+    // paneCanGoBack/Forward are Q_INVOKABLEs (not bindable Q_PROPERTYs), so
+    // touch paneNavTick — bumped on every pane navigation via
+    // refreshActivePanePath — to give the toolbar's enabled bindings a
+    // reactive dependency that re-fires when any pane's history changes.
     function activePaneCanGoBack() {
-        if (!tabModel.activeTab)
-            return false
-
-        return activeIsSecondaryPane()
-            ? tabModel.activeTab.secondaryCanGoBack
-            : tabModel.activeTab.canGoBack
+        root.paneNavTick
+        return tabModel.activeTab
+            ? tabModel.activeTab.paneCanGoBack(activePaneIndex)
+            : false
     }
 
     function activePaneCanGoForward() {
-        if (!tabModel.activeTab)
-            return false
-
-        return activeIsSecondaryPane()
-            ? tabModel.activeTab.secondaryCanGoForward
-            : tabModel.activeTab.canGoForward
+        root.paneNavTick
+        return tabModel.activeTab
+            ? tabModel.activeTab.paneCanGoForward(activePaneIndex)
+            : false
     }
 
     function activeItemCount() {

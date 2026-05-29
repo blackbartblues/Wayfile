@@ -69,6 +69,22 @@ public:
     // paneServices slot.
     Q_INVOKABLE void navigateInPane(int idx, const QString &path);
 
+    // Phase 2 #9 (unify split -> N-pane): generic per-pane history navigation.
+    // These are the single entry points Main.qml routes the active pane's
+    // back / forward / up through, indexed by activePaneIndex — replacing the
+    // old activeIsSecondaryPane() fork between goBack()/secondaryGoBack() etc.
+    // Slots 0 / 1 delegate to the legacy mutators so their established
+    // currentPathChanged / secondaryCurrentPathChanged signals keep firing
+    // for the QML handlers wired around them; slots >= 2 operate on
+    // m_panes[idx] directly and emit panePathChanged(idx).  The CanGo readers
+    // are uniform across every index (each pane carries its own back/forward
+    // stack in PaneState), so they work for 0 / 1 too.
+    Q_INVOKABLE void paneGoBack(int idx);
+    Q_INVOKABLE void paneGoForward(int idx);
+    Q_INVOKABLE void paneGoUp(int idx);
+    Q_INVOKABLE bool paneCanGoBack(int idx) const;
+    Q_INVOKABLE bool paneCanGoForward(int idx) const;
+
     // Phase 2 P2-M2: grow / shrink the pane list past the original N=2.
     int paneCount() const;
     Q_INVOKABLE int addPane(const QString &path);

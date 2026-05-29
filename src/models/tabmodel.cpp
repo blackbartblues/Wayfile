@@ -429,6 +429,77 @@ void TabModel::navigateInPane(int idx, const QString &path)
     emit titleChanged();
 }
 
+// --- Phase 2 #9: generic per-pane history navigation -------------------------
+
+void TabModel::paneGoBack(int idx)
+{
+    if (idx == 0) {
+        goBack();
+        return;
+    }
+    if (idx == 1) {
+        secondaryGoBack();
+        return;
+    }
+    if (idx < 0 || idx >= m_panes.size())
+        return;
+    PaneState &p = m_panes[idx];
+    if (p.backStack.isEmpty())
+        return;
+    p.forwardStack.append(p.currentPath);
+    p.currentPath = p.backStack.takeLast();
+    emit panePathChanged(idx);
+    emit titleChanged();
+}
+
+void TabModel::paneGoForward(int idx)
+{
+    if (idx == 0) {
+        goForward();
+        return;
+    }
+    if (idx == 1) {
+        secondaryGoForward();
+        return;
+    }
+    if (idx < 0 || idx >= m_panes.size())
+        return;
+    PaneState &p = m_panes[idx];
+    if (p.forwardStack.isEmpty())
+        return;
+    p.backStack.append(p.currentPath);
+    p.currentPath = p.forwardStack.takeLast();
+    emit panePathChanged(idx);
+    emit titleChanged();
+}
+
+void TabModel::paneGoUp(int idx)
+{
+    if (idx == 0) {
+        goUp();
+        return;
+    }
+    if (idx == 1) {
+        secondaryGoUp();
+        return;
+    }
+    if (idx < 0 || idx >= m_panes.size())
+        return;
+    const QString parent = parentLocation(m_panes[idx].currentPath);
+    if (parent != m_panes[idx].currentPath)
+        navigateInPane(idx, parent);
+}
+
+bool TabModel::paneCanGoBack(int idx) const
+{
+    return idx >= 0 && idx < m_panes.size() && !m_panes[idx].backStack.isEmpty();
+}
+
+bool TabModel::paneCanGoForward(int idx) const
+{
+    return idx >= 0 && idx < m_panes.size() && !m_panes[idx].forwardStack.isEmpty();
+}
+
 void TabModel::setSupertab(bool on)
 {
     if (m_isSupertab == on)
