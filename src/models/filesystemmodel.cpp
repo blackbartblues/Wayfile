@@ -929,16 +929,32 @@ void FileSystemModel::reload()
     ++m_remoteReloadGeneration;
 
     if (isTrashRoot()) {
-        // Trash scan runs gio synchronously already; wrap in the reset.
+        if (m_synchronousReload) {
+            // Test mode: keep it synchronous so rowCount() is populated at once.
+            beginResetModel();
+            m_entries.clear();
+            m_remoteEntries.clear();
+            m_trashEntries.clear();
+            m_fileCount = 0;
+            m_folderCount = 0;
+            reloadTrash();
+            endResetModel();
+            emit countsChanged();
+            return;
+        }
+
+        // GUI: clear rows now so the old dir disappears, then fetch the trash
+        // listing asynchronously (reloadTrashAsync owns the reset around the
+        // result) — navigating into Trash no longer freezes for up to 5s.
         beginResetModel();
         m_entries.clear();
         m_remoteEntries.clear();
         m_trashEntries.clear();
         m_fileCount = 0;
         m_folderCount = 0;
-        reloadTrash();
         endResetModel();
         emit countsChanged();
+        reloadTrashAsync();
         return;
     }
 
@@ -1351,6 +1367,22 @@ bool FileSystemModel::applyLocalDiff(const QList<Entry> &newEntries)
     return false;
 }
 
+// Argument list for `gio list` against the trash root (shared by the sync and
+// async reload paths). Inside a Flatpak the call is transparently wrapped with
+// `flatpak-spawn --host` by runHostTool/startHostToolProcess so it queries the
+// host's real ~/.local/share/Trash rather than the sandbox-local one.
+static QStringList trashGioListArgs(const QString &rootPath)
+{
+    return {
+        QStringLiteral("list"),
+        QStringLiteral("-l"),
+        QStringLiteral("-u"),
+        QStringLiteral("-a"),
+        QStringLiteral("standard::display-name,standard::name,standard::content-type,time::modified,trash::orig-path,trash::deletion-date"),
+        QUrl(rootPath).toString(QUrl::FullyEncoded)
+    };
+}
+
 void FileSystemModel::reloadTrash()
 {
     if (m_rootPath.isEmpty()) {
@@ -1359,18 +1391,60 @@ void FileSystemModel::reloadTrash()
         return;
     }
 
-    // Inside a Flatpak this transparently runs `flatpak-spawn --host gio
-    // list ...`. Without the host hop, the sandbox's overridden
-    // XDG_DATA_HOME (~/.var/app/<app-id>/data) makes gio query an empty
-    // sandbox-local trash instead of the user's real ~/.local/share/Trash.
-    const QString output = runHostTool(QStringLiteral("gio"), {
-        QStringLiteral("list"),
-        QStringLiteral("-l"),
-        QStringLiteral("-u"),
-        QStringLiteral("-a"),
-        QStringLiteral("standard::display-name,standard::name,standard::content-type,time::modified,trash::orig-path,trash::deletion-date"),
-        QUrl(m_rootPath).toString(QUrl::FullyEncoded)
-    }, 5000);
+    // Synchronous gio query. Only used in test mode (setSynchronousReload); the
+    // GUI uses reloadTrashAsync() so navigating into Trash never blocks for the
+    // up-to-5s gio call.
+    const QString output = runHostTool(QStringLiteral("gio"), trashGioListArgs(m_rootPath), 5000);
+    applyTrashReload(output);
+}
+
+void FileSystemModel::reloadTrashAsync()
+{
+    if (m_rootPath.isEmpty()) {
+        m_fileCount = 0;
+        m_folderCount = 0;
+        return;
+    }
+
+    const int generation = m_remoteReloadGeneration;
+    const QString rootPath = m_rootPath;
+    auto *process = new QProcess(this);
+    m_remoteReloadProcess = process;
+
+    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+            this, [this, process, generation, rootPath](int exitCode, QProcess::ExitStatus) {
+        if (process != m_remoteReloadProcess || generation != m_remoteReloadGeneration) {
+            process->deleteLater();
+            return;
+        }
+
+        const QByteArray output = exitCode == 0 ? process->readAllStandardOutput() : QByteArray();
+        m_remoteReloadProcess = nullptr;
+        process->deleteLater();
+
+        // Discard if the user navigated away while the query was in flight.
+        if (rootPath != m_rootPath || !isTrashRoot())
+            return;
+
+        beginResetModel();
+        m_trashEntries.clear();
+        applyTrashReload(QString::fromUtf8(output));
+        endResetModel();
+        emit countsChanged();
+    });
+
+    startHostToolProcess(process, QStringLiteral("gio"), trashGioListArgs(m_rootPath));
+    QTimer::singleShot(8000, process, [this, process, generation]() {
+        if (process == m_remoteReloadProcess
+            && generation == m_remoteReloadGeneration
+            && process->state() != QProcess::NotRunning) {
+            process->kill();
+        }
+    });
+}
+
+void FileSystemModel::applyTrashReload(const QString &output)
+{
     const QStringList lines = output.split('\n', Qt::SkipEmptyParts);
     for (const QString &line : lines) {
         const QVariantMap entry = buildTrashEntryFromLine(line);

@@ -117,7 +117,9 @@ private:
     void reload();
     void reloadLocal();
     void reloadRemote();
-    void reloadTrash();
+    void reloadTrash();        // synchronous (test mode); fills m_trashEntries inline
+    void reloadTrashAsync();   // GUI: fetch trash listing via async QProcess (no freeze)
+    void applyTrashReload(const QString &output);
     void cancelRemoteReload();
     void applyRemoteReload(const QString &rootPath, const QByteArray &output);
     // Local scans go through a QtConcurrent future so the GUI thread never
