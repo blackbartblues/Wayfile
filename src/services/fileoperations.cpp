@@ -1081,8 +1081,13 @@ void FileOperations::restoreFromTrash(const QStringList &paths)
             const bool inFlatpak = runningInFlatpak();
             for (int i = 0; i < total; ++i) {
                 const QString uri = trashUriForPath(paths[i]);
-                if (uri.isEmpty())
+                if (uri.isEmpty()) {
+                    // Don't silently drop the item: record it so the operation
+                    // reports failure instead of a false success.
+                    lastError = QStringLiteral("Could not locate \"%1\" in trash")
+                                    .arg(locationFileName(paths[i]));
                     continue;
+                }
 
                 report(i, total, locationFileName(paths[i]));
 
