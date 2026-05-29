@@ -124,10 +124,10 @@ private:
     struct ClosedTabInfo {
         QString path;
         QString viewMode;
-        QString secondaryPath;
+        QStringList panePaths;
         QString sortBy;
         bool sortAscending = true;
-        bool splitViewEnabled = false;
+        bool isSupertab = false;
     };
     QList<ClosedTabInfo> m_closedTabs;
 };

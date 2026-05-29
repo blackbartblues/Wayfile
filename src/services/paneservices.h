@@ -22,10 +22,9 @@ struct PaneServices {
 };
 
 // Q_INVOKABLE indexed accessor over a QList<PaneServices> the way Main.qml
-// addresses pane backends in the M6 paneRow Repeater.  Slots 0 / 1 are
-// also still exposed under the historical names fsModel / splitFsModel /
-// etc., so this provider exists alongside them rather than replacing
-// every call site.
+// addresses pane backends in the paneRow Repeater.  Slot 0 is also still
+// exposed under the historical name fsModel for the primary-pane call sites,
+// so this provider exists alongside that rather than replacing every one.
 class PaneServicesProvider : public QObject {
     Q_OBJECT
     Q_PROPERTY(int count READ count CONSTANT)

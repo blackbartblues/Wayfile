@@ -72,35 +72,15 @@ QString parentLocation(const QString &path)
 TabModel::TabModel(QObject *parent)
     : QObject(parent)
 {
-    // Phase 2 P2-M4 fix: only the primary pane is seeded up-front.  The
-    // secondary pane is grown lazily by ensureSecondaryPane() the moment
-    // anything actually needs it (split view toggle, setSecondaryCurrentPath,
-    // navigateSecondaryTo, resetSecondaryTo, session restore with a
-    // saved splitViewEnabled=true).  This keeps the merge action clean —
-    // a freshly merged supertab doesn't drag along a leftover home-dir
-    // PaneState[1] that would show up as 'home' in the joined title.
+    // A fresh tab is single-pane. Extra panes are grown only by addPane()
+    // (merge / restore / the merge-button add-a-pane gesture), so a brand-new
+    // tab never drags along a stale secondary pane into a later merge.
     PaneState primary;
     primary.currentPath = QDir::homePath();
     m_panes.append(primary);
 }
 
-void TabModel::ensureSecondaryPane()
-{
-    if (m_panes.size() >= 2)
-        return;
-    PaneState secondary;
-    secondary.currentPath = m_panes[0].currentPath;
-    secondary.viewMode = m_panes[0].viewMode;
-    secondary.sortBy = m_panes[0].sortBy;
-    secondary.sortAscending = m_panes[0].sortAscending;
-    m_panes.append(secondary);
-    emit panesChanged();
-}
-
-// Phase 1 M3: public readers pull from m_panes.  Mirror fields still exist
-// (and are still written via syncPaneFromMirror in mutators) but external
-// behaviour is now driven by the pane storage.  If any M2 write-through
-// site was missed, this is where it shows up as stale state.
+// Public readers pull from m_panes[0], the primary pane.
 QString TabModel::currentPath() const { return m_panes[0].currentPath; }
 
 QString TabModel::title() const
@@ -109,9 +89,10 @@ QString TabModel::title() const
         return {};
     const QString name0 = displayNameForPath(m_panes[0].currentPath);
 
-    // Phase 2 P2-M4: merged supertab — every pane is live, join names with
-    // ' · ' per the Heimdall design canvas.  This is the only place where
-    // a tab can legitimately surface m_panes[1+] outside split view.
+    // Merged supertab — every pane is live, join names with ' · ' per the
+    // Heimdall design canvas. With the legacy split-view system gone, a
+    // multi-pane tab is always a supertab (paneCount > 1 ⟺ isSupertab), so
+    // this is the only multi-name case.
     if (m_isSupertab) {
         QStringList names;
         names.reserve(m_panes.size());
@@ -120,38 +101,13 @@ QString TabModel::title() const
         return names.join(QStringLiteral(" · "));
     }
 
-    // Single-pane tab or supertab dissolved: just primary.
-    if (m_panes.size() == 1)
-        return name0;
-
-    // 2-pane with split view active keeps the HyprFM 'primary / secondary'.
-    if (m_splitViewEnabled)
-        return name0 + QStringLiteral(" / ") + displayNameForPath(m_panes[1].currentPath);
-
-    // 2-pane with split currently OFF: the secondary is stored but hidden,
-    // so the title shows only what the user can see.
+    // Single-pane tab: just the primary name.
     return name0;
 }
 
 QString TabModel::viewMode() const { return m_panes[0].viewMode; }
 bool TabModel::canGoBack() const { return !m_panes[0].backStack.isEmpty(); }
 bool TabModel::canGoForward() const { return !m_panes[0].forwardStack.isEmpty(); }
-bool TabModel::splitViewEnabled() const { return m_splitViewEnabled; }
-// Phase 2 P2-M4: secondary getters guard against the lazy-grown m_panes
-// not having a [1] slot yet.  Callers see empty path / no history until
-// something (split toggle, restore, merge) seeds the secondary pane.
-QString TabModel::secondaryCurrentPath() const
-{
-    return m_panes.size() >= 2 ? m_panes[1].currentPath : QString();
-}
-bool TabModel::secondaryCanGoBack() const
-{
-    return m_panes.size() >= 2 && !m_panes[1].backStack.isEmpty();
-}
-bool TabModel::secondaryCanGoForward() const
-{
-    return m_panes.size() >= 2 && !m_panes[1].forwardStack.isEmpty();
-}
 QString TabModel::sortBy() const { return m_panes[0].sortBy; }
 bool TabModel::sortAscending() const { return m_panes[0].sortAscending; }
 
@@ -165,37 +121,6 @@ void TabModel::setViewMode(const QString &mode)
     for (int i = 1; i < m_panes.size(); ++i)
         m_panes[i].viewMode = mode;
     emit viewModeChanged();
-}
-
-void TabModel::setSplitViewEnabled(bool enabled)
-{
-    if (m_splitViewEnabled == enabled)
-        return;
-
-    if (enabled && !m_secondaryInitialized) {
-        ensureSecondaryPane();
-        m_panes[1].currentPath = m_panes[0].currentPath;
-        m_secondaryInitialized = true;
-        emit secondaryCurrentPathChanged();
-    }
-
-    m_splitViewEnabled = enabled;
-    emit splitViewEnabledChanged();
-    emit titleChanged();
-}
-
-void TabModel::setSecondaryCurrentPath(const QString &path)
-{
-    if (path.isEmpty())
-        return;
-    ensureSecondaryPane();
-    if (m_panes[1].currentPath == path)
-        return;
-
-    m_panes[1].currentPath = path;
-    m_secondaryInitialized = true;
-    emit secondaryCurrentPathChanged();
-    emit titleChanged();
 }
 
 void TabModel::setSortBy(const QString &column)
@@ -231,24 +156,6 @@ void TabModel::navigateTo(const QString &path)
     emit historyChanged();
 }
 
-void TabModel::navigateSecondaryTo(const QString &path)
-{
-    if (path.isEmpty())
-        return;
-    ensureSecondaryPane();
-    PaneState &p = m_panes[1];
-    if (path == p.currentPath)
-        return;
-
-    p.backStack.append(p.currentPath);
-    p.forwardStack.clear();
-    p.currentPath = path;
-    m_secondaryInitialized = true;
-    emit secondaryCurrentPathChanged();
-    emit titleChanged();
-    emit secondaryHistoryChanged();
-}
-
 void TabModel::goBack()
 {
     PaneState &p = m_panes[0];
@@ -259,21 +166,6 @@ void TabModel::goBack()
     emit currentPathChanged();
     emit titleChanged();
     emit historyChanged();
-}
-
-void TabModel::secondaryGoBack()
-{
-    if (m_panes.size() < 2)
-        return;
-    PaneState &p = m_panes[1];
-    if (p.backStack.isEmpty())
-        return;
-
-    p.forwardStack.append(p.currentPath);
-    p.currentPath = p.backStack.takeLast();
-    emit secondaryCurrentPathChanged();
-    emit titleChanged();
-    emit secondaryHistoryChanged();
 }
 
 void TabModel::goForward()
@@ -288,58 +180,11 @@ void TabModel::goForward()
     emit historyChanged();
 }
 
-void TabModel::secondaryGoForward()
-{
-    if (m_panes.size() < 2)
-        return;
-    PaneState &p = m_panes[1];
-    if (p.forwardStack.isEmpty())
-        return;
-
-    p.backStack.append(p.currentPath);
-    p.currentPath = p.forwardStack.takeLast();
-    emit secondaryCurrentPathChanged();
-    emit titleChanged();
-    emit secondaryHistoryChanged();
-}
-
 void TabModel::goUp()
 {
     const QString parent = parentLocation(m_panes[0].currentPath);
     if (parent != m_panes[0].currentPath)
         navigateTo(parent);
-}
-
-void TabModel::secondaryGoUp()
-{
-    if (m_panes.size() < 2)
-        return;
-    const QString parent = parentLocation(m_panes[1].currentPath);
-    if (parent != m_panes[1].currentPath)
-        navigateSecondaryTo(parent);
-}
-
-void TabModel::resetSecondaryTo(const QString &path)
-{
-    if (path.isEmpty())
-        return;
-    ensureSecondaryPane();
-
-    PaneState &p = m_panes[1];
-    const bool pathChanged = p.currentPath != path;
-    const bool historyChanged = !p.backStack.isEmpty() || !p.forwardStack.isEmpty();
-
-    p.backStack.clear();
-    p.forwardStack.clear();
-    p.currentPath = path;
-    m_secondaryInitialized = true;
-
-    if (pathChanged) {
-        emit secondaryCurrentPathChanged();
-        emit titleChanged();
-    }
-    if (historyChanged)
-        emit secondaryHistoryChanged();
 }
 
 
@@ -377,9 +222,8 @@ int TabModel::addPane(const QString &path)
 bool TabModel::removePane(int idx)
 {
     // Phase 2 P2-M9: allow shrinking down to 1 pane.  When it does drop to
-    // single-pane the tab demotes out of supertab / split-view mode so
-    // title() goes back to just the primary name and Main.qml's Repeater
-    // collapses to one frame.
+    // single-pane the tab demotes out of supertab mode so title() goes back
+    // to just the primary name and Main.qml's Repeater collapses to one frame.
     if (idx < 0 || idx >= m_panes.size())
         return false;
     if (m_panes.size() <= 1)
@@ -388,19 +232,10 @@ bool TabModel::removePane(int idx)
     emit panesChanged();
     emit titleChanged();
 
-    if (m_panes.size() == 1) {
-        if (m_isSupertab) {
-            m_isSupertab = false;
-            emit supertabChanged();
-            emit titleChanged();
-        }
-        if (m_splitViewEnabled) {
-            m_splitViewEnabled = false;
-            emit splitViewEnabledChanged();
-        }
-        m_secondaryInitialized = false;
-        emit secondaryCurrentPathChanged();
-        emit secondaryHistoryChanged();
+    if (m_panes.size() == 1 && m_isSupertab) {
+        m_isSupertab = false;
+        emit supertabChanged();
+        emit titleChanged();
     }
     return true;
 }
@@ -409,14 +244,14 @@ void TabModel::navigateInPane(int idx, const QString &path)
 {
     if (idx < 0 || idx >= m_panes.size() || path.isEmpty())
         return;
+    // Pane 0 keeps the dedicated mutator so the primary Q_PROPERTYs
+    // (currentPath / canGoBack / canGoForward, consumed by the tab bar,
+    // toolbar and sidebar) keep emitting their fine-grained signals. Every
+    // other pane is generic: push history on m_panes[idx] and let
+    // panePathChanged(idx) drive the matching paneServices slot in QML.
     if (idx == 0) {
         navigateTo(path);
         emit panePathChanged(0);
-        return;
-    }
-    if (idx == 1) {
-        navigateSecondaryTo(path);
-        emit panePathChanged(1);
         return;
     }
     PaneState &p = m_panes[idx];
@@ -437,10 +272,6 @@ void TabModel::paneGoBack(int idx)
         goBack();
         return;
     }
-    if (idx == 1) {
-        secondaryGoBack();
-        return;
-    }
     if (idx < 0 || idx >= m_panes.size())
         return;
     PaneState &p = m_panes[idx];
@@ -458,10 +289,6 @@ void TabModel::paneGoForward(int idx)
         goForward();
         return;
     }
-    if (idx == 1) {
-        secondaryGoForward();
-        return;
-    }
     if (idx < 0 || idx >= m_panes.size())
         return;
     PaneState &p = m_panes[idx];
@@ -477,10 +304,6 @@ void TabModel::paneGoUp(int idx)
 {
     if (idx == 0) {
         goUp();
-        return;
-    }
-    if (idx == 1) {
-        secondaryGoUp();
         return;
     }
     if (idx < 0 || idx >= m_panes.size())
@@ -516,15 +339,10 @@ void TabModel::compactToPrimary()
         m_panes.removeLast();
         changed = true;
     }
-    if (m_splitViewEnabled) {
-        m_splitViewEnabled = false;
-        emit splitViewEnabledChanged();
-    }
-    m_secondaryInitialized = false;
+    // The supertab marker is managed by the caller (mergeSelected sets it,
+    // unmergeAt clears it), so compactToPrimary only collapses the pane list.
     if (changed) {
         emit panesChanged();
-        emit secondaryCurrentPathChanged();
-        emit secondaryHistoryChanged();
         emit titleChanged();
     }
 }

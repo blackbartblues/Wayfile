@@ -84,11 +84,9 @@ ApplicationWindow {
                     root.clearPaneSearch(p)
                 fsModel.setRootPath(tabModel.activeTab.currentPath)
                 root.syncMillerParentModel(tabModel.activeTab.currentPath)
-                if (tabModel.activeTab.splitViewEnabled)
-                    splitFsModel.setRootPath(tabModel.activeTab.secondaryCurrentPath)
-                // Phase 2 P2-M6: supertab tabs carry up to kMaxPanes panes;
-                // seed every fsModel slot so each PaneFrame in the Repeater
-                // shows the right content on the first paint.
+                // Supertab tabs carry up to kMaxPanes panes; seed every fsModel
+                // slot so each PaneFrame in the Repeater shows the right content
+                // on the first paint.
                 for (var i = 0; i < tabModel.activeTab.paneCount; ++i) {
                     var mdl = paneServicesProvider.fsModelAt(i)
                     if (mdl)
@@ -123,18 +121,8 @@ ApplicationWindow {
                 root.refreshActivePanePath()
             }
         }
-        function onSecondaryCurrentPathChanged() {
-            if (tabModel.activeTab) {
-                splitFsModel.setRootPath(tabModel.activeTab.secondaryCurrentPath)
-                root.setPaneRecents(1, false)
-                root.clearPaneSearch(1)
-                root.scheduleActivePaneFocus()
-                root.refreshActivePanePath()
-            }
-        }
-        // Phase 2 P2-M6: navigation inside a supertab pane (idx >= 2)
-        // pushes only panePathChanged(idx) — wire each pane's fsModel
-        // slot to follow.
+        // Navigation inside any non-primary pane (idx >= 1) pushes only
+        // panePathChanged(idx) — wire each pane's fsModel slot to follow.
         function onPanePathChanged(idx) {
             if (!tabModel.activeTab)
                 return
@@ -166,21 +154,6 @@ ApplicationWindow {
             if (tabModel.activeTab)
                 root.syncMillerParentModel(tabModel.activeTab.currentPath)
             root.scheduleActivePaneFocus()
-        }
-        function onSplitViewEnabledChanged() {
-            if (!tabModel.activeTab)
-                return
-
-            if (tabModel.activeTab.splitViewEnabled) {
-                splitFsModel.setRootPath(tabModel.activeTab.secondaryCurrentPath)
-                root.applyActiveTabSort()
-                root.scheduleActivePaneFocus()
-                return
-            }
-
-            if (root.activePaneIndex === 1)
-                root.activePaneIndex = 0
-            root.updateSelectionStatus()
         }
     }
 
@@ -215,10 +188,8 @@ ApplicationWindow {
         root.wirePaneServiceSignals()
         if (tabModel.activeTab) {
             fsModel.setRootPath(tabModel.activeTab.currentPath)
-            if (tabModel.activeTab.splitViewEnabled)
-                splitFsModel.setRootPath(tabModel.activeTab.secondaryCurrentPath)
             // Seed every pane of a (possibly session-restored) supertab, not
-            // just slots 0/1 — panes 2/3 otherwise start with no root path.
+            // just slot 0 — other panes otherwise start with no root path.
             for (var i = 0; i < tabModel.activeTab.paneCount; ++i) {
                 var mdl = paneServicesProvider.fsModelAt(i)
                 if (mdl)
@@ -314,25 +285,12 @@ ApplicationWindow {
     }
     onActivePaneIndexChanged: refreshActivePanePath()
     readonly property bool searchMode: paneSearchMode(activePaneIndex)
-    property real splitTransitionProgress: splitViewEnabled() ? 1 : 0
-    readonly property bool splitViewPresented: splitViewEnabled() || splitTransitionProgress > 0.001
-
-    Behavior on splitTransitionProgress {
-        NumberAnimation {
-            duration: Theme.animDurationSlow
-            easing.type: Theme.animEasingTransition; easing.bezierCurve: Theme.animBezierCurve
-        }
-    }
 
     // ── Selection state for StatusBar ────────────────────────────────────────
     property int currentSelectedCount: 0
     property string currentSelectedSize: ""
     property bool currentSelectedSizePending: false
     property int currentSelectedSizeRequestId: -1
-
-    function splitViewEnabled() {
-        return tabModel.activeTab ? tabModel.activeTab.splitViewEnabled : false
-    }
 
     // Phase 2 P2-M6: indexed lookups so the N-pane Repeater can address
     // pane 2 and 3 the same way the hand-wired primary / secondary panes
@@ -714,16 +672,12 @@ ApplicationWindow {
 
         root.setPaneRecents(pane, false)
         root.clearPaneSearch(pane)
-        // Phase 2 P2-M6: keep slots 0 / 1 on their legacy mutators so the
-        // existing currentPathChanged / secondaryCurrentPathChanged
-        // signals fire (Main.qml handlers wired around those for years).
-        // Supertab panes 2 / 3 hit navigateInPane so m_panes[pane] gets
-        // updated directly and panePathChanged(pane) drives the matching
-        // paneServices slot.
+        // Pane 0 keeps the dedicated navigateTo so the primary currentPath
+        // Q_PROPERTY signals fire for the tab bar / sidebar; every other pane
+        // goes through navigateInPane, which updates m_panes[pane] and emits
+        // panePathChanged(pane) to drive the matching paneServices slot.
         if (pane === 0)
             tabModel.activeTab.navigateTo(path)
-        else if (pane === 1)
-            tabModel.activeTab.navigateSecondaryTo(path)
         else
             tabModel.activeTab.navigateInPane(pane, path)
         root.scheduleActivePaneFocus()
@@ -983,20 +937,14 @@ ApplicationWindow {
         tabModel.activeTab.paneGoUp(activePaneIndex)
     }
 
-    // Phase 2 P2-merge-unmerge: the historical split-view toggle now drives
-    // the merge / unmerge gesture instead.  Behaviour:
-    //   * active tab is a supertab        -> unmerge it
-    //   * selectedCount >= 2              -> merge the selection
-    //   * selectedCount == 1, count > 1   -> extend selection to the
-    //                                        nearest right neighbour
-    //                                        (wrap to left if active is
-    //                                        the rightmost), then merge
-    //   * selectedCount == 1, count == 1  -> spawn a new tab on the right
-    //                                        and merge against it so the
-    //                                        gesture never feels like a
-    //                                        no-op for the user
-    // The toolbar split button + F3 + the close-split context action all
-    // dispatch through this single function.
+    // The toolbar merge button + F3 dispatch through this single function.
+    // Behaviour:
+    //   * active tab is a supertab  -> unmerge it back into separate tabs
+    //   * 2+ tabs selected          -> merge the selection into one supertab
+    //   * otherwise (only active)   -> spawn a fresh tab and merge it in as a
+    //                                  new pane, so the button doubles as
+    //                                  "add a pane to this tab" (this replaced
+    //                                  the old "Open in split view" action)
     function toggleMergeOrUnmerge() {
         if (!tabModel.activeTab)
             return
@@ -1010,28 +958,14 @@ ApplicationWindow {
             return
         }
 
-        // selectedCount == 1 — extend automatically.
+        // Only the active tab is in the selection: spawn a fresh tab and merge
+        // it against the active one. addTab makes the new tab the only-selected
+        // active, so re-arm the original (its index is unchanged — addTab
+        // appends) then merge {original, new}; mergeSelected picks the lower
+        // index (the original) as the receiver.
         var active = tabModel.activeIndex
-        var count = tabModel.count
-
-        if (count <= 1) {
-            // Lone tab.  Spawn a fresh one; addTab makes the new tab the
-            // only-selected active, so re-arm the original via toggle then
-            // merge.
-            tabModel.addTab()
-            tabModel.toggleSelected(active)
-            tabModel.mergeSelected()
-            return
-        }
-
-        // Multi-tab, single selection.  Prefer the right neighbour; fall
-        // back to the left when the active is already the rightmost tab.
-        var neighbour = active + 1
-        if (neighbour >= count)
-            neighbour = active - 1
-        if (neighbour < 0)
-            return  // shouldn't happen — count > 1 guarantees a neighbour
-        tabModel.toggleSelected(neighbour)
+        tabModel.addTab()
+        tabModel.toggleSelected(active)
         tabModel.mergeSelected()
     }
 
@@ -1060,9 +994,7 @@ ApplicationWindow {
                 return "Tab limit reached (max 4 panes)"
             return "Merge " + tabModel.selectedCount + " tabs"
         }
-        if (tabModel.count <= 1)
-            return "Spawn tab and merge"
-        return "Merge with neighbour tab"
+        return "Add a new pane"
     }
 
     // paneCanGoBack/Forward are Q_INVOKABLEs (not bindable Q_PROPERTYs), so
@@ -2903,7 +2835,6 @@ ApplicationWindow {
         blurSource: mainContent
 
         fileModel: root.paneBaseModel(root.activePaneIndex)
-        splitViewEnabled: root.splitViewEnabled()
         isTrashView: root.isTrashView
         currentViewMode: tabModel.activeTab ? tabModel.activeTab.viewMode : "grid"
         currentSortBy: tabModel.activeTab ? tabModel.activeTab.sortBy : "name"
@@ -2982,15 +2913,6 @@ ApplicationWindow {
             propertiesDialog.showProperties(path)
         }
 
-        onSplitViewRequested: (path) => {
-            root.openPathInSplitView(path)
-        }
-
-        onCustomActionRequested: (action) => {
-            if (action === "close_split")
-                root.toggleMergeOrUnmerge()
-        }
-
         onViewModeRequested: (mode) => {
             if (tabModel.activeTab) tabModel.activeTab.viewMode = mode
         }
@@ -3016,11 +2938,6 @@ ApplicationWindow {
         onOpenInNewTabRequested: (path) => {
             if (path)
                 root.openPathInNewTab(path)
-        }
-
-        onSplitViewRequested: (path) => {
-            if (path)
-                root.openPathInSplitView(path)
         }
 
         onPropertiesRequested: (path) => {
@@ -3088,9 +3005,11 @@ ApplicationWindow {
         onActivated: root.openPathInNewTab(root.currentOrSelectedDirectoryPath())
     }
 
+    // "Open in split" now maps to the unified add-a-pane / unmerge toggle —
+    // split view is no longer a separate concept from the merge gesture.
     Shortcut {
         sequence: config.shortcutMap["open_in_split"]
-        onActivated: root.openPathInSplitView(root.currentOrSelectedDirectoryPath())
+        onActivated: root.toggleMergeOrUnmerge()
     }
 
     // Navigation
@@ -3495,24 +3414,6 @@ ApplicationWindow {
         contextMenu.popup(position.x, position.y)
     }
 
-    function openPathInSplitView(path) {
-        if (!tabModel.activeTab)
-            return
-
-        var targetPath = path || panePath(activePaneIndex)
-        if (!targetPath)
-            return
-
-        root.clearPaneSearch(1)
-        root.setPaneRecents(1, false)
-        tabModel.activeTab.resetSecondaryTo(targetPath)
-
-        if (!tabModel.activeTab.splitViewEnabled)
-            tabModel.activeTab.splitViewEnabled = true
-
-        root.setActivePane(1)
-    }
-
     function pasteIntoDirectory(destPath) {
         if (!destPath)
             return
@@ -3679,7 +3580,6 @@ ApplicationWindow {
                 navigationPath: panePath(activePaneIndex)
                 canGoBack: activePaneCanGoBack()
                 canGoForward: activePaneCanGoForward()
-                splitViewEnabled: root.splitViewEnabled()
                 mergeWillUnmerge: root.mergeButtonWillUnmerge()
                 mergeTooltip: root.mergeButtonTooltip()
                 isRecentsView: root.isRecentsView

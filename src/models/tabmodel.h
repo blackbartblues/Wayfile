@@ -16,10 +16,6 @@ class TabModel : public QObject
     Q_PROPERTY(QString viewMode READ viewMode WRITE setViewMode NOTIFY viewModeChanged)
     Q_PROPERTY(bool canGoBack READ canGoBack NOTIFY historyChanged)
     Q_PROPERTY(bool canGoForward READ canGoForward NOTIFY historyChanged)
-    Q_PROPERTY(bool splitViewEnabled READ splitViewEnabled WRITE setSplitViewEnabled NOTIFY splitViewEnabledChanged)
-    Q_PROPERTY(QString secondaryCurrentPath READ secondaryCurrentPath WRITE setSecondaryCurrentPath NOTIFY secondaryCurrentPathChanged)
-    Q_PROPERTY(bool secondaryCanGoBack READ secondaryCanGoBack NOTIFY secondaryHistoryChanged)
-    Q_PROPERTY(bool secondaryCanGoForward READ secondaryCanGoForward NOTIFY secondaryHistoryChanged)
     Q_PROPERTY(QString sortBy READ sortBy WRITE setSortBy NOTIFY sortChanged)
     Q_PROPERTY(bool sortAscending READ sortAscending WRITE setSortAscending NOTIFY sortChanged)
     // Phase 2 P2-M2: pane list size, exposed so the future N-pane paneRow
@@ -38,46 +34,33 @@ public:
     QString viewMode() const;
     bool canGoBack() const;
     bool canGoForward() const;
-    bool splitViewEnabled() const;
-    QString secondaryCurrentPath() const;
-    bool secondaryCanGoBack() const;
-    bool secondaryCanGoForward() const;
     QString sortBy() const;
     bool sortAscending() const;
 
     void setViewMode(const QString &mode);
-    void setSplitViewEnabled(bool enabled);
-    void setSecondaryCurrentPath(const QString &path);
     void setSortBy(const QString &column);
     void setSortAscending(bool ascending);
 
     Q_INVOKABLE void navigateTo(const QString &path);
-    Q_INVOKABLE void navigateSecondaryTo(const QString &path);
     Q_INVOKABLE void goBack();
     Q_INVOKABLE void goForward();
     Q_INVOKABLE void goUp();
-    Q_INVOKABLE void secondaryGoBack();
-    Q_INVOKABLE void secondaryGoForward();
-    Q_INVOKABLE void secondaryGoUp();
-    Q_INVOKABLE void resetSecondaryTo(const QString &path);
 
-    // Phase 2 P2-M6: navigate the pane at idx to a new path.  Dispatches to
-    // navigateTo (idx == 0) / navigateSecondaryTo (idx == 1) when those
-    // legacy mutators apply; for supertab panes idx >= 2 it pushes
-    // m_panes[idx].currentPath + history stacks directly and emits
-    // panePathChanged(idx) so Main.qml can re-setRootPath the matching
+    // Navigate the pane at idx to a new path.  idx == 0 delegates to
+    // navigateTo so the primary currentPath Q_PROPERTY signals fire; every
+    // other pane pushes m_panes[idx].currentPath + history stacks directly and
+    // emits panePathChanged(idx) so Main.qml can re-setRootPath the matching
     // paneServices slot.
     Q_INVOKABLE void navigateInPane(int idx, const QString &path);
 
-    // Phase 2 #9 (unify split -> N-pane): generic per-pane history navigation.
+    // #9 (split -> N-pane unification): generic per-pane history navigation.
     // These are the single entry points Main.qml routes the active pane's
-    // back / forward / up through, indexed by activePaneIndex — replacing the
-    // old activeIsSecondaryPane() fork between goBack()/secondaryGoBack() etc.
-    // Slots 0 / 1 delegate to the legacy mutators so their established
-    // currentPathChanged / secondaryCurrentPathChanged signals keep firing
-    // for the QML handlers wired around them; slots >= 2 operate on
-    // m_panes[idx] directly and emit panePathChanged(idx).  The CanGo readers
-    // are uniform across every index (each pane carries its own back/forward
+    // back / forward / up through, indexed by activePaneIndex.  idx == 0
+    // delegates to goBack/goForward/goUp so the primary currentPath /
+    // canGoBack / canGoForward Q_PROPERTYs keep emitting; every other pane
+    // operates on m_panes[idx] directly and emits panePathChanged(idx).  The
+    // CanGo readers are uniform across every index (each pane carries its own
+    // back/forward
     // stack in PaneState), so they work for 0 / 1 too.
     Q_INVOKABLE void paneGoBack(int idx);
     Q_INVOKABLE void paneGoForward(int idx);
@@ -115,9 +98,6 @@ signals:
     void titleChanged();
     void viewModeChanged();
     void historyChanged();
-    void splitViewEnabledChanged();
-    void secondaryCurrentPathChanged();
-    void secondaryHistoryChanged();
     void sortChanged();
     // Phase 2 P2-M2: emitted whenever m_panes grows or shrinks.  Per-pane
     // currentPath / viewMode mutations still emit the existing fine-grained
@@ -127,31 +107,20 @@ signals:
     // Phase 2 P2-M4: fires when the supertab marker is set / cleared by
     // mergeSelected / unmergeAt / compactToPrimary.
     void supertabChanged();
-    // Phase 2 P2-M6: emitted whenever a pane's currentPath changes (for
-    // the legacy slots 0 / 1 this fires alongside currentPathChanged /
-    // secondaryCurrentPathChanged; for slot >= 2 it's the only signal
-    // QML gets).  Carries the pane index so the handler can re-seed the
+    // Emitted whenever a pane's currentPath changes. For pane 0 this fires
+    // alongside currentPathChanged; for every other pane it's the only path
+    // signal QML gets. Carries the pane index so the handler can re-seed the
     // matching paneServices slot's fsModel.
     void panePathChanged(int idx);
 
 private:
-    // Phase 2 P2-M4: secondary pane is grown lazily the first time anything
-    // reaches for it.  Keeps a fresh tab at paneCount == 1 so merge actions
-    // don't pull along a stale home-dir constructor leftover.
-    void ensureSecondaryPane();
-
-    // Phase 1 M4: m_panes is the single source of truth for every per-pane
-    // field (currentPath, viewMode, sortBy, sortAscending, backStack,
-    // forwardStack).  Index 0 == primary, index 1 == secondary today; later
-    // milestones generalise to arbitrary N panes per tab.
+    // m_panes is the single source of truth for every per-pane field
+    // (currentPath, viewMode, sortBy, sortAscending, backStack, forwardStack).
+    // Index 0 is the primary pane; merged supertabs grow indices 1..N-1.
     QList<PaneState> m_panes;
 
-    // Tab-level state that isn't per-pane.  splitViewEnabled toggles whether
-    // the secondary pane is rendered; secondaryInitialized tracks whether
-    // the secondary pane has ever been navigated (used to seed it from the
-    // primary path the first time split view is enabled).  isSupertab is
-    // set when this tab is the receiver of a merge gesture.
-    bool m_splitViewEnabled = false;
-    bool m_secondaryInitialized = false;
+    // Tab-level state that isn't per-pane: set when this tab is the receiver
+    // of a merge gesture (paneCount > 1 ⟺ isSupertab now that split-view is
+    // gone).
     bool m_isSupertab = false;
 };

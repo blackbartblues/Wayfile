@@ -83,9 +83,11 @@ void TabListModel::connectTab(int row, TabModel *tab)
         // without us needing another signal.
         emit selectionChanged();
     });
-    connect(tab, &TabModel::secondaryCurrentPathChanged, this, &TabListModel::sessionChanged);
+    // Navigation in any non-primary pane only emits panePathChanged(idx)
+    // (pane 0 covers itself via currentPathChanged above), so persist on it
+    // too — otherwise a supertab's pane 2/3 path changes wouldn't be saved.
+    connect(tab, &TabModel::panePathChanged, this, &TabListModel::sessionChanged);
     connect(tab, &TabModel::viewModeChanged, this, &TabListModel::sessionChanged);
-    connect(tab, &TabModel::splitViewEnabledChanged, this, &TabListModel::sessionChanged);
     connect(tab, &TabModel::sortChanged, this, &TabListModel::sessionChanged);
 }
 
@@ -190,13 +192,16 @@ void TabListModel::closeTab(int index)
     }
 
     TabModel *tab = m_tabs.at(index);
+    QStringList panePaths;
+    for (int i = 0; i < tab->paneCount(); ++i)
+        panePaths.append(tab->paneCurrentPath(i));
     m_closedTabs.append({
         tab->currentPath(),
         tab->viewMode(),
-        tab->secondaryCurrentPath(),
+        panePaths,
         tab->sortBy(),
         tab->sortAscending(),
-        tab->splitViewEnabled(),
+        tab->isSupertab(),
     });
 
     beginRemoveRows(QModelIndex(), index, index);
@@ -632,14 +637,15 @@ void TabListModel::reopenClosedTab()
     auto *tab = new TabModel(this);
     tab->navigateTo(info.path);
     tab->setViewMode(info.viewMode);
-    // Phase 2 P2-M4: only grow the secondary pane if the closed tab actually
-    // had split view on.  A non-split tab stays at paneCount == 1 so a later
-    // merge gesture doesn't pull along a stale secondary path.
-    if (info.splitViewEnabled && !info.secondaryPath.isEmpty())
-        tab->setSecondaryCurrentPath(info.secondaryPath);
     tab->setSortBy(info.sortBy);
     tab->setSortAscending(info.sortAscending);
-    tab->setSplitViewEnabled(info.splitViewEnabled);
+    // Restore a closed supertab by recreating its extra panes — mirrors
+    // mergeSelected() / restoreSession(). A plain tab stays single-pane.
+    if (info.isSupertab && info.panePaths.size() > 1) {
+        for (int i = 1; i < info.panePaths.size(); ++i)
+            tab->addPane(info.panePaths.at(i));
+        tab->setSupertab(true);
+    }
     m_tabs.append(tab);
     connectTab(m_tabs.size() - 1, tab);
     endInsertRows();
@@ -653,8 +659,6 @@ QJsonArray TabListModel::saveSession() const
     QJsonArray arr;
     for (const auto *tab : m_tabs) {
         // Persist the full pane list so merged supertabs survive a restart.
-        // Merges use the N-pane system (m_panes + isSupertab), which the
-        // legacy splitViewEnabled/secondaryPath fields don't capture.
         QJsonArray panes;
         for (int i = 0; i < tab->paneCount(); ++i)
             panes.append(tab->paneCurrentPath(i));
@@ -662,8 +666,6 @@ QJsonArray TabListModel::saveSession() const
         arr.append(QJsonObject{
             {"path", tab->currentPath()},
             {"viewMode", tab->viewMode()},
-            {"splitViewEnabled", tab->splitViewEnabled()},
-            {"secondaryPath", tab->secondaryCurrentPath()},
             {"sortBy", tab->sortBy()},
             {"sortAscending", tab->sortAscending()},
             {"panes", panes},
@@ -705,17 +707,9 @@ void TabListModel::restoreSession(const QJsonArray &tabs, int activeIdx)
             for (int i = 1; i < panes.size(); ++i)
                 tab->addPane(normalizedSessionPath(panes.at(i).toString()));
             tab->setSupertab(true);
-        } else {
-            // Legacy 2-pane split restore. Skip secondary for non-split tabs so
-            // they come back at paneCount == 1 (matches the lazy-grow ctor).
-            const bool splitEnabled = obj.value("splitViewEnabled").toBool(false);
-            tab->setSplitViewEnabled(splitEnabled);
-            if (splitEnabled) {
-                const QString secondaryPath = normalizedSessionPath(
-                    obj.value("secondaryPath").toString(tab->currentPath()));
-                tab->setSecondaryCurrentPath(secondaryPath);
-            }
         }
+        // Non-supertab tabs (and legacy single-pane sessions) come back at
+        // paneCount == 1 from the navigateTo above — nothing else to restore.
 
         m_tabs.append(tab);
         connectTab(m_tabs.size() - 1, tab);

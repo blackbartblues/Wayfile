@@ -262,10 +262,6 @@ int main(int argc, char *argv[])
     const QString initialPrimaryPath = tabModel->activeTab() && !tabModel->activeTab()->currentPath().isEmpty()
         ? tabModel->activeTab()->currentPath()
         : homePath;
-    const QString initialSecondaryPath = tabModel->activeTab() && !tabModel->activeTab()->secondaryCurrentPath().isEmpty()
-        ? tabModel->activeTab()->secondaryCurrentPath()
-        : initialPrimaryPath;
-    const bool initialSplitViewEnabled = tabModel->activeTab() && tabModel->activeTab()->splitViewEnabled();
 
     // Phase 1 M5: backend services bundled per pane so adding panes (Phase 2)
     // is a list append rather than a search-and-replace across main.cpp.  N
@@ -300,22 +296,14 @@ int main(int argc, char *argv[])
     };
 
     // Phase 2 P2-M3: pre-allocate the full pane services array up to the
-    // kMaxPanes ceiling so the merge action (P2-M4) doesn't need to grow
-    // the list at runtime.  Slots 0 and 1 keep the primary / secondary
-    // seeded paths so the existing split-view UI flow is unchanged; slots
-    // 2 and 3 sit on the user's home directory with no root applied
-    // until the future merge plumbing points an active pane at them.
+    // kMaxPanes ceiling so the merge action doesn't need to grow the list at
+    // runtime.  Only slot 0 gets a seeded root path up front; every other
+    // slot sits on the user's home directory with no root applied until QML
+    // points a live pane at it (onActiveIndexChanged / onCompleted / restore).
     QList<PaneServices> paneServices;
     for (int i = 0; i < kMaxPanes; ++i) {
-        QString seedPath = homePath;
-        bool seedRoot = false;
-        if (i == 0) {
-            seedPath = initialPrimaryPath;
-            seedRoot = true;
-        } else if (i == 1) {
-            seedPath = initialSecondaryPath;
-            seedRoot = initialSplitViewEnabled;
-        }
+        const QString seedPath = (i == 0) ? initialPrimaryPath : homePath;
+        const bool seedRoot = (i == 0);
         paneServices.append(makePaneServices(i, seedPath, seedRoot));
     }
     mark("Pane services populated");
@@ -406,18 +394,16 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("undoManager", undoManager);
     engine.rootContext()->setContextProperty("clipboard", clipboard);
     engine.rootContext()->setContextProperty("dragHelper", dragHelper);
-    // QML still addresses panes by name ("fsModel" / "splitFsModel" / ...).
-    // M6 swaps the QML side to indexed access; for now the context names
-    // stay so Main.qml keeps building.
-    // Phase 2 P2-M6: indexed access for the N-pane Repeater.  Slots 0 / 1
-    // also stay reachable under fsModel / splitFsModel below for back-compat
-    // with the many Main.qml call sites that grew up around those names.
+    // Panes are addressed by index through paneServicesProvider (the N-pane
+    // Repeater + every per-pane helper). Slot 0 also stays reachable under the
+    // historical name "fsModel" for the many primary-pane call sites that grew
+    // up around it; the old "splitFsModel" alias for slot 1 is gone with the
+    // legacy split-view system (QML reaches slot 1+ via fsModelAt(i)).
     PaneServicesProvider *paneServicesProvider = new PaneServicesProvider(&app);
     paneServicesProvider->setServices(paneServices);
     engine.rootContext()->setContextProperty("paneServicesProvider", paneServicesProvider);
 
     engine.rootContext()->setContextProperty("fsModel", paneServices[0].fsModel);
-    engine.rootContext()->setContextProperty("splitFsModel", paneServices[1].fsModel);
     engine.rootContext()->setContextProperty("millerParentModel", millerParentModel);
     engine.rootContext()->setContextProperty("millerPreviewModel", millerPreviewModel);
     engine.rootContext()->setContextProperty("devices", devices);

@@ -20,7 +20,6 @@ Item {
     property var customItems: []
     property var contextData: ({})
     property int menuWidth: 260
-    property bool splitViewEnabled: false
     property bool isTrashView: false
 
     signal openRequested(string path, bool isDir)
@@ -42,7 +41,6 @@ Item {
     signal newFileRequested(string parentPath)
     signal selectAllRequested()
     signal propertiesRequested(string path)
-    signal splitViewRequested(string path)
     signal viewModeRequested(string mode)
     signal sortRequested(string column, bool ascending)
     signal emptyTrashRequested()
@@ -603,16 +601,6 @@ Item {
             items.push({ text: "Open", shortcut: "Return", action: "open", icon: "ExternalLink" })
             if (targetIsDir)
                 items.push({ text: "Open in New Tab", shortcut: "", action: "opennewtab", icon: "Folder" })
-            if (!splitViewEnabled && !isTrashView) {
-                items.push({
-                    text: targetIsDir ? "Open in Split View" : "Split View Here",
-                    shortcut: "",
-                    action: targetIsDir ? "split_open" : "split_here",
-                    icon: "SquareSplitHorizontal"
-                })
-            } else if (splitViewEnabled) {
-                items.push({ text: "Close Split View", shortcut: "", action: "close_split", icon: "SquareSplitHorizontal" })
-            }
             if (!targetIsDir && fileModel) {
                 var props = fileModel.fileProperties(targetPath)
                 var mime = props["mimeType"] || ""
@@ -703,10 +691,6 @@ Item {
                         icon: clipboard.hasContent ? "Clipboard" : "Image"
                     })
                 }
-                if (!splitViewEnabled)
-                    items.push({ text: "Split View Here", shortcut: "", action: "split_here", icon: "SquareSplitHorizontal" })
-                else
-                    items.push({ text: "Close Split View", shortcut: "", action: "close_split", icon: "SquareSplitHorizontal" })
                 items.push({ separator: true })
                 if (!remoteContext)
                     items.push({ text: "Open in Terminal", shortcut: "", action: "terminal", icon: "Terminal" })
@@ -742,9 +726,6 @@ Item {
         case "newfolder": newFolderRequested(effectiveDir); break
         case "newfile": newFileRequested(effectiveDir); break
         case "properties": propertiesRequested(targetPath); break
-        case "split_open": splitViewRequested(targetPath); break
-        case "split_here": splitViewRequested(effectiveDir); break
-        case "close_split": customActionRequested("close_split"); break
         case "view_grid": viewModeRequested("grid"); break
         case "view_miller": viewModeRequested("miller"); break
         case "view_detailed": viewModeRequested("detailed"); break

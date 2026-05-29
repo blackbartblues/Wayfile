@@ -66,43 +66,45 @@ private slots:
         QCOMPARE(tab.currentPath(), QString("/usr"));
     }
 
-    void testSplitViewState()
+    void testSupertabPaneState()
     {
         TabModel tab;
 
-        QCOMPARE(tab.splitViewEnabled(), false);
-        // Phase 2 P2-M4: secondary pane is lazy.  Before split is enabled
-        // (and before merge / setSecondaryCurrentPath / etc.), paneCount
-        // stays at 1 and the secondary accessors report empty / false.
-        QCOMPARE(tab.secondaryCurrentPath(), QString());
-        QCOMPARE(tab.secondaryCanGoBack(), false);
-        QCOMPARE(tab.secondaryCanGoForward(), false);
+        // A fresh tab is single-pane and not a supertab; non-primary pane
+        // accessors report empty / false until a pane is grown.
+        QCOMPARE(tab.paneCount(), 1);
+        QCOMPARE(tab.isSupertab(), false);
+        QCOMPARE(tab.paneCurrentPath(1), QString());
+        QCOMPARE(tab.paneCanGoBack(1), false);
+        QCOMPARE(tab.paneCanGoForward(1), false);
 
-        tab.setSplitViewEnabled(true);
-        QCOMPARE(tab.splitViewEnabled(), true);
-        QCOMPARE(tab.secondaryCurrentPath(), tab.currentPath());
+        QCOMPARE(tab.addPane("/tmp"), 1);
+        QCOMPARE(tab.paneCount(), 2);
+        QCOMPARE(tab.paneCurrentPath(1), QString("/tmp"));
+        tab.setSupertab(true);
+        QCOMPARE(tab.isSupertab(), true);
     }
 
-    void testSecondaryNavigation()
+    void testNonPrimaryPaneNavigation()
     {
         TabModel tab;
-        tab.setSplitViewEnabled(true);
+        tab.addPane(tab.currentPath());  // grow pane 1 at the primary's path
 
-        QSignalSpy pathSpy(&tab, &TabModel::secondaryCurrentPathChanged);
+        QSignalSpy pathSpy(&tab, &TabModel::panePathChanged);
 
-        tab.navigateSecondaryTo("/tmp");
-        QCOMPARE(tab.secondaryCurrentPath(), QString("/tmp"));
-        QCOMPARE(tab.secondaryCanGoBack(), true);
-        QCOMPARE(tab.secondaryCanGoForward(), false);
+        tab.navigateInPane(1, "/tmp");
+        QCOMPARE(tab.paneCurrentPath(1), QString("/tmp"));
+        QCOMPARE(tab.paneCanGoBack(1), true);
+        QCOMPARE(tab.paneCanGoForward(1), false);
         QCOMPARE(pathSpy.count(), 1);
 
-        tab.navigateSecondaryTo("/usr");
-        tab.secondaryGoBack();
-        QCOMPARE(tab.secondaryCurrentPath(), QString("/tmp"));
-        QCOMPARE(tab.secondaryCanGoForward(), true);
+        tab.navigateInPane(1, "/usr");
+        tab.paneGoBack(1);
+        QCOMPARE(tab.paneCurrentPath(1), QString("/tmp"));
+        QCOMPARE(tab.paneCanGoForward(1), true);
 
-        tab.secondaryGoForward();
-        QCOMPARE(tab.secondaryCurrentPath(), QString("/usr"));
+        tab.paneGoForward(1);
+        QCOMPARE(tab.paneCurrentPath(1), QString("/usr"));
     }
 
     void testNavigateClearsForwardHistory()
@@ -194,12 +196,10 @@ private slots:
         tab.navigateTo("/usr/local/bin");
         QCOMPARE(tab.title(), QString("bin"));
 
-        tab.setSplitViewEnabled(true);
-        tab.navigateSecondaryTo("/tmp");
-        QCOMPARE(tab.title(), QString("bin / tmp"));
-
-        tab.setSplitViewEnabled(false);
-        QCOMPARE(tab.title(), QString("bin"));
+        // A merged supertab joins every pane's name with ' · '.
+        tab.addPane("/tmp");
+        tab.setSupertab(true);
+        QCOMPARE(tab.title(), QString("bin · tmp"));
     }
 
     void testRemoteTabTitleAndGoUp()
@@ -281,8 +281,8 @@ private slots:
     {
         TabListModel model;
         model.activeTab()->navigateTo("/tmp");
-        model.activeTab()->setSplitViewEnabled(true);
-        model.activeTab()->navigateSecondaryTo("/usr");
+        model.activeTab()->addPane("/usr");
+        model.activeTab()->setSupertab(true);
         model.addTab();
         model.closeTab(0);
         QCOMPARE(model.rowCount(), 1);
@@ -290,8 +290,9 @@ private slots:
         model.reopenClosedTab();
         QCOMPARE(model.rowCount(), 2);
         QCOMPARE(model.tabAt(1)->currentPath(), QString("/tmp"));
-        QCOMPARE(model.tabAt(1)->secondaryCurrentPath(), QString("/usr"));
-        QCOMPARE(model.tabAt(1)->splitViewEnabled(), true);
+        QCOMPARE(model.tabAt(1)->paneCount(), 2);
+        QCOMPARE(model.tabAt(1)->paneCurrentPath(1), QString("/usr"));
+        QCOMPARE(model.tabAt(1)->isSupertab(), true);
     }
 
     void testReopenMultipleClosedTabs()
@@ -329,9 +330,9 @@ private slots:
         QCOMPARE(model.data(idx, TabListModel::PathRole).toString(), QString("/tmp"));
         QVERIFY(model.data(idx, TabListModel::TabObjectRole).value<TabModel*>() != nullptr);
 
-        model.activeTab()->setSplitViewEnabled(true);
-        model.activeTab()->navigateSecondaryTo("/usr");
-        QCOMPARE(model.data(idx, TabListModel::TitleRole).toString(), QString("tmp / usr"));
+        model.activeTab()->addPane("/usr");
+        model.activeTab()->setSupertab(true);
+        QCOMPARE(model.data(idx, TabListModel::TitleRole).toString(), QString("tmp · usr"));
     }
 
     void testCloseTabAdjustsActiveIndex()
@@ -381,13 +382,6 @@ private slots:
         QJsonObject tab;
         tab["path"] = "/definitely/missing/path/for/heimdall";
         tab["viewMode"] = "grid";
-        // Phase 2 P2-M4: the secondary pane is grown lazily only when the
-        // saved splitViewEnabled is true.  Restoring a non-split tab leaves
-        // paneCount == 1 (secondaryCurrentPath returns empty), which is the
-        // intentional new behaviour — non-split tabs no longer carry along
-        // a stale secondary path waiting to surface in a merge supertab.
-        tab["splitViewEnabled"] = true;
-        tab["secondaryPath"] = "/another/missing/path";
         tab["sortBy"] = "name";
         tab["sortAscending"] = true;
         tabs.append(tab);
@@ -396,7 +390,6 @@ private slots:
 
         QVERIFY(model.activeTab() != nullptr);
         QVERIFY(QFileInfo::exists(model.activeTab()->currentPath()));
-        QVERIFY(QFileInfo::exists(model.activeTab()->secondaryCurrentPath()));
     }
 
     void testSessionPersistsMergedSupertab()

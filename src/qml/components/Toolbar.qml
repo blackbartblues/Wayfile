@@ -12,7 +12,6 @@ Rectangle {
     property string navigationPath: ""
     property bool canGoBack: false
     property bool canGoForward: false
-    property bool splitViewEnabled: false
     // P2-M5: dynamic merge/unmerge button state.  mergeWillUnmerge picks
     // IconUnlink vs IconLink; mergeTooltip rotates between four messages
     // (merge N / merge with neighbour / unmerge / cap reached) so the
