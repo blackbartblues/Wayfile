@@ -79,6 +79,7 @@ Window {
     property bool draftSidebarVisible: currentSidebarVisible
     property string draftSidebarPosition: config.sidebarPosition
     property int draftSidebarWidth: currentSidebarWidth
+    property real draftScrollSpeed: config.scrollSpeed
     property int draftRadiusSmall: config.radiusSmall
     property int draftRadiusMedium: config.radiusMedium
     property int draftRadiusLarge: config.radiusLarge
@@ -249,6 +250,7 @@ Window {
         draftSidebarVisible = true
         draftSidebarPosition = defaultSidebarPosition
         draftSidebarWidth = defaultSidebarWidth
+        draftScrollSpeed = 3.0
         draftRadiusSmall = defaultRadiusSmall
         draftRadiusMedium = defaultRadiusMedium
         draftRadiusLarge = defaultRadiusLarge
@@ -288,6 +290,7 @@ Window {
             draftSidebarVisible = currentSidebarVisible
             draftSidebarPosition = config.sidebarPosition
             draftSidebarWidth = currentSidebarWidth
+            draftScrollSpeed = config.scrollSpeed
             draftRadiusSmall = config.radiusSmall
             draftRadiusMedium = Math.max(config.radiusMedium, draftRadiusSmall)
             draftRadiusLarge = Math.max(config.radiusLarge, draftRadiusMedium)
@@ -357,6 +360,7 @@ Window {
             sidebarVisible: draftSidebarVisible,
             sidebarPosition: draftSidebarPosition,
             sidebarWidth: draftSidebarWidth,
+            scrollSpeed: draftScrollSpeed,
             radiusSmall: draftRadiusSmall,
             radiusMedium: draftRadiusMedium,
             radiusLarge: draftRadiusLarge,
@@ -689,6 +693,20 @@ Window {
                 value: root.draftSidebarWidth
                 onMoved: (value) => {
                     root.draftSidebarWidth = Math.round(value)
+                    root.queueSettingsApply()
+                }
+            }
+
+            Q.Slider {
+                Layout.fillWidth: true
+                label: "Scroll speed"
+                from: 1.0
+                to: 10.0
+                stepSize: 0.5
+                showValue: true
+                value: root.draftScrollSpeed
+                onMoved: (value) => {
+                    root.draftScrollSpeed = value
                     root.queueSettingsApply()
                 }
             }

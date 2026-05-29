@@ -257,6 +257,7 @@ void ConfigManager::setDefaults()
     m_sidebarPosition = "left";
     m_sidebarWidth = 200;
     m_sidebarVisible = true;
+    m_scrollSpeed = 3.0;
     m_bookmarks = {"~/Documents", "~/Downloads", "~/Pictures", "~/Projects"};
     m_radiusSmall = 4;
     m_radiusMedium = 8;
@@ -312,6 +313,9 @@ void ConfigManager::loadConfig()
             m_sidebarWidth = static_cast<int>(*v);
         if (auto v = config["sidebar"]["visible"].value<bool>())
             m_sidebarVisible = *v;
+
+        if (auto v = config["general"]["scroll_speed"].value<double>())
+            m_scrollSpeed = qBound(1.0, *v, 10.0);
 
         // Appearance
         if (auto v = config["appearance"]["radius_small"].value<int64_t>())
@@ -438,6 +442,7 @@ QString ConfigManager::sidebarPosition() const { return m_sidebarPosition; }
 int ConfigManager::sidebarWidth() const { return m_sidebarWidth; }
 bool ConfigManager::sidebarVisible() const { return m_sidebarVisible; }
 QStringList ConfigManager::bookmarks() const { return m_bookmarks; }
+double ConfigManager::scrollSpeed() const { return m_scrollSpeed; }
 int ConfigManager::radiusSmall() const { return m_radiusSmall; }
 int ConfigManager::radiusMedium() const { return m_radiusMedium; }
 int ConfigManager::radiusLarge() const { return m_radiusLarge; }
@@ -567,6 +572,11 @@ void ConfigManager::saveSettings(const QVariantMap &settings)
     if (settings.contains("sortAscending")) {
         m_sortAscending = settings.value("sortAscending").toBool();
         general.insert_or_assign("sort_ascending", m_sortAscending);
+    }
+
+    if (settings.contains("scrollSpeed")) {
+        m_scrollSpeed = qBound(1.0, settings.value("scrollSpeed").toDouble(), 10.0);
+        general.insert_or_assign("scroll_speed", m_scrollSpeed);
     }
 
     if (!general.empty())

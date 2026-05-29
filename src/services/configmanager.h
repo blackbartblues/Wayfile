@@ -25,6 +25,7 @@ class ConfigManager : public QObject
     Q_PROPERTY(QString sidebarPosition READ sidebarPosition NOTIFY configChanged)
     Q_PROPERTY(int sidebarWidth READ sidebarWidth NOTIFY configChanged)
     Q_PROPERTY(bool sidebarVisible READ sidebarVisible NOTIFY configChanged)
+    Q_PROPERTY(double scrollSpeed READ scrollSpeed NOTIFY configChanged)
     Q_PROPERTY(QStringList bookmarks READ bookmarks NOTIFY configChanged)
     Q_PROPERTY(int radiusSmall READ radiusSmall NOTIFY configChanged)
     Q_PROPERTY(int radiusMedium READ radiusMedium NOTIFY configChanged)
@@ -62,6 +63,7 @@ public:
     QString sidebarPosition() const;
     int sidebarWidth() const;
     bool sidebarVisible() const;
+    double scrollSpeed() const;
     QStringList bookmarks() const;
     int radiusSmall() const;
     int radiusMedium() const;
@@ -110,6 +112,7 @@ private:
     QString m_sidebarPosition;
     int m_sidebarWidth;
     bool m_sidebarVisible;
+    double m_scrollSpeed;
     QStringList m_bookmarks;
     int m_radiusSmall;
     int m_radiusMedium;
