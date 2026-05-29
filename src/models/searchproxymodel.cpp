@@ -93,6 +93,7 @@ void SearchProxyModel::clearSearch()
 
 QString SearchProxyModel::filePath(int row) const
 {
+    if (!sourceModel()) return {};
     QModelIndex proxyIdx = index(row, 0);
     if (!proxyIdx.isValid()) return {};
     QModelIndex srcIdx = mapToSource(proxyIdx);
@@ -101,6 +102,7 @@ QString SearchProxyModel::filePath(int row) const
 
 bool SearchProxyModel::isDir(int row) const
 {
+    if (!sourceModel()) return false;
     QModelIndex proxyIdx = index(row, 0);
     if (!proxyIdx.isValid()) return false;
     QModelIndex srcIdx = mapToSource(proxyIdx);
@@ -109,6 +111,7 @@ bool SearchProxyModel::isDir(int row) const
 
 QString SearchProxyModel::fileName(int row) const
 {
+    if (!sourceModel()) return {};
     QModelIndex proxyIdx = index(row, 0);
     if (!proxyIdx.isValid()) return {};
     QModelIndex srcIdx = mapToSource(proxyIdx);

@@ -237,6 +237,23 @@ private slots:
         QCOMPARE(proxy.isDir(1), false);
     }
 
+    void testAccessorsWithNoSourceModelDoNotCrash()
+    {
+        // QML can call these Q_INVOKABLEs before a source model is wired up
+        // (or after switchSourceModel(nullptr)); they must return defaults
+        // rather than dereferencing a null sourceModel().
+        SearchProxyModel proxy;
+        QCOMPARE(proxy.filePath(0), QString());
+        QCOMPARE(proxy.fileName(0), QString());
+        QCOMPARE(proxy.isDir(0), false);
+        QCOMPARE(proxy.filePath(-1), QString());
+        QCOMPARE(proxy.isDir(99), false);
+
+        proxy.switchSourceModel(nullptr);
+        QCOMPARE(proxy.filePath(0), QString());
+        QCOMPARE(proxy.isDir(0), false);
+    }
+
     void testSearchActive()
     {
         SearchProxyModel proxy;
