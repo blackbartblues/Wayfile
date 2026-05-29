@@ -2944,22 +2944,6 @@ ApplicationWindow {
         }
     }
 
-    // Phase 2 P2-M4 temporary trigger: Ctrl+M collapses the current Ctrl-
-    // click selection into a supertab.  P2-M5 will replace this with a
-    // chain-link merge button in the toolbar.
-    Shortcut {
-        sequence: "Ctrl+M"
-        onActivated: tabModel.mergeSelected()
-    }
-
-    // Phase 2 P2-M8 temporary trigger: Ctrl+Shift+M dissolves the active
-    // supertab back into its constituent tabs.  Same toolbar button as
-    // merge will likely host this too (chain-link toggle).
-    Shortcut {
-        sequence: "Ctrl+Shift+M"
-        onActivated: tabModel.unmergeActive()
-    }
-
     Shortcut {
         sequence: config.shortcutMap["reopen_tab"]
         onActivated: tabModel.reopenClosedTab()
@@ -3031,7 +3015,7 @@ ApplicationWindow {
     }
 
     Shortcut {
-        sequence: config.shortcutMap["split_view"]
+        sequence: config.shortcutMap["toggle_merge"]
         onActivated: root.toggleMergeOrUnmerge()
     }
 
@@ -3159,7 +3143,7 @@ ApplicationWindow {
     }
 
     Shortcut {
-        sequence: "Menu"
+        sequence: config.shortcutMap["context_menu_alt"]
         onActivated: root.showContextMenuForActiveSelection()
     }
 

@@ -42,11 +42,12 @@ const ShortcutSpec kShortcutSpecs[] = {
     {"quick_preview", "Quick Preview"},
     {"search", "Search"},
     {"context_menu", "Show Context Menu"},
+    {"context_menu_alt", "Show Context Menu (Menu key)"},
     {"open_terminal", "Open in Terminal"},
     {"properties", "Properties"},
     {"path_bar", "Focus Path Bar"},
     {"toggle_sidebar", "Toggle Sidebar"},
-    {"split_view", "Toggle Split View"},
+    {"toggle_merge", "Merge / Unmerge Panes"},
     {"focus_next_pane", "Focus Next Pane"},
     {"focus_previous_pane", "Focus Previous Pane"},
     {"focus_left_pane", "Focus Left Pane"},
@@ -106,11 +107,12 @@ QMap<QString, QString> ConfigManager::s_defaultShortcuts = {
     {"quick_preview", "Space"},
     {"search", "Ctrl+F"},
     {"context_menu", "Shift+F10"},
+    {"context_menu_alt", "Menu"},
     {"open_terminal", "Ctrl+Alt+T"},
     {"properties", "Alt+Return"},
     {"path_bar", "Ctrl+L"},
     {"toggle_sidebar", "F9"},
-    {"split_view", "F3"},
+    {"toggle_merge", "F3"},
     {"focus_next_pane", "F6"},
     {"focus_previous_pane", "Shift+F6"},
     {"focus_left_pane", "Ctrl+Alt+Left"},
@@ -347,6 +349,28 @@ void ConfigManager::loadConfig()
             // pick up Ctrl+N unless the user chose a different custom binding.
             if (m_shortcuts.value(QStringLiteral("new_file")) == QStringLiteral("Ctrl+Alt+N"))
                 m_shortcuts[QStringLiteral("new_file")] = s_defaultShortcuts.value(QStringLiteral("new_file"));
+
+            // P3 M1: rename action 'split_view' -> 'toggle_merge'. Existing
+            // configs that referenced the old key keep their custom value
+            // under the new key. Note m_shortcuts is pre-seeded with
+            // s_defaultShortcuts above, so 'toggle_merge' is always present
+            // before the TOML loop — we detect 'TOML had only the old key'
+            // by comparing the current toggle_merge value against its
+            // default. If a config sets both keys, the customized
+            // toggle_merge (!= default) wins and split_view is dropped.
+            // One-shot, silent, idempotent: the next saveShortcuts()
+            // rewrites the [shortcuts] table and drops 'split_view' on disk.
+            if (m_shortcuts.contains(QStringLiteral("split_view"))) {
+                const QString currentToggleMerge =
+                    m_shortcuts.value(QStringLiteral("toggle_merge"));
+                const QString defaultToggleMerge =
+                    s_defaultShortcuts.value(QStringLiteral("toggle_merge"));
+                if (currentToggleMerge == defaultToggleMerge) {
+                    m_shortcuts[QStringLiteral("toggle_merge")] =
+                        m_shortcuts.value(QStringLiteral("split_view"));
+                }
+                m_shortcuts.remove(QStringLiteral("split_view"));
+            }
         }
 
     } catch (const toml::parse_error &err) {

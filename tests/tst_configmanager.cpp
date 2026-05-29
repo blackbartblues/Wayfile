@@ -585,6 +585,99 @@ private slots:
         QCOMPARE(mgr.theme(), QString("catppuccin-mocha"));
         QCOMPARE(mgr.defaultView(), QString("grid"));
     }
+
+    // --- P3 M1: split_view -> toggle_merge rename ---
+
+    void testToggleMergeActionRegistered()
+    {
+        QTemporaryDir dir;
+        ConfigManager mgr(dir.path() + "/config.toml");
+
+        const QVariantMap shortcutMap = mgr.shortcutMap();
+        QVERIFY2(shortcutMap.contains("toggle_merge"),
+                 "Action 'toggle_merge' must be registered (renamed from split_view in P3 M1).");
+        QCOMPARE(shortcutMap.value("toggle_merge").toString(), QString("F3"));
+
+        QVERIFY2(!shortcutMap.contains("split_view"),
+                 "Old action key 'split_view' must be gone from the registry.");
+
+        const QVariantList defs = mgr.shortcutDefinitions();
+        bool foundToggleMerge = false;
+        for (const QVariant &v : defs) {
+            const QVariantMap def = v.toMap();
+            if (def.value("action").toString() == QLatin1String("toggle_merge")) {
+                foundToggleMerge = true;
+                QCOMPARE(def.value("label").toString(), QString("Merge / Unmerge Panes"));
+                QCOMPARE(def.value("defaultSequence").toString(), QString("F3"));
+                break;
+            }
+        }
+        QVERIFY2(foundToggleMerge,
+                 "shortcutDefinitions() must expose toggle_merge with label 'Merge / Unmerge Panes'.");
+    }
+
+    void testMigrateSplitViewToToggleMerge_customValue()
+    {
+        QTemporaryDir dir;
+        const QString cfgPath = dir.path() + "/config.toml";
+
+        // Seed a config that pre-dates the rename: only the old key, with a
+        // user-customized value (so the migration must preserve the value,
+        // not just substitute the default).
+        QFile f(cfgPath);
+        QVERIFY(f.open(QIODevice::WriteOnly | QIODevice::Text));
+        f.write("[shortcuts]\nsplit_view = \"Ctrl+J\"\n");
+        f.close();
+
+        ConfigManager mgr(cfgPath);
+
+        const QVariantMap shortcutMap = mgr.shortcutMap();
+        QCOMPARE(shortcutMap.value("toggle_merge").toString(), QString("Ctrl+J"));
+        QVERIFY2(!shortcutMap.contains("split_view"),
+                 "After migration, the old action key must not surface via shortcutMap().");
+    }
+
+    void testMigrateSplitViewToToggleMerge_doesNotOverwriteNewKey()
+    {
+        QTemporaryDir dir;
+        const QString cfgPath = dir.path() + "/config.toml";
+
+        // If a user has BOTH keys (e.g. partial manual edit), the new key
+        // wins — migration must not clobber it.
+        QFile f(cfgPath);
+        QVERIFY(f.open(QIODevice::WriteOnly | QIODevice::Text));
+        f.write("[shortcuts]\nsplit_view = \"Ctrl+J\"\ntoggle_merge = \"Ctrl+K\"\n");
+        f.close();
+
+        ConfigManager mgr(cfgPath);
+
+        const QVariantMap shortcutMap = mgr.shortcutMap();
+        QCOMPARE(shortcutMap.value("toggle_merge").toString(), QString("Ctrl+K"));
+    }
+
+    void testContextMenuAltActionRegistered()
+    {
+        QTemporaryDir dir;
+        ConfigManager mgr(dir.path() + "/config.toml");
+
+        const QVariantMap shortcutMap = mgr.shortcutMap();
+        QCOMPARE(shortcutMap.value("context_menu_alt").toString(), QString("Menu"));
+
+        const QVariantList defs = mgr.shortcutDefinitions();
+        bool found = false;
+        for (const QVariant &v : defs) {
+            const QVariantMap def = v.toMap();
+            if (def.value("action").toString() == QLatin1String("context_menu_alt")) {
+                found = true;
+                QCOMPARE(def.value("label").toString(),
+                         QString("Show Context Menu (Menu key)"));
+                QCOMPARE(def.value("defaultSequence").toString(), QString("Menu"));
+                break;
+            }
+        }
+        QVERIFY2(found,
+                 "shortcutDefinitions() must expose context_menu_alt with the Menu-key label.");
+    }
 };
 
 QTEST_MAIN(TestConfigManager)
