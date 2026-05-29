@@ -894,6 +894,36 @@ ApplicationWindow {
         tabModel.mergeSelected()
     }
 
+    // P2-M5: predicates feeding the toolbar merge button's icon + tooltip.
+    // Read straight off the same state machine as toggleMergeOrUnmerge so
+    // the button can never advertise an action it wouldn't actually fire.
+    // - mergeButtonWillUnmerge: true iff the next click would dissolve the
+    //   active supertab back into separate tabs.  Drives the IconLink vs
+    //   IconUnlink swap.
+    // - mergeButtonTooltip: human-readable description of the next action,
+    //   including the cap-reached case where the click would no-op with a
+    //   toast.  Bindings re-evaluate on selectionChanged / supertabChanged
+    //   / countChanged because every term references one of them.
+    function mergeButtonWillUnmerge() {
+        return !!(tabModel.activeTab && tabModel.activeTab.isSupertab)
+    }
+
+    function mergeButtonTooltip() {
+        if (!tabModel.activeTab)
+            return ""
+        if (tabModel.activeTab.isSupertab)
+            return "Unmerge supertab"
+        if (tabModel.selectedCount >= 2) {
+            var total = tabModel.selectedPaneCountTotal()
+            if (total > 4)
+                return "Tab limit reached (max 4 panes)"
+            return "Merge " + tabModel.selectedCount + " tabs"
+        }
+        if (tabModel.count <= 1)
+            return "Spawn tab and merge"
+        return "Merge with neighbour tab"
+    }
+
     function activePaneCanGoBack() {
         if (!tabModel.activeTab)
             return false
@@ -3373,8 +3403,21 @@ ApplicationWindow {
         TabBar {
             id: tabBar
             Layout.fillWidth: true
+            // P2-M7: mirror window-level active sub-pane so the supertab's
+            // mini folder icons can highlight which pane currently has
+            // keyboard focus.
+            activePaneIndex: root.activePaneIndex
             onTransferRequested: (paths, destinationPath, moveOperation) =>
                 root.beginTransfer(paths, destinationPath, moveOperation, false)
+            // P2-M7: clicking a mini folder icon inside a merged supertab
+            // activates the tab and snaps active pane focus to that sub-pane
+            // in one gesture — same intent as clicking the pane in the
+            // viewport, just shorter travel for mouse users.
+            onSubPaneClicked: (tabIdx, paneIdx) => {
+                tabModel.activateAndCollapseSelection(tabIdx)
+                if (paneIdx >= 0)
+                    root.activePaneIndex = paneIdx
+            }
         }
 
         RowLayout {
@@ -3494,6 +3537,8 @@ ApplicationWindow {
                 canGoBack: activePaneCanGoBack()
                 canGoForward: activePaneCanGoForward()
                 splitViewEnabled: root.splitViewEnabled()
+                mergeWillUnmerge: root.mergeButtonWillUnmerge()
+                mergeTooltip: root.mergeButtonTooltip()
                 isRecentsView: root.isRecentsView
                 isTrashView: root.isTrashView
                 isRemoteView: root.isRemoteView

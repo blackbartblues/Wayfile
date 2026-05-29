@@ -472,3 +472,12 @@ QString TabModel::paneViewMode(int idx) const
     return m_panes.at(idx).viewMode;
 }
 
+QStringList TabModel::paneTitles() const
+{
+    QStringList names;
+    names.reserve(m_panes.size());
+    for (const PaneState &p : m_panes)
+        names.append(displayNameForPath(p.currentPath));
+    return names;
+}
+

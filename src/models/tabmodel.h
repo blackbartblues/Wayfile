@@ -77,6 +77,10 @@ public:
     // secondaryX Q_PROPERTYs stay alive while paneRow is still hand-wired.
     Q_INVOKABLE QString paneCurrentPath(int idx) const;
     Q_INVOKABLE QString paneViewMode(int idx) const;
+    // Phase 2 P2-M7: batched basename list for every live pane.  Mirrors
+    // the join used by title() so the TabBar delegate can render the same
+    // names as N discrete chips without re-parsing the joined string.
+    Q_INVOKABLE QStringList paneTitles() const;
 
     // Phase 2 P2-M4: supertab marker.  Set by TabListModel::mergeSelected
     // on the receiver tab; cleared when the supertab dissolves back to a

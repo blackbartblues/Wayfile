@@ -53,8 +53,35 @@ void TabListModel::connectTab(int row, TabModel *tab)
         int idx = m_tabs.indexOf(tab);
         if (idx >= 0) {
             QModelIndex mi = index(idx);
-            emit dataChanged(mi, mi, {TitleRole});
+            // PaneTitlesRole follows the same trigger as TitleRole (any pane
+            // path change rebuilds the joined title), so emit them together
+            // and the TabBar delegate's mini-icon row re-binds in sync.
+            emit dataChanged(mi, mi, {TitleRole, PaneTitlesRole});
         }
+    });
+    // Phase 2 P2-M7: structural pane changes drive both the supertab flag
+    // and the visible pane count.  Emitting on panesChanged covers M9
+    // (close-pane reduces a 3-pane supertab to 2) and on supertabChanged
+    // covers M4/M8 (merge / unmerge flips the flag without changing count
+    // for some edge cases).  PaneTitlesRole is included on panesChanged
+    // because adding / removing a pane reshapes the list.
+    connect(tab, &TabModel::panesChanged, this, [this, tab]() {
+        int idx = m_tabs.indexOf(tab);
+        if (idx >= 0) {
+            QModelIndex mi = index(idx);
+            emit dataChanged(mi, mi, {PaneCountRole, PaneTitlesRole});
+        }
+    });
+    connect(tab, &TabModel::supertabChanged, this, [this, tab]() {
+        int idx = m_tabs.indexOf(tab);
+        if (idx >= 0) {
+            QModelIndex mi = index(idx);
+            emit dataChanged(mi, mi, {IsSupertabRole});
+        }
+        // M5 tooltip predicate ("Unmerge supertab" vs "Merge …") binds to
+        // selectionChanged in QML; piggyback so the toolbar refreshes
+        // without us needing another signal.
+        emit selectionChanged();
     });
     connect(tab, &TabModel::secondaryCurrentPathChanged, this, &TabListModel::sessionChanged);
     connect(tab, &TabModel::viewModeChanged, this, &TabListModel::sessionChanged);
@@ -78,6 +105,9 @@ QVariant TabListModel::data(const QModelIndex &index, int role) const
     case PathRole: return tab->currentPath();
     case TabObjectRole: return QVariant::fromValue(tab);
     case IsSelectedRole: return m_selectedIndices.contains(index.row());
+    case IsSupertabRole: return tab->isSupertab();
+    case PaneCountRole: return tab->paneCount();
+    case PaneTitlesRole: return tab->paneTitles();
     }
     return {};
 }
@@ -89,6 +119,9 @@ QHash<int, QByteArray> TabListModel::roleNames() const
         {PathRole, "path"},
         {TabObjectRole, "tabObject"},
         {IsSelectedRole, "isSelected"},
+        {IsSupertabRole, "isSupertab"},
+        {PaneCountRole, "paneCount"},
+        {PaneTitlesRole, "paneTitles"},
     };
 }
 
@@ -251,6 +284,16 @@ void TabListModel::toggleSelected(int index)
 
     emitIsSelectedChanged(index);
     emit selectionChanged();
+}
+
+int TabListModel::selectedPaneCountTotal() const
+{
+    int total = 0;
+    for (int idx : std::as_const(m_selectedIndices)) {
+        if (idx >= 0 && idx < m_tabs.size())
+            total += m_tabs[idx]->paneCount();
+    }
+    return total;
 }
 
 void TabListModel::mergeSelected()

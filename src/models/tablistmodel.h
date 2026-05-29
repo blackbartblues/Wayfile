@@ -23,6 +23,17 @@ public:
         PathRole,
         TabObjectRole,
         IsSelectedRole,
+        // Phase 2 P2-M7: surfaced so TabBar.qml's delegate can branch the
+        // visual treatment for merged supertabs (mini folder icon row +
+        // active-sub-pane highlight) without round-tripping through the
+        // TabModel*.  IsSupertabRole is the cheap discriminator; the
+        // other two feed the per-pane sub-strip.  Active-sub-pane is read
+        // from Main.qml's root.activePaneIndex when the tab is active —
+        // it's a window-level concept, not per-tab, so it doesn't belong
+        // on this model.
+        IsSupertabRole,
+        PaneCountRole,
+        PaneTitlesRole,
     };
 
     explicit TabListModel(QObject *parent = nullptr);
@@ -71,6 +82,12 @@ public:
     // new pane via receiver.addPane(...).  Donor tabs are removed.  No-op
     // when the selection has fewer than 2 entries.
     Q_INVOKABLE void mergeSelected();
+
+    // Phase 2 P2-M5: sum of paneCount() across currently-selected tabs.
+    // Mirrors mergeSelected's pre-flight check so the toolbar tooltip
+    // can announce "cap reached" before the user clicks instead of
+    // silently no-op'ing with a toast.
+    Q_INVOKABLE int selectedPaneCountTotal() const;
 
     // Phase 2 P2-M8: dissolve the supertab at idx back into N individual
     // tabs.  m_panes[0]..m_panes[N-1] become tabs inserted in-place at

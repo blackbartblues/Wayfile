@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Heimdall
+import Quill as Q
 
 Rectangle {
     id: root
@@ -12,6 +13,13 @@ Rectangle {
     property bool canGoBack: false
     property bool canGoForward: false
     property bool splitViewEnabled: false
+    // P2-M5: dynamic merge/unmerge button state.  mergeWillUnmerge picks
+    // IconUnlink vs IconLink; mergeTooltip rotates between four messages
+    // (merge N / merge with neighbour / unmerge / cap reached) so the
+    // button never feels ambiguous.  Main.qml computes both off the same
+    // predicates as toggleMergeOrUnmerge — see mergeButtonTooltip there.
+    property bool mergeWillUnmerge: false
+    property string mergeTooltip: ""
     property bool isRecentsView: false
     property bool isTrashView: false
     property bool isRemoteView: false
@@ -210,23 +218,46 @@ Rectangle {
                 }
 
                 HoverRect {
+                    id: mergeBtn
                     width: Theme.controlSize; height: Theme.controlSize
                     visible: !root.searchMode
-                    border.width: root.splitViewEnabled ? 1 : 0
-                    border.color: root.splitViewEnabled
+                    // Accent ring lights up whenever the next click would
+                    // unmerge (active tab is a supertab) — this is the
+                    // visual "active state" since merge from a non-selection
+                    // doesn't have a persistent "on" mode the way the old
+                    // split view did.
+                    border.width: root.mergeWillUnmerge ? 1 : 0
+                    border.color: root.mergeWillUnmerge
                         ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.65)
                         : "transparent"
-                    color: root.splitViewEnabled
+                    color: root.mergeWillUnmerge
                         ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b,
                                   hovered ? 0.30 : 0.22)
                         : (hovered
                             ? Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.1)
                             : "transparent")
                     onClicked: root.splitViewToggled()
-                    IconSquareSplitHorizontal {
+
+                    // P2-M5: swap glyph based on which action will fire.
+                    // Unlink = "this click will dissolve the supertab"; Link =
+                    // "this click will merge tabs into a supertab".  Active
+                    // tab being a supertab is the single discriminator.
+                    IconLink {
                         anchors.centerIn: parent
                         size: 18
-                        color: root.splitViewEnabled ? Theme.accent : Theme.text
+                        color: Theme.text
+                        visible: !root.mergeWillUnmerge
+                    }
+                    IconUnlink {
+                        anchors.centerIn: parent
+                        size: 18
+                        color: Theme.accent
+                        visible: root.mergeWillUnmerge
+                    }
+
+                    Q.Tooltip {
+                        text: root.mergeTooltip
+                        visible: mergeBtn.hovered && root.mergeTooltip.length > 0
                     }
                 }
 

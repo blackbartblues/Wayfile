@@ -118,6 +118,8 @@ list(APPEND heimdall_qml_module_args
         qml/icons/IconSearch.qml
         qml/icons/IconPanelLeft.qml
         qml/icons/IconSquareSplitHorizontal.qml
+        qml/icons/IconLink.qml
+        qml/icons/IconUnlink.qml
         qml/icons/IconPlus.qml
         qml/icons/IconClock.qml
         qml/icons/IconTrash.qml

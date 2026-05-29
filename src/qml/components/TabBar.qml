@@ -21,6 +21,17 @@ Item {
     // copy/move via UndoManager (same handler signature as Toolbar's).
     signal transferRequested(var paths, string destinationPath, bool moveOperation)
 
+    // P2-M7: which sub-pane within the active supertab currently has
+    // keyboard focus.  Used to highlight the matching mini folder icon
+    // in the merged tab.  Owned by Main.qml as a window-level concept
+    // (it follows the active tab's active pane), so we just mirror it.
+    property int activePaneIndex: 0
+    // P2-M7: left-click on one of the mini folder icons inside a supertab.
+    // Main.qml handles by activating the tab and routing focus into the
+    // matching pane, so the user can switch sub-pane without leaving the
+    // tab strip.
+    signal subPaneClicked(int tabIndex, int paneIdx)
+
     // Chrome-ish bounds. Tune here if the design canvas tightens these later.
     readonly property int minTabWidth: 100
     readonly property int maxTabWidth: 220
@@ -152,6 +163,13 @@ Item {
                     // Phase 2 P2-M1: per-tab selected flag, read from the
                     // tablistmodel's new IsSelectedRole.
                     required property bool isSelected
+                    // P2-M7: surfaced from TabListModel so the delegate can
+                    // swap its title area for a mini folder-icon row when
+                    // this tab is a merged supertab.  paneTitles holds the
+                    // basename of each live pane in display order.
+                    required property bool isSupertab
+                    required property int paneCount
+                    required property var paneTitles
 
                     // Phase 2: drag-lift visual.  Mirrors tabMouseArea's
                     // drag state through transforms — a Scale pops the tab
@@ -560,11 +578,19 @@ Item {
                         z: 1
                     }
 
+                    // P2-M7: single-tab title.  Hidden for supertabs so the
+                    // mini-icon Row below can take over.  Keeping both items
+                    // declarative (visible toggles) rather than a Loader
+                    // keeps the binding fast in the common path where the
+                    // strip is mostly single tabs.
                     Text {
                         anchors.left: parent.left
                         anchors.right: parent.right
+                        anchors.leftMargin: 12
+                        anchors.rightMargin: 28  // leave room for the × button
                         anchors.verticalCenter: parent.verticalCenter
                         horizontalAlignment: Text.AlignHCenter
+                        visible: !(tabDelegate.isSupertab && tabDelegate.paneCount > 1)
                         text: tabDelegate.model.title || "New Tab"
                         color: tabDelegate.index === tabModel.activeIndex ? Theme.text : Theme.subtext
                         font.pointSize: Theme.fontNormal
@@ -572,6 +598,106 @@ Item {
                             ? Font.Medium : Font.Normal
                         elide: Text.ElideRight
                         verticalAlignment: Text.AlignVCenter
+                    }
+
+                    // P2-M7: supertab strip.  N mini folder icons followed
+                    // by a tightly-elided joined title.  Active sub-pane
+                    // glows in the accent colour; inactive panes dim toward
+                    // subtext so the eye lands on focus immediately.
+                    // Clicking an icon both activates the tab and switches
+                    // sub-pane focus to that pane.
+                    Row {
+                        id: supertabRow
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.leftMargin: 8
+                        anchors.rightMargin: 28
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 4
+                        visible: tabDelegate.isSupertab && tabDelegate.paneCount > 1
+
+                        readonly property bool tabIsActive: tabDelegate.index === tabModel.activeIndex
+
+                        Repeater {
+                            model: tabDelegate.paneCount
+                            delegate: Item {
+                                id: paneChip
+                                required property int index
+                                readonly property bool isActiveSubPane:
+                                    supertabRow.tabIsActive
+                                    && paneChip.index === root.activePaneIndex
+                                readonly property string chipName: {
+                                    var titles = tabDelegate.paneTitles
+                                    if (titles && paneChip.index < titles.length)
+                                        return titles[paneChip.index]
+                                    return ""
+                                }
+                                // Width: icon + small gap.  Total Row width
+                                // is bounded by the tab; if it overflows the
+                                // joined title beside it elides — for now
+                                // we don't render the title (icons alone
+                                // carry the supertab signal).
+                                width: 14
+                                height: supertabRow.height
+
+                                IconFolder {
+                                    anchors.centerIn: parent
+                                    size: 12
+                                    color: paneChip.isActiveSubPane
+                                        ? Theme.accent
+                                        : (supertabRow.tabIsActive
+                                            ? Theme.text
+                                            : Theme.subtext)
+                                    opacity: paneChip.isActiveSubPane ? 1.0 : 0.78
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    acceptedButtons: Qt.LeftButton
+                                    onClicked: {
+                                        root.subPaneClicked(tabDelegate.index,
+                                                            paneChip.index)
+                                    }
+                                }
+                            }
+                        }
+
+                        // Separator after icons, then truncated title.  The
+                        // separator keeps the strip readable when a wide tab
+                        // gives us room for both icons and text; when narrow,
+                        // the Text elides immediately so icons stay legible.
+                        Item {
+                            width: 1
+                            height: parent.height
+                            visible: supertabTitle.implicitWidth > 0
+                                     && supertabRow.width
+                                        - tabDelegate.paneCount * 18 - 4 > 24
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: 1
+                                height: parent.height * 0.5
+                                color: Qt.rgba(Theme.text.r, Theme.text.g,
+                                               Theme.text.b, 0.18)
+                            }
+                        }
+
+                        Text {
+                            id: supertabTitle
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: Math.max(
+                                0,
+                                supertabRow.width
+                                - tabDelegate.paneCount * 18 - 8)
+                            text: tabDelegate.model.title || ""
+                            color: supertabRow.tabIsActive ? Theme.text : Theme.subtext
+                            font.pointSize: Theme.fontNormal
+                            font.weight: supertabRow.tabIsActive
+                                ? Font.Medium : Font.Normal
+                            elide: Text.ElideRight
+                            verticalAlignment: Text.AlignVCenter
+                            visible: width > 12
+                        }
                     }
 
                     Rectangle {
