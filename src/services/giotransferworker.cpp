@@ -120,7 +120,12 @@ void GioTransferWorker::execute(const QList<TransferItem> &items, bool moveOpera
     m_lastEmitMs = 0;
     m_lastEmittedProgress = -1.0;
 
-    m_cancellable = g_cancellable_new();
+    {
+        // m_cancellable is read by cancel() on the GUI thread; guard the
+        // pointer's lifetime transitions with the same mutex.
+        QMutexLocker lock(&m_mutex);
+        m_cancellable = g_cancellable_new();
+    }
     m_elapsed.start();
 
     // Indeterminate pre-scan
@@ -201,9 +206,24 @@ void GioTransferWorker::execute(const QList<TransferItem> &items, bool moveOpera
                 g_object_unref(backupParent);
             }
             GError *mvErr = nullptr;
-            g_file_move(existingTarget, backupFile, G_FILE_COPY_NONE, nullptr, nullptr, nullptr, &mvErr);
-            if (mvErr)
+            g_file_move(existingTarget, backupFile, G_FILE_COPY_NONE, m_cancellable, nullptr, nullptr, &mvErr);
+            if (mvErr) {
+                // If the backup move failed for any reason other than the
+                // target simply not existing, refuse to continue: proceeding
+                // would overwrite (and destroy) the user's existing file with
+                // no recoverable backup.
+                const bool targetMissing = g_error_matches(mvErr, G_IO_ERROR, G_IO_ERROR_NOT_FOUND);
+                if (!targetMissing) {
+                    success = false;
+                    errorMsg = gErrorToUserMessage(mvErr);
+                    g_error_free(mvErr);
+                    g_object_unref(existingTarget);
+                    g_object_unref(backupFile);
+                    g_object_unref(targetFile);
+                    break;
+                }
                 g_error_free(mvErr);
+            }
             g_object_unref(existingTarget);
             g_object_unref(backupFile);
         }
@@ -362,8 +382,11 @@ void GioTransferWorker::execute(const QList<TransferItem> &items, bool moveOpera
         g_object_unref(targetFile);
     }
 
-    g_object_unref(m_cancellable);
-    m_cancellable = nullptr;
+    {
+        QMutexLocker lock(&m_mutex);
+        g_object_unref(m_cancellable);
+        m_cancellable = nullptr;
+    }
 
     emit finished(success, errorMsg);
 }
@@ -371,8 +394,15 @@ void GioTransferWorker::execute(const QList<TransferItem> &items, bool moveOpera
 void GioTransferWorker::cancel()
 {
     m_cancelled.store(true);
-    if (m_cancellable)
-        g_cancellable_cancel(m_cancellable);
+    {
+        // Serialise against execute()'s create/unref of m_cancellable so we
+        // never cancel (or read) a pointer that is being freed on the worker
+        // thread. g_cancellable_cancel itself is safe to call concurrently
+        // with the GIO operations using the cancellable.
+        QMutexLocker lock(&m_mutex);
+        if (m_cancellable)
+            g_cancellable_cancel(m_cancellable);
+    }
     m_pauseCondition.wakeAll();
 }
 
