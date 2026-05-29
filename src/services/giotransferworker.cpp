@@ -145,6 +145,15 @@ void GioTransferWorker::execute(const QList<TransferItem> &items, bool moveOpera
             break;
         }
 
+        // Hard safety net: a move/copy whose target IS its source must never
+        // run. Otherwise the overwrite branch backs up (moves away) the
+        // existing target and then fails to copy the now-missing source,
+        // destroying the file. No QML guard can be trusted with data loss.
+        if (item.sourcePath == item.targetPath) {
+            qCInfo(lcTransfer).nospace() << "skip self-transfer " << item.sourcePath;
+            continue;
+        }
+
         qCInfo(lcTransfer).nospace() << "item start  src=" << item.sourcePath
                                      << " dst=" << item.targetPath
                                      << (moveOperation ? " (move)" : " (copy)");

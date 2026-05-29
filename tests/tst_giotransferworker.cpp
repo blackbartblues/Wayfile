@@ -92,6 +92,36 @@ private slots:
         thread.wait();
     }
 
+    void testSelfMoveLeavesFileIntact()
+    {
+        // Regression: a move whose target IS its source (e.g. a drag dropped
+        // into the file's own directory) must be a no-op. Without the guard,
+        // the overwrite+backup path moves the file to the backup and then
+        // fails to copy the now-missing source — destroying the file.
+        TestDir dir;
+        dir.createFile("keep.txt", QByteArray(1024, 'k'));
+        const QString p = dir.path() + "/keep.txt";
+
+        GioTransferWorker worker;
+        QList<GioTransferWorker::TransferItem> items;
+        items.append({p, p, dir.path() + "/keep.txt.bak", true});  // overwrite + backup
+
+        QSignalSpy finishSpy(&worker, &GioTransferWorker::finished);
+        QThread thread;
+        worker.moveToThread(&thread);
+        connect(&thread, &QThread::started, &worker, [&]() {
+            worker.execute(items, true);
+        });
+        connect(&worker, &GioTransferWorker::finished, &thread, &QThread::quit);
+        thread.start();
+
+        QVERIFY(finishSpy.wait(10000));
+        QVERIFY(QFile::exists(p));                       // file survived
+        QCOMPARE(QFileInfo(p).size(), qint64(1024));     // and is intact
+        QVERIFY(!QFile::exists(dir.path() + "/keep.txt.bak"));  // no stray backup
+        thread.wait();
+    }
+
     void testCopySymlink()
     {
         TestDir src, dst;
