@@ -883,6 +883,30 @@ FileOperations::FileOperations(QObject *parent)
 {
 }
 
+FileOperations::~FileOperations()
+{
+    // Cancel in-flight transfers and join their threads before this object is
+    // destroyed: the worker connections and queued lambdas capture `this`, so
+    // a thread still running after destruction would dereference a dangling
+    // pointer. Gio workers respond to cancel() promptly via their cancellable;
+    // simple operations have no cancellation channel, so we bound the wait.
+    for (auto &t : m_activeTransfers) {
+        if (t.worker)
+            t.worker->cancel();
+    }
+    for (auto &t : m_activeTransfers) {
+        if (t.thread) {
+            t.thread->quit();
+            // Bounded wait: gio workers exit promptly after cancel(); a simple
+            // operation has no cancellation channel, so cap the shutdown stall.
+            // If it does not stop in time we leave the thread object to leak
+            // (the process is exiting) rather than terminate() it mid-syscall.
+            t.thread->wait(5000);
+        }
+    }
+    m_activeTransfers.clear();
+}
+
 bool FileOperations::busy() const { return m_busy; }
 double FileOperations::progress() const { return m_progress; }
 QString FileOperations::statusText() const { return m_statusText; }
@@ -1638,7 +1662,18 @@ QString FileOperations::pasteClipboardImage(const QString &destinationDir)
         emit operationFinished(false, "Failed to write clipboard image");
         return {};
     }
-    file.write(rawImage);
+    if (file.write(rawImage) != rawImage.size()) {
+        file.close();
+        file.remove();
+        emit operationFinished(false, "Failed to write clipboard image");
+        return {};
+    }
+    if (!file.flush()) {
+        file.close();
+        file.remove();
+        emit operationFinished(false, "Failed to write clipboard image");
+        return {};
+    }
     file.close();
 
     emitChangedPaths({outputPath});
@@ -1648,10 +1683,10 @@ QString FileOperations::pasteClipboardImage(const QString &destinationDir)
 
 void FileOperations::copyPathToClipboard(const QString &path)
 {
-    auto *proc = new QProcess(this);
-    proc->start("wl-copy", {path});
-    connect(proc, qOverload<int, QProcess::ExitStatus>(&QProcess::finished),
-            proc, &QProcess::deleteLater);
+    // Use Qt's clipboard rather than spawning wl-copy: works on X11 too and
+    // reports nothing silently on failure the way an unmonitored QProcess does.
+    if (QClipboard *clipboard = QGuiApplication::clipboard())
+        clipboard->setText(path);
 }
 
 void FileOperations::openInTerminal(const QString &dirPath)
@@ -1683,44 +1718,34 @@ void FileOperations::compressFiles(const QStringList &paths, const QString &form
     if (format == "zip") {
         QString outPath = parentDir + "/" + baseName + ".zip";
         outputPath = outPath;
-        cmd = "zip -r " + QString("'%1'").arg(outPath);
-        for (const auto &p : paths) {
-            QFileInfo fi(p);
-            cmd += " -j " + QString("'%1'").arg(p);
-        }
         // Use cd + relative paths for proper zip structure
-        cmd = "cd " + QString("'%1'").arg(parentDir) + " && zip -rv " +
-              QString("'%1'").arg(outPath);
+        cmd = "cd " + shellQuote(parentDir) + " && zip -rv " + shellQuote(outPath);
         for (const auto &p : paths)
-            cmd += " " + QString("'%1'").arg(QFileInfo(p).fileName());
+            cmd += " " + shellQuote(QFileInfo(p).fileName());
     } else if (format == "tar.gz") {
         QString outPath = parentDir + "/" + baseName + ".tar.gz";
         outputPath = outPath;
-        cmd = "tar -cvzf " + QString("'%1'").arg(outPath) +
-              " -C " + QString("'%1'").arg(parentDir);
+        cmd = "tar -cvzf " + shellQuote(outPath) + " -C " + shellQuote(parentDir);
         for (const auto &p : paths)
-            cmd += " " + QString("'%1'").arg(QFileInfo(p).fileName());
+            cmd += " " + shellQuote(QFileInfo(p).fileName());
     } else if (format == "tar.xz") {
         QString outPath = parentDir + "/" + baseName + ".tar.xz";
         outputPath = outPath;
-        cmd = "tar -cvJf " + QString("'%1'").arg(outPath) +
-              " -C " + QString("'%1'").arg(parentDir);
+        cmd = "tar -cvJf " + shellQuote(outPath) + " -C " + shellQuote(parentDir);
         for (const auto &p : paths)
-            cmd += " " + QString("'%1'").arg(QFileInfo(p).fileName());
+            cmd += " " + shellQuote(QFileInfo(p).fileName());
     } else if (format == "tar.bz2") {
         QString outPath = parentDir + "/" + baseName + ".tar.bz2";
         outputPath = outPath;
-        cmd = "tar -cvjf " + QString("'%1'").arg(outPath) +
-              " -C " + QString("'%1'").arg(parentDir);
+        cmd = "tar -cvjf " + shellQuote(outPath) + " -C " + shellQuote(parentDir);
         for (const auto &p : paths)
-            cmd += " " + QString("'%1'").arg(QFileInfo(p).fileName());
+            cmd += " " + shellQuote(QFileInfo(p).fileName());
     } else if (format == "tar") {
         QString outPath = parentDir + "/" + baseName + ".tar";
         outputPath = outPath;
-        cmd = "tar -cvf " + QString("'%1'").arg(outPath) +
-              " -C " + QString("'%1'").arg(parentDir);
+        cmd = "tar -cvf " + shellQuote(outPath) + " -C " + shellQuote(parentDir);
         for (const auto &p : paths)
-            cmd += " " + QString("'%1'").arg(QFileInfo(p).fileName());
+            cmd += " " + shellQuote(QFileInfo(p).fileName());
     } else if (format == "7z") {
         QString outPath = parentDir + "/" + baseName + ".7z";
         outputPath = outPath;
@@ -1867,14 +1892,17 @@ void FileOperations::pauseTransfer(int transferId)
 {
     if (transferId < 0) {
         for (auto &t : m_activeTransfers) {
+            if (!t.worker) continue;
             t.worker->pause();
             t.paused = true;
             t.statusText = QStringLiteral("Paused");
         }
     } else if (auto *t = findTransfer(transferId)) {
-        t->worker->pause();
-        t->paused = true;
-        t->statusText = QStringLiteral("Paused");
+        if (t->worker) {
+            t->worker->pause();
+            t->paused = true;
+            t->statusText = QStringLiteral("Paused");
+        }
     }
     emitAggregatedState();
 }
@@ -1883,23 +1911,28 @@ void FileOperations::resumeTransfer(int transferId)
 {
     if (transferId < 0) {
         for (auto &t : m_activeTransfers) {
+            if (!t.worker) continue;
             t.worker->resume();
             t.paused = false;
         }
     } else if (auto *t = findTransfer(transferId)) {
-        t->worker->resume();
-        t->paused = false;
+        if (t->worker) {
+            t->worker->resume();
+            t->paused = false;
+        }
     }
     emitAggregatedState();
 }
 
 void FileOperations::cancelTransfer(int transferId)
 {
+    // Simple operations (compress/extract/trash) have no GioTransferWorker, so
+    // their transfer entries carry a null worker — guard every dereference.
     if (transferId < 0) {
         for (auto &t : m_activeTransfers)
-            t.worker->cancel();
+            if (t.worker) t.worker->cancel();
     } else if (auto *t = findTransfer(transferId)) {
-        t->worker->cancel();
+        if (t->worker) t->worker->cancel();
     }
 }
 
