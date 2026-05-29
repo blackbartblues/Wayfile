@@ -17,6 +17,10 @@ Q.Dialog {
     property bool syncingFromConfig: false
     property bool pendingShortcutsDirty: false
     property string recordingAction: ""
+    property bool confirmResetAll: false
+    // Set when a recorded combo is already bound to another action. Shown
+    // in the footer; cleared when recording (re)starts or a bind succeeds.
+    property string conflictWarning: ""
 
     function syncShortcutDrafts() {
         syncingFromConfig = true
@@ -82,17 +86,38 @@ Q.Dialog {
 
     function closeDialog() {
         recordingAction = ""
+        confirmResetAll = false
+        conflictWarning = ""
+        resetConfirmTimer.stop()
         applyPendingShortcuts()
         close()
     }
 
     function startRecording(action) {
         recordingAction = action
+        conflictWarning = ""
         keyCapture.forceActiveFocus()
     }
 
     function stopRecording() {
         recordingAction = ""
+        conflictWarning = ""
+    }
+
+    // Returns the label of another action already bound to `seq`, or ""
+    // if the sequence is free. `exceptAction` is the action currently
+    // being rebound (so re-recording the same key on the same row is not
+    // a conflict). Qt treats two WindowShortcuts with the same sequence
+    // as ambiguous and fires neither, so we refuse the duplicate up front.
+    function actionLabelUsingSequence(seq, exceptAction) {
+        for (var i = 0; i < shortcutEntries.length; ++i) {
+            var entry = shortcutEntries[i]
+            if (entry.action === exceptAction)
+                continue
+            if (entry.sequence === seq)
+                return entry.label
+        }
+        return ""
     }
 
     function resetToDefault(action) {
@@ -103,6 +128,25 @@ Q.Dialog {
                 return
             }
         }
+    }
+
+    function resetAllToDefaults() {
+        var nextShortcuts = ({})
+        var nextEntries = []
+        for (var i = 0; i < shortcutEntries.length; ++i) {
+            var entry = shortcutEntries[i]
+            var defaultSeq = entry.defaultSequence
+            nextShortcuts[entry.action] = defaultSeq
+
+            var updatedEntry = ({})
+            for (var field in entry)
+                updatedEntry[field] = entry[field]
+            updatedEntry.sequence = defaultSeq
+            nextEntries.push(updatedEntry)
+        }
+        draftShortcuts = nextShortcuts
+        shortcutEntries = nextEntries
+        queueShortcutApply()
     }
 
     function keyEventToSequence(event) {
@@ -175,10 +219,34 @@ Q.Dialog {
         onTriggered: root.applyPendingShortcuts()
     }
 
-    // Invisible item that captures key presses while recording
+    Timer {
+        id: resetConfirmTimer
+        interval: 3000
+        repeat: false
+        onTriggered: root.confirmResetAll = false
+    }
+
+    // Invisible item that captures key presses while recording.
+    // Zero-size layout row (no anchors — illegal inside the ColumnLayout
+    // that Q.Dialog routes content into).
     Item {
         id: keyCapture
+        Layout.preferredWidth: 0
+        Layout.preferredHeight: 0
         focus: root.recordingAction !== ""
+
+        // While recording, claim every key BEFORE Qt's global Shortcut
+        // system can match it. Main.qml registers ~42 application-wide
+        // Shortcut objects (Ctrl+N, F2, Delete, ...); without this
+        // override they swallow the very combos the user is trying to
+        // record and fire their actions instead. Accepting the event in
+        // onShortcutOverride tells Qt "the focused item handles this key"
+        // so it flows to Keys.onPressed below rather than to a Shortcut.
+        Keys.onShortcutOverride: (event) => {
+            if (root.recordingAction !== "")
+                event.accepted = true
+        }
+
         Keys.onPressed: (event) => {
             if (root.recordingAction === "")
                 return
@@ -191,12 +259,24 @@ Q.Dialog {
             }
 
             var seq = root.keyEventToSequence(event)
-            if (seq !== "") {
-                root.setShortcutValue(root.recordingAction, seq)
-                root.queueShortcutApply()
-                root.stopRecording()
-                event.accepted = true
+            if (seq === "")
+                return  // bare modifier — keep listening
+
+            event.accepted = true
+
+            // Refuse a combo already bound to another action: two global
+            // Shortcuts with the same sequence are ambiguous in Qt and
+            // fire neither. Keep recording so the user can pick another.
+            var clash = root.actionLabelUsingSequence(seq, root.recordingAction)
+            if (clash !== "") {
+                root.conflictWarning = seq + " is already used by “" + clash + "”"
+                return
             }
+
+            root.conflictWarning = ""
+            root.setShortcutValue(root.recordingAction, seq)
+            root.queueShortcutApply()
+            root.stopRecording()
         }
     }
 
@@ -256,128 +336,195 @@ Q.Dialog {
                 Repeater {
                     model: root.shortcutEntries
 
-                    delegate: Rectangle {
-                        id: shortcutRow
+                    delegate: Column {
+                        id: shortcutRowContainer
                         required property var modelData
                         required property int index
 
                         readonly property bool isRecording: root.recordingAction === modelData.action
                         readonly property bool isModified: modelData.sequence !== modelData.defaultSequence
+                        readonly property bool isRebindable: modelData.rebindable === undefined
+                            ? true
+                            : modelData.rebindable
+                        readonly property bool showGroupHeader: shortcutRowContainer.index === 0
+                            || root.shortcutEntries[shortcutRowContainer.index - 1].group !== modelData.group
 
-                        Layout.fillWidth: true
-                        implicitHeight: 44
-                        color: {
-                            if (isRecording)
-                                return Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.12)
-                            if (rowHover.hovered)
-                                return Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.04)
-                            return "transparent"
-                        }
-                        Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+                        width: parent ? parent.width : 0
+                        spacing: 0
 
-                        // Bottom separator
+                        // Group header band (only on group transitions)
                         Rectangle {
-                            anchors.bottom: parent.bottom
-                            anchors.left: parent.left
-                            anchors.right: parent.right
-                            anchors.leftMargin: 16
-                            anchors.rightMargin: 16
-                            height: 1
-                            color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.06)
-                            visible: shortcutRow.index < root.shortcutEntries.length - 1
-                        }
+                            visible: shortcutRowContainer.showGroupHeader
+                            width: parent.width
+                            implicitHeight: visible ? 32 : 0
+                            color: "transparent"
 
-                        HoverHandler {
-                            id: rowHover
-                        }
-
-                        RowLayout {
-                            anchors.fill: parent
-                            anchors.leftMargin: 16
-                            anchors.rightMargin: 16
-                            spacing: 8
-
-                            // Action label
                             Text {
-                                Layout.fillWidth: true
-                                text: shortcutRow.modelData.label
-                                color: Theme.text
-                                font.pointSize: Theme.fontNormal
+                                anchors.left: parent.left
+                                anchors.leftMargin: 16
+                                anchors.bottom: parent.bottom
+                                anchors.bottomMargin: 4
+                                text: shortcutRowContainer.modelData.group
+                                color: Theme.accent
+                                font.pointSize: Theme.fontSmall
+                                font.weight: Font.DemiBold
                             }
 
-                            // Shortcut badge / recording indicator
                             Rectangle {
-                                Layout.preferredWidth: 180
-                                Layout.preferredHeight: 30
-                                radius: Theme.radiusSmall
-                                color: {
-                                    if (shortcutRow.isRecording)
-                                        return Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.2)
-                                    return Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.06)
-                                }
-                                border.width: shortcutRow.isRecording ? 1 : 0
-                                border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.6)
+                                anchors.bottom: parent.bottom
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.leftMargin: 16
+                                anchors.rightMargin: 16
+                                height: 1
+                                color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.25)
+                            }
+                        }
 
-                                Behavior on color { ColorAnimation { duration: Theme.animDuration } }
-                                Behavior on border.width { NumberAnimation { duration: Theme.animDuration } }
+                        Rectangle {
+                            id: shortcutRow
+                            width: parent.width
+                            implicitHeight: 44
+                            color: {
+                                if (shortcutRowContainer.isRecording)
+                                    return Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.12)
+                                if (rowHover.hovered && shortcutRowContainer.isRebindable)
+                                    return Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.04)
+                                return "transparent"
+                            }
+                            Behavior on color { ColorAnimation { duration: Theme.animDuration } }
 
-                                RowLayout {
-                                    anchors.fill: parent
-                                    anchors.leftMargin: 10
-                                    anchors.rightMargin: 10
-                                    spacing: 4
+                            // Bottom separator (last row in group gets no separator)
+                            Rectangle {
+                                anchors.bottom: parent.bottom
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.leftMargin: 16
+                                anchors.rightMargin: 16
+                                height: 1
+                                color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.06)
+                                visible: shortcutRowContainer.index < root.shortcutEntries.length - 1
+                                    && root.shortcutEntries[shortcutRowContainer.index + 1].group === shortcutRowContainer.modelData.group
+                            }
+
+                            HoverHandler {
+                                id: rowHover
+                                enabled: shortcutRowContainer.isRebindable
+                            }
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 16
+                                anchors.rightMargin: 16
+                                spacing: 8
+
+                                // Action label
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 0
 
                                     Text {
                                         Layout.fillWidth: true
-                                        text: shortcutRow.isRecording
-                                            ? "Press keys..."
-                                            : shortcutRow.modelData.sequence
-                                        color: shortcutRow.isRecording ? Theme.accent : Theme.text
+                                        text: shortcutRowContainer.modelData.label
+                                        color: shortcutRowContainer.isRebindable ? Theme.text : Theme.subtext
                                         font.pointSize: Theme.fontNormal
-                                        font.weight: Font.Medium
-                                        font.italic: shortcutRow.isRecording
-                                        elide: Text.ElideRight
+                                    }
 
-                                        SequentialAnimation on opacity {
-                                            running: shortcutRow.isRecording
-                                            loops: Animation.Infinite
-                                            NumberAnimation { to: 0.4; duration: 600; easing.type: Easing.InOutSine }
-                                            NumberAnimation { to: 1.0; duration: 600; easing.type: Easing.InOutSine }
+                                    Text {
+                                        Layout.fillWidth: true
+                                        visible: !shortcutRowContainer.isRebindable
+                                        text: "View-local — fires from the active file view (Enter on selection)."
+                                        color: Theme.subtext
+                                        font.pointSize: Theme.fontSmall
+                                        font.italic: true
+                                        wrapMode: Text.WordWrap
+                                    }
+                                }
+
+                                // Shortcut badge / recording indicator
+                                Rectangle {
+                                    Layout.preferredWidth: 180
+                                    Layout.preferredHeight: 30
+                                    radius: Theme.radiusSmall
+                                    color: {
+                                        if (shortcutRowContainer.isRecording)
+                                            return Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.2)
+                                        if (!shortcutRowContainer.isRebindable)
+                                            return Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.03)
+                                        return Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.06)
+                                    }
+                                    border.width: shortcutRowContainer.isRecording ? 1 : 0
+                                    border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.6)
+                                    opacity: shortcutRowContainer.isRebindable ? 1.0 : 0.6
+
+                                    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+                                    Behavior on border.width { NumberAnimation { duration: Theme.animDuration } }
+
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.leftMargin: 10
+                                        anchors.rightMargin: 10
+                                        spacing: 4
+
+                                        Text {
+                                            Layout.fillWidth: true
+                                            text: shortcutRowContainer.isRecording
+                                                ? "Press keys..."
+                                                : shortcutRowContainer.modelData.sequence
+                                            color: shortcutRowContainer.isRecording ? Theme.accent : Theme.text
+                                            font.pointSize: Theme.fontNormal
+                                            font.weight: Font.Medium
+                                            font.italic: shortcutRowContainer.isRecording
+                                            elide: Text.ElideRight
+
+                                            SequentialAnimation on opacity {
+                                                running: shortcutRowContainer.isRecording
+                                                loops: Animation.Infinite
+                                                NumberAnimation { to: 0.4; duration: 600; easing.type: Easing.InOutSine }
+                                                NumberAnimation { to: 1.0; duration: 600; easing.type: Easing.InOutSine }
+                                            }
+                                        }
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: shortcutRowContainer.isRebindable
+                                            ? Qt.PointingHandCursor
+                                            : Qt.ArrowCursor
+                                        enabled: shortcutRowContainer.isRebindable
+                                        onClicked: {
+                                            if (shortcutRowContainer.isRecording)
+                                                root.stopRecording()
+                                            else
+                                                root.startRecording(shortcutRowContainer.modelData.action)
                                         }
                                     }
                                 }
 
-                                MouseArea {
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        if (shortcutRow.isRecording)
-                                            root.stopRecording()
-                                        else
-                                            root.startRecording(shortcutRow.modelData.action)
+                                // Reset button (visible when modified AND rebindable)
+                                HoverRect {
+                                    width: 28; height: 28
+                                    visible: shortcutRowContainer.isModified
+                                        && !shortcutRowContainer.isRecording
+                                        && shortcutRowContainer.isRebindable
+                                    opacity: visible ? 1 : 0
+                                    Behavior on opacity { NumberAnimation { duration: Theme.animDuration } }
+                                    onClicked: root.resetToDefault(shortcutRowContainer.modelData.action)
+
+                                    IconUndo {
+                                        anchors.centerIn: parent
+                                        size: 14
+                                        color: Theme.subtext
                                     }
                                 }
-                            }
 
-                            // Reset button (visible when modified)
-                            HoverRect {
-                                width: 28; height: 28
-                                visible: shortcutRow.isModified && !shortcutRow.isRecording
-                                opacity: visible ? 1 : 0
-                                Behavior on opacity { NumberAnimation { duration: Theme.animDuration } }
-                                onClicked: root.resetToDefault(shortcutRow.modelData.action)
-
-                                IconUndo {
-                                    anchors.centerIn: parent
-                                    size: 14
-                                    color: Theme.subtext
+                                // Spacer when reset button is hidden
+                                Item {
+                                    width: 28
+                                    visible: !(shortcutRowContainer.isModified
+                                        && !shortcutRowContainer.isRecording
+                                        && shortcutRowContainer.isRebindable)
                                 }
-                            }
-
-                            // Spacer when reset button is hidden
-                            Item {
-                                width: 28
-                                visible: !shortcutRow.isModified || shortcutRow.isRecording
                             }
                         }
                     }
@@ -404,12 +551,31 @@ Q.Dialog {
 
         Text {
             Layout.fillWidth: true
-            text: root.recordingAction !== ""
-                ? "Press Escape to cancel recording."
-                : "Click a shortcut to change it. Changes save automatically."
-            color: Theme.subtext
+            text: root.conflictWarning !== ""
+                ? root.conflictWarning + " — try another."
+                : root.recordingAction !== ""
+                    ? "Press Escape to cancel recording."
+                    : root.confirmResetAll
+                        ? "Click again to confirm — every binding goes back to its factory default."
+                        : "Click a shortcut to change it. Changes save automatically."
+            color: (root.conflictWarning !== "" || root.confirmResetAll) ? Theme.accent : Theme.subtext
             font.pointSize: Theme.fontSmall
             wrapMode: Text.WordWrap
+        }
+
+        Q.Button {
+            text: root.confirmResetAll ? "Confirm reset" : "Reset all to defaults"
+            variant: "ghost"
+            onClicked: {
+                if (root.confirmResetAll) {
+                    root.confirmResetAll = false
+                    resetConfirmTimer.stop()
+                    root.resetAllToDefaults()
+                } else {
+                    root.confirmResetAll = true
+                    resetConfirmTimer.restart()
+                }
+            }
         }
 
         Q.Button {

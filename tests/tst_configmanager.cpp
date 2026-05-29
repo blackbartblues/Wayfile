@@ -678,6 +678,177 @@ private slots:
         QVERIFY2(found,
                  "shortcutDefinitions() must expose context_menu_alt with the Menu-key label.");
     }
+
+    // --- P3 M2: registry group field ---
+
+    void testEveryActionHasGroup()
+    {
+        QTemporaryDir dir;
+        ConfigManager mgr(dir.path() + "/config.toml");
+
+        const QSet<QString> kAllowedGroups = {
+            QStringLiteral("Tabs"),
+            QStringLiteral("Navigation"),
+            QStringLiteral("Panes"),
+            QStringLiteral("View"),
+            QStringLiteral("Selection"),
+            QStringLiteral("File"),
+            QStringLiteral("Application")
+        };
+
+        const QVariantList defs = mgr.shortcutDefinitions();
+        QVERIFY(!defs.isEmpty());
+
+        for (const QVariant &v : defs) {
+            const QVariantMap def = v.toMap();
+            const QString action = def.value("action").toString();
+            const QString group = def.value("group").toString();
+            QVERIFY2(!group.isEmpty(),
+                     qPrintable(QStringLiteral("Action '%1' must have a non-empty group").arg(action)));
+            QVERIFY2(kAllowedGroups.contains(group),
+                     qPrintable(QStringLiteral("Action '%1' has unexpected group '%2'").arg(action, group)));
+        }
+    }
+
+    void testKnownActionsHaveExpectedGroups()
+    {
+        QTemporaryDir dir;
+        ConfigManager mgr(dir.path() + "/config.toml");
+
+        const QMap<QString, QString> expected = {
+            // Tabs
+            {QStringLiteral("new_tab"), QStringLiteral("Tabs")},
+            {QStringLiteral("close_tab"), QStringLiteral("Tabs")},
+            {QStringLiteral("reopen_tab"), QStringLiteral("Tabs")},
+            {QStringLiteral("open_in_new_tab"), QStringLiteral("Tabs")},
+            {QStringLiteral("open_in_split"), QStringLiteral("Tabs")},
+            // Navigation
+            {QStringLiteral("back"), QStringLiteral("Navigation")},
+            {QStringLiteral("forward"), QStringLiteral("Navigation")},
+            {QStringLiteral("parent"), QStringLiteral("Navigation")},
+            {QStringLiteral("home"), QStringLiteral("Navigation")},
+            {QStringLiteral("refresh"), QStringLiteral("Navigation")},
+            {QStringLiteral("path_bar"), QStringLiteral("Navigation")},
+            // Panes
+            {QStringLiteral("toggle_merge"), QStringLiteral("Panes")},
+            {QStringLiteral("focus_left_pane"), QStringLiteral("Panes")},
+            {QStringLiteral("focus_right_pane"), QStringLiteral("Panes")},
+            {QStringLiteral("focus_next_pane"), QStringLiteral("Panes")},
+            {QStringLiteral("focus_previous_pane"), QStringLiteral("Panes")},
+            {QStringLiteral("toggle_sidebar"), QStringLiteral("Panes")},
+            // View
+            {QStringLiteral("grid_view"), QStringLiteral("View")},
+            {QStringLiteral("miller_view"), QStringLiteral("View")},
+            {QStringLiteral("detailed_view"), QStringLiteral("View")},
+            {QStringLiteral("toggle_hidden"), QStringLiteral("View")},
+            {QStringLiteral("quick_preview"), QStringLiteral("View")},
+            // Selection
+            {QStringLiteral("select_all"), QStringLiteral("Selection")},
+            {QStringLiteral("context_menu"), QStringLiteral("Selection")},
+            {QStringLiteral("context_menu_alt"), QStringLiteral("Selection")},
+            // File
+            {QStringLiteral("open"), QStringLiteral("File")},
+            {QStringLiteral("copy"), QStringLiteral("File")},
+            {QStringLiteral("cut"), QStringLiteral("File")},
+            {QStringLiteral("paste"), QStringLiteral("File")},
+            {QStringLiteral("trash"), QStringLiteral("File")},
+            {QStringLiteral("permanent_delete"), QStringLiteral("File")},
+            {QStringLiteral("undo"), QStringLiteral("File")},
+            {QStringLiteral("redo"), QStringLiteral("File")},
+            {QStringLiteral("rename"), QStringLiteral("File")},
+            {QStringLiteral("new_folder"), QStringLiteral("File")},
+            {QStringLiteral("new_file"), QStringLiteral("File")},
+            {QStringLiteral("properties"), QStringLiteral("File")},
+            {QStringLiteral("open_terminal"), QStringLiteral("File")},
+            // Application
+            {QStringLiteral("search"), QStringLiteral("Application")},
+            {QStringLiteral("settings"), QStringLiteral("Application")},
+            {QStringLiteral("keyboard_shortcuts"), QStringLiteral("Application")}
+        };
+
+        const QVariantList defs = mgr.shortcutDefinitions();
+        QMap<QString, QString> actual;
+        for (const QVariant &v : defs) {
+            const QVariantMap def = v.toMap();
+            actual.insert(def.value("action").toString(), def.value("group").toString());
+        }
+
+        for (auto it = expected.cbegin(); it != expected.cend(); ++it) {
+            QVERIFY2(actual.contains(it.key()),
+                     qPrintable(QStringLiteral("Expected action '%1' is missing from shortcutDefinitions()")
+                                .arg(it.key())));
+            QCOMPARE(actual.value(it.key()), it.value());
+        }
+        QCOMPARE(actual.size(), expected.size());
+    }
+
+    void testRegistryIsGroupContiguous()
+    {
+        QTemporaryDir dir;
+        ConfigManager mgr(dir.path() + "/config.toml");
+
+        const QVariantList defs = mgr.shortcutDefinitions();
+        QVERIFY(!defs.isEmpty());
+
+        QSet<QString> seenGroups;
+        QString currentGroup;
+        for (const QVariant &v : defs) {
+            const QString group = v.toMap().value("group").toString();
+            if (group != currentGroup) {
+                QVERIFY2(!seenGroups.contains(group),
+                         qPrintable(QStringLiteral("Group '%1' is non-contiguous in kShortcutSpecs — "
+                                                   "the dialog renders groups in registry order so "
+                                                   "all entries of one group must sit together")
+                                    .arg(group)));
+                seenGroups.insert(group);
+                currentGroup = group;
+            }
+        }
+    }
+
+    // --- P3 M2: rebindable field ---
+
+    void testOpenActionIsNonRebindable()
+    {
+        QTemporaryDir dir;
+        ConfigManager mgr(dir.path() + "/config.toml");
+
+        const QVariantList defs = mgr.shortcutDefinitions();
+        bool foundOpen = false;
+        for (const QVariant &v : defs) {
+            const QVariantMap def = v.toMap();
+            if (def.value("action").toString() == QLatin1String("open")) {
+                foundOpen = true;
+                QVERIFY2(def.contains("rebindable"),
+                         "shortcutDefinitions() must expose a 'rebindable' field on every row.");
+                QCOMPARE(def.value("rebindable").toBool(), false);
+                break;
+            }
+        }
+        QVERIFY(foundOpen);
+    }
+
+    void testNonOpenActionsAreRebindable()
+    {
+        QTemporaryDir dir;
+        ConfigManager mgr(dir.path() + "/config.toml");
+
+        const QVariantList defs = mgr.shortcutDefinitions();
+        int checked = 0;
+        for (const QVariant &v : defs) {
+            const QVariantMap def = v.toMap();
+            const QString action = def.value("action").toString();
+            if (action == QLatin1String("open"))
+                continue;
+            QVERIFY2(def.contains("rebindable"),
+                     qPrintable(QStringLiteral("Action '%1' is missing the 'rebindable' field").arg(action)));
+            QVERIFY2(def.value("rebindable").toBool(),
+                     qPrintable(QStringLiteral("Action '%1' must be rebindable (only 'open' is view-local)").arg(action)));
+            ++checked;
+        }
+        QVERIFY2(checked >= 40,
+                 qPrintable(QStringLiteral("Expected at least 40 rebindable actions, only saw %1").arg(checked)));
+    }
 };
 
 QTEST_MAIN(TestConfigManager)

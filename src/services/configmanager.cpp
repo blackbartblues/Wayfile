@@ -16,50 +16,65 @@ namespace {
 struct ShortcutSpec {
     const char *action;
     const char *label;
+    const char *group;
+    bool rebindable;
 };
 
 const ShortcutSpec kShortcutSpecs[] = {
-    {"open", "Open"},
-    {"back", "Back"},
-    {"forward", "Forward"},
-    {"parent", "Go to Parent"},
-    {"home", "Home"},
-    {"refresh", "Refresh"},
-    {"new_tab", "New Tab"},
-    {"close_tab", "Close Tab"},
-    {"reopen_tab", "Reopen Closed Tab"},
-    {"open_in_new_tab", "Open in New Tab"},
-    {"open_in_split", "Open in Split View"},
-    {"copy", "Copy"},
-    {"cut", "Cut"},
-    {"paste", "Paste"},
-    {"rename", "Rename"},
-    {"new_folder", "New Folder"},
-    {"new_file", "New File"},
-    {"trash", "Move to Trash"},
-    {"permanent_delete", "Permanent Delete"},
-    {"toggle_hidden", "Toggle Hidden Files"},
-    {"quick_preview", "Quick Preview"},
-    {"search", "Search"},
-    {"context_menu", "Show Context Menu"},
-    {"context_menu_alt", "Show Context Menu (Menu key)"},
-    {"open_terminal", "Open in Terminal"},
-    {"properties", "Properties"},
-    {"path_bar", "Focus Path Bar"},
-    {"toggle_sidebar", "Toggle Sidebar"},
-    {"toggle_merge", "Merge / Unmerge Panes"},
-    {"focus_next_pane", "Focus Next Pane"},
-    {"focus_previous_pane", "Focus Previous Pane"},
-    {"focus_left_pane", "Focus Left Pane"},
-    {"focus_right_pane", "Focus Right Pane"},
-    {"grid_view", "Grid View"},
-    {"miller_view", "Miller View"},
-    {"detailed_view", "Detailed View"},
-    {"select_all", "Select All"},
-    {"undo", "Undo"},
-    {"redo", "Redo"},
-    {"settings", "Open Settings"},
-    {"keyboard_shortcuts", "Open Keyboard Shortcuts"},
+    // Tabs
+    {"new_tab", "New Tab", "Tabs", true},
+    {"close_tab", "Close Tab", "Tabs", true},
+    {"reopen_tab", "Reopen Closed Tab", "Tabs", true},
+    {"open_in_new_tab", "Open in New Tab", "Tabs", true},
+    {"open_in_split", "Open in Split View", "Tabs", true},
+
+    // Navigation
+    {"back", "Back", "Navigation", true},
+    {"forward", "Forward", "Navigation", true},
+    {"parent", "Go to Parent", "Navigation", true},
+    {"home", "Home", "Navigation", true},
+    {"refresh", "Refresh", "Navigation", true},
+    {"path_bar", "Focus Path Bar", "Navigation", true},
+
+    // Panes
+    {"toggle_merge", "Merge / Unmerge Panes", "Panes", true},
+    {"focus_left_pane", "Focus Left Pane", "Panes", true},
+    {"focus_right_pane", "Focus Right Pane", "Panes", true},
+    {"focus_next_pane", "Focus Next Pane", "Panes", true},
+    {"focus_previous_pane", "Focus Previous Pane", "Panes", true},
+    {"toggle_sidebar", "Toggle Sidebar", "Panes", true},
+
+    // View
+    {"grid_view", "Grid View", "View", true},
+    {"miller_view", "Miller View", "View", true},
+    {"detailed_view", "Detailed View", "View", true},
+    {"toggle_hidden", "Toggle Hidden Files", "View", true},
+    {"quick_preview", "Quick Preview", "View", true},
+
+    // Selection
+    {"select_all", "Select All", "Selection", true},
+    {"context_menu", "Show Context Menu", "Selection", true},
+    {"context_menu_alt", "Show Context Menu (Menu key)", "Selection", true},
+
+    // File
+    {"open", "Open", "File", false},
+    {"copy", "Copy", "File", true},
+    {"cut", "Cut", "File", true},
+    {"paste", "Paste", "File", true},
+    {"trash", "Move to Trash", "File", true},
+    {"permanent_delete", "Permanent Delete", "File", true},
+    {"undo", "Undo", "File", true},
+    {"redo", "Redo", "File", true},
+    {"rename", "Rename", "File", true},
+    {"new_folder", "New Folder", "File", true},
+    {"new_file", "New File", "File", true},
+    {"properties", "Properties", "File", true},
+    {"open_terminal", "Open in Terminal", "File", true},
+
+    // Application
+    {"search", "Search", "Application", true},
+    {"settings", "Open Settings", "Application", true},
+    {"keyboard_shortcuts", "Open Keyboard Shortcuts", "Application", true},
 };
 
 QStringList iconSearchDirs()
@@ -432,6 +447,8 @@ QVariantList ConfigManager::shortcutDefinitions() const
         QVariantMap definition;
         definition.insert("action", action);
         definition.insert("label", QString::fromUtf8(spec.label));
+        definition.insert("group", QString::fromUtf8(spec.group));
+        definition.insert("rebindable", spec.rebindable);
         definition.insert("defaultSequence", s_defaultShortcuts.value(action));
         definition.insert("sequence", m_shortcuts.value(action, s_defaultShortcuts.value(action)));
         definitions.append(definition);
