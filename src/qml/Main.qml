@@ -850,11 +850,21 @@ ApplicationWindow {
         }
     }
 
+    // True when the active pane is the secondary (index 1) of a multi-pane
+    // tab. The split layout now comes from the merge system (paneCount > 1);
+    // the legacy splitViewEnabled flag stays false, so it must NOT be used to
+    // gate per-pane navigation — doing so always fell through to the primary
+    // pane (goBack/goForward/goUp operated on pane 0 regardless of focus).
+    function activeIsSecondaryPane() {
+        return activePaneIndex === 1
+            && tabModel.activeTab && tabModel.activeTab.paneCount > 1
+    }
+
     function goActivePaneBack() {
         if (!tabModel.activeTab)
             return
 
-        if (activePaneIndex === 1 && splitViewEnabled())
+        if (activeIsSecondaryPane())
             tabModel.activeTab.secondaryGoBack()
         else
             tabModel.activeTab.goBack()
@@ -864,7 +874,7 @@ ApplicationWindow {
         if (!tabModel.activeTab)
             return
 
-        if (activePaneIndex === 1 && splitViewEnabled())
+        if (activeIsSecondaryPane())
             tabModel.activeTab.secondaryGoForward()
         else
             tabModel.activeTab.goForward()
@@ -895,7 +905,7 @@ ApplicationWindow {
             return
         }
 
-        if (activePaneIndex === 1 && splitViewEnabled())
+        if (activeIsSecondaryPane())
             tabModel.activeTab.secondaryGoUp()
         else
             tabModel.activeTab.goUp()
@@ -987,7 +997,7 @@ ApplicationWindow {
         if (!tabModel.activeTab)
             return false
 
-        return activePaneIndex === 1 && splitViewEnabled()
+        return activeIsSecondaryPane()
             ? tabModel.activeTab.secondaryCanGoBack
             : tabModel.activeTab.canGoBack
     }
@@ -996,7 +1006,7 @@ ApplicationWindow {
         if (!tabModel.activeTab)
             return false
 
-        return activePaneIndex === 1 && splitViewEnabled()
+        return activeIsSecondaryPane()
             ? tabModel.activeTab.secondaryCanGoForward
             : tabModel.activeTab.canGoForward
     }
