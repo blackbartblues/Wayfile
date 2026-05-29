@@ -282,18 +282,10 @@ void ConfigManager::loadConfig()
         return;
 
     try {
-        m_fontFamily.clear();
-        m_transparencyEnabled = true;
-        m_transparencyLevel = 1.0;
-        m_animationsEnabled = true;
-        m_animDurationFast = 100;
-        m_animDuration = 200;
-        m_animDurationSlow = 350;
-        m_animCurveEnter = QStringLiteral("OutCubic");
-        m_animCurveExit = QStringLiteral("InCubic");
-        m_animCurveTransition = QStringLiteral("Bezier");
-        m_showWindowControlsExplicit = false;
-        m_shortcuts = s_defaultShortcuts;
+        // Start from a full known baseline every load: a key removed from the
+        // file (by the user or an external tool) must revert to its default
+        // rather than keeping the previous in-memory value.
+        setDefaults();
 
         auto config = toml::parse_file(m_configPath.toStdString());
 
@@ -422,7 +414,15 @@ void ConfigManager::loadConfig()
         }
 
     } catch (const toml::parse_error &err) {
+        // Malformed file: keep the baseline set by setDefaults() above so the
+        // app stays in a consistent state rather than partially-parsed.
         qWarning() << "Config parse error:" << err.what();
+        setDefaults();
+    } catch (const std::exception &err) {
+        // bad_alloc, filesystem_error, etc. must not escape into the
+        // QFileSystemWatcher signal handler and terminate the app.
+        qWarning() << "Config load failed:" << err.what();
+        setDefaults();
     }
 }
 
