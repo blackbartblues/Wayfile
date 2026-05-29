@@ -38,7 +38,10 @@ Rectangle {
             }
 
             if (existingIndex < 0) {
-                transfersModel.insert(i, {
+                // Clamp defensively: ListModel.insert throws if the index ever
+                // exceeds count (it shouldn't here, but concurrent transfer
+                // churn makes the invariant easy to break).
+                transfersModel.insert(Math.min(i, transfersModel.count), {
                     transferId: transferId,
                     statusText: transfer.statusText,
                     progress: progress,

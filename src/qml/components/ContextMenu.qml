@@ -58,6 +58,9 @@ Item {
     property string effectiveDir: {
         if (isEmptySpace) return targetPath
         if (targetIsDir) return targetPath
+        // No target and not empty-space: return "" so paste/new-folder/terminal
+        // no-op rather than falling through to "/" and acting on the FS root.
+        if (targetPath === "") return ""
         var p = targetPath
         var idx = p.lastIndexOf("/")
         return idx > 0 ? p.substring(0, idx) : "/"

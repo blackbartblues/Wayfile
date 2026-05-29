@@ -685,11 +685,14 @@ ApplicationWindow {
         }
 
         if (clearClipboardOnSuccess) {
-            fileOps.operationFinished.connect(function(success) {
-                fileOps.operationFinished.disconnect(arguments.callee)
+            // Named one-shot rather than arguments.callee (which breaks under
+            // JS strict mode and is hard to debug): disconnect by reference.
+            var onClipboardTransferFinished = function(success) {
+                fileOps.operationFinished.disconnect(onClipboardTransferFinished)
                 if (success)
                     clipboard.clear()
-            })
+            }
+            fileOps.operationFinished.connect(onClipboardTransferFinished)
         }
 
         if (usesRemotePath) {
@@ -1286,13 +1289,19 @@ ApplicationWindow {
         }
 
         debouncePane = pane
-        debounceTimer = Qt.createQmlObject(
+        var timer = Qt.createQmlObject(
             'import QtQuick; Timer { interval: 500; running: true; repeat: false }',
             root
         )
-        debounceTimer.triggered.connect(function() {
+        debounceTimer = timer
+        timer.triggered.connect(function() {
             root.triggerRecursiveSearch(pane, query)
-            debounceTimer = null
+            // Only clear the property if it still points at THIS timer (a newer
+            // query may have replaced it), then destroy the fired instance so
+            // it doesn't leak — the old code nulled the property and leaked it.
+            if (debounceTimer === timer)
+                debounceTimer = null
+            timer.destroy()
         })
     }
 
@@ -3369,12 +3378,14 @@ ApplicationWindow {
             var dir = filePath.substring(0, filePath.lastIndexOf("/"))
             var rootFolder = fileOps.archiveRootFolder(filePath)
             fileOps.extractArchive(filePath, dir)
-            var conn = fileOps.operationFinished.connect(function(success) {
-                fileOps.operationFinished.disconnect(arguments.callee)
+            // Named one-shot rather than arguments.callee (see above).
+            var onArchiveExtracted = function(success) {
+                fileOps.operationFinished.disconnect(onArchiveExtracted)
                 if (success) {
                     root.navigatePaneTo(pane, rootFolder ? dir + "/" + rootFolder : dir)
                 }
-            })
+            }
+            fileOps.operationFinished.connect(onArchiveExtracted)
         } else {
             fileOps.openFile(filePath)
             recentFiles.addRecent(filePath)

@@ -536,4 +536,17 @@ MouseArea {
         flickable.maximumFlickVelocity = Math.max(flickable.maximumFlickVelocity, maxVelocity)
         flickable.contentItem.transform = [overshootTranslate]
     }
+
+    Component.onDestruction: {
+        // Panes/tabs are created and destroyed dynamically. Stop every timer
+        // and animation that targets this object, and remove the Translate we
+        // installed on the host flickable so nothing fires on a torn-down
+        // scroller or leaves a dangling transform behind.
+        finishTimer.stop()
+        kineticAnim.stop()
+        kineticBounceSequence.stop()
+        bounceBackAnimation.stop()
+        if (flickable && flickable.contentItem)
+            flickable.contentItem.transform = []
+    }
 }
