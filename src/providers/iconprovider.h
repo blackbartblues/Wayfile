@@ -28,19 +28,22 @@ public:
     {
         const QString themeName = primaryTheme.trimmed().isEmpty() ? QStringLiteral("Adwaita")
                                                                     : primaryTheme.trimmed();
-        QMutexLocker locker(&m_cacheMutex);
-        if (m_primaryTheme == themeName && !m_primaryDirs.isEmpty())
-            return;
+        {
+            QMutexLocker locker(&m_cacheMutex);
+            if (m_primaryTheme == themeName && !m_primaryDirs.isEmpty())
+                return;
+        }
 
-        m_primaryTheme = themeName;
-        m_primaryDirs.clear();
-        m_fallbackDirs.clear();
-        m_cache.clear();
+        // Probe the filesystem WITHOUT holding m_cacheMutex: QDir::exists() can
+        // block for tens of ms on network-mounted icon themes, and the render
+        // thread takes the same mutex in requestImage() to read the cache.
+        QStringList primaryDirs;
+        QStringList fallbackDirs;
 
         for (const auto &dir : m_searchDirs) {
             const QString path = dir + "/" + themeName;
-            if (QDir(path).exists() && !m_primaryDirs.contains(path))
-                m_primaryDirs.append(path);
+            if (QDir(path).exists() && !primaryDirs.contains(path))
+                primaryDirs.append(path);
         }
 
         const QStringList fallbacks = {"breeze", "Papirus", "Adwaita", "hicolor"};
@@ -50,10 +53,17 @@ public:
 
             for (const auto &dir : m_searchDirs) {
                 const QString path = dir + "/" + theme;
-                if (QDir(path).exists() && !m_fallbackDirs.contains(path))
-                    m_fallbackDirs.append(path);
+                if (QDir(path).exists() && !fallbackDirs.contains(path))
+                    fallbackDirs.append(path);
             }
         }
+
+        // Only the swap is mutex-protected.
+        QMutexLocker locker(&m_cacheMutex);
+        m_primaryTheme = themeName;
+        m_primaryDirs = std::move(primaryDirs);
+        m_fallbackDirs = std::move(fallbackDirs);
+        m_cache.clear();
     }
 
     QImage requestImage(const QString &id, QSize *size, const QSize &requestedSize) override
