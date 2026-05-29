@@ -24,15 +24,18 @@ ApplicationWindow {
 
     readonly property bool useIntegratedWindowControls: false
 
-    property bool primaryPaneIsRecents: false
-    property bool secondaryPaneIsRecents: false
-    property bool primaryPaneSearchMode: false
-    property bool secondaryPaneSearchMode: false
-    property bool primaryPaneFilterPanelOpen: false
-    property bool secondaryPaneFilterPanelOpen: false
-    readonly property bool isRecentsView: activePaneIndex === 1
-        ? secondaryPaneIsRecents
-        : primaryPaneIsRecents
+    // Per-pane view-state flags, indexed by pane (0..paneServicesProvider.count-1).
+    // These replace the old primary*/secondary* boolean pairs whose getters
+    // treated every index other than 1 as "primary" — so panes 2 and 3 of a
+    // merged supertab aliased pane 0's recents/search/filter state, and
+    // navigating one of them flipped the others (#9 follow-up bug).  The arrays
+    // are reassigned wholesale on every change (never mutated in place) so the
+    // QML bindings that read them re-evaluate; sparse holes read as undefined,
+    // which paneIsRecents()/paneSearchMode()/paneFilterPanelOpen() treat as false.
+    property var paneRecents: []
+    property var paneSearchModes: []
+    property var paneFilterPanels: []
+    readonly property bool isRecentsView: root.paneIsRecents(activePaneIndex)
     property var deleteConfirmPaths: []
     property var transferConflictItems: []
     property var transferResolvedItems: []
@@ -73,10 +76,12 @@ ApplicationWindow {
         function onActiveIndexChanged() {
             if (tabModel.activeTab) {
                 root.activePaneIndex = 0
-                root.primaryPaneIsRecents = false
-                root.secondaryPaneIsRecents = false
-                root.clearPaneSearch(0)
-                root.clearPaneSearch(1)
+                // Reset per-pane recents/search/filter state for every pane
+                // slot, not just 0/1 — a supertab we're leaving may have had
+                // recents or an active search on panes 2/3.
+                root.paneRecents = []
+                for (var p = 0; p < paneServicesProvider.count; ++p)
+                    root.clearPaneSearch(p)
                 fsModel.setRootPath(tabModel.activeTab.currentPath)
                 root.syncMillerParentModel(tabModel.activeTab.currentPath)
                 if (tabModel.activeTab.splitViewEnabled)
@@ -402,14 +407,15 @@ ApplicationWindow {
     }
 
     function paneIsRecents(pane) {
-        return pane === 1 ? secondaryPaneIsRecents : primaryPaneIsRecents
+        return paneRecents[pane] === true
     }
 
     function setPaneRecents(pane, enabled) {
-        if (pane === 1)
-            secondaryPaneIsRecents = enabled
-        else
-            primaryPaneIsRecents = enabled
+        if (pane < 0)
+            return
+        var next = paneRecents.slice()
+        next[pane] = enabled
+        paneRecents = next
     }
 
     function searchProxyForPane(pane) {
@@ -425,25 +431,27 @@ ApplicationWindow {
     }
 
     function paneSearchMode(pane) {
-        return pane === 1 ? secondaryPaneSearchMode : primaryPaneSearchMode
+        return paneSearchModes[pane] === true
     }
 
     function setPaneSearchMode(pane, enabled) {
-        if (pane === 1)
-            secondaryPaneSearchMode = enabled
-        else
-            primaryPaneSearchMode = enabled
+        if (pane < 0)
+            return
+        var next = paneSearchModes.slice()
+        next[pane] = enabled
+        paneSearchModes = next
     }
 
     function paneFilterPanelOpen(pane) {
-        return pane === 1 ? secondaryPaneFilterPanelOpen : primaryPaneFilterPanelOpen
+        return paneFilterPanels[pane] === true
     }
 
     function setPaneFilterPanelOpen(pane, enabled) {
-        if (pane === 1)
-            secondaryPaneFilterPanelOpen = enabled
-        else
-            primaryPaneFilterPanelOpen = enabled
+        if (pane < 0)
+            return
+        var next = paneFilterPanels.slice()
+        next[pane] = enabled
+        paneFilterPanels = next
     }
 
     function clearPaneDebounce(pane) {
@@ -610,13 +618,34 @@ ApplicationWindow {
         if (!tabModel.activeTab)
             return
         if (tabModel.activeTab.paneCount > 1) {
-            // Drop the active marker back to primary if we just nuked it.
+            // The per-pane search/filter backends are bound to fixed slot
+            // indices, so they can't follow a pane that shifts down when idx
+            // is removed.  Clear search on every pane to avoid leaving stale
+            // results wired to the wrong pane, then shift the recents flags so
+            // they keep tracking the surviving panes.
+            for (var p = 0; p < paneServicesProvider.count; ++p)
+                root.clearPaneSearch(p)
+            root.removePaneRecents(idx)
+            // Keep the active marker pointing at the same pane it referenced
+            // before the removal collapsed the indices.
             if (root.activePaneIndex === idx)
                 root.activePaneIndex = 0
+            else if (root.activePaneIndex > idx)
+                root.activePaneIndex = root.activePaneIndex - 1
             tabModel.activeTab.removePane(idx)
         } else if (tabModel.count > 1) {
             tabModel.closeTab(tabModel.activeIndex)
         }
+    }
+
+    // Splice the recents flag for the pane being removed so flags for panes
+    // above idx shift down to match TabModel's m_panes.removeAt(idx).
+    function removePaneRecents(idx) {
+        if (idx < 0 || idx >= paneRecents.length)
+            return
+        var next = paneRecents.slice()
+        next.splice(idx, 1)
+        paneRecents = next
     }
 
     function navigatePaneTo(pane, path) {
