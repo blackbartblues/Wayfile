@@ -96,8 +96,12 @@ QStringList BookmarkModel::paths() const
     QStringList result;
     const QString home = QDir::homePath();
     for (const auto &bm : m_bookmarks) {
-        // Store as ~/... for portability
-        if (bm.path.startsWith(home))
+        // Store as ~/... for portability. Match the home dir itself or a path
+        // strictly inside it — startsWith(home) alone would also rewrite a
+        // sibling like /home/username when home is /home/user.
+        if (bm.path == home)
+            result.append(QStringLiteral("~"));
+        else if (bm.path.startsWith(home + QLatin1Char('/')))
             result.append("~" + bm.path.mid(home.length()));
         else
             result.append(bm.path);

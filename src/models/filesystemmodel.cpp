@@ -614,7 +614,7 @@ int FileSystemModel::rowCount(const QModelIndex &parent) const
 
 QVariant FileSystemModel::data(const QModelIndex &index, int role) const
 {
-    if (!index.isValid() || index.row() >= rowCount())
+    if (!index.isValid() || index.row() < 0 || index.row() >= rowCount())
         return {};
 
     if (isTrashRoot()) {

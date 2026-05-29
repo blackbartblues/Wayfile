@@ -196,14 +196,17 @@ bool SearchProxyModel::matchesDate(const QModelIndex &sourceIndex) const
     if (!modified.isValid()) return false;
 
     QDateTime now = QDateTime::currentDateTime();
+    // daysTo is negative for future-dated files; require >= 0 so a clock-skewed
+    // or future mtime doesn't pass every recency window.
+    const qint64 days = modified.daysTo(now);
     if (m_dateFilter == "today")
         return modified.date() == now.date();
     if (m_dateFilter == "week")
-        return modified.daysTo(now) <= 7;
+        return days >= 0 && days <= 7;
     if (m_dateFilter == "month")
-        return modified.daysTo(now) <= 30;
+        return days >= 0 && days <= 30;
     if (m_dateFilter == "year")
-        return modified.daysTo(now) <= 365;
+        return days >= 0 && days <= 365;
     return true;
 }
 
