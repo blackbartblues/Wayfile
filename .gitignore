@@ -9,3 +9,4 @@ CLAUDE.md
 .claude/
 docs/*
 !docs/screenshots/
+!docs/superpowers/
