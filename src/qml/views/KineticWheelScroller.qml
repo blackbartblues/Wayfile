@@ -6,7 +6,8 @@ MouseArea {
     required property var flickable
 
     property real wheelStep: 56
-    property real mouseWheelMultiplier: 1.0
+    property real mouseWheelMultiplier: 1.0    // views drive this from config.scrollSpeed
+    property real shiftScrollMultiplier: 2.5   // Shift+wheel = this much faster again
     property real touchpadMultiplier: 1.35
     property real minVelocity: 180
     property real maxVelocity: 5200
@@ -364,7 +365,11 @@ MouseArea {
             return
         }
 
-        if (wheel.modifiers !== Qt.NoModifier) {
+        // Pure Shift = fast scroll (handled below with a boosted step). Any
+        // other modifier (Ctrl zoom, Alt, Meta, Shift+Ctrl) is passed through
+        // to the view's own handler.
+        var shiftFast = (wheel.modifiers === Qt.ShiftModifier)
+        if (wheel.modifiers !== Qt.NoModifier && !shiftFast) {
             wheel.accepted = false
             return
         }
@@ -375,6 +380,8 @@ MouseArea {
         }
 
         var delta = deltaFor(wheel)
+        if (shiftFast)
+            delta *= shiftScrollMultiplier
         if (delta === 0) {
             wheel.accepted = false
             return

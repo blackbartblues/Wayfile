@@ -204,6 +204,10 @@ GridView {
 
     ScrollBar.vertical: ScrollBar {
         policy: ScrollBar.AsNeeded
+        // Above the z:10 rubber-band MouseArea below, otherwise a press on the
+        // scrollbar starts a selection instead of dragging the thumb.
+        z: 20
+        interactive: true
     }
 
     function selectIndex(idx, ctrl, shift) {
@@ -931,7 +935,7 @@ GridView {
         z: 12
         flickable: root
         wheelStep: 42
-        mouseWheelMultiplier: 0.75
+        mouseWheelMultiplier: 0.75 * config.scrollSpeed
         touchpadMultiplier: 1.35
         minVelocity: 135
         maxVelocity: 3900

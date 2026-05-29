@@ -428,7 +428,8 @@ FocusScope {
                 }
             }
 
-            ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+            // z:20 keeps the thumb above the z:10 rubber-band MouseArea so it stays draggable.
+            ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded; z: 20; interactive: true }
 
             Timer {
                 id: typeAheadTimer
@@ -1082,7 +1083,7 @@ FocusScope {
                 z: 12
                 flickable: currentColumn
                 wheelStep: 42
-                mouseWheelMultiplier: 0.75
+                mouseWheelMultiplier: 0.75 * config.scrollSpeed
                 touchpadMultiplier: 1.35
                 minVelocity: 135
                 maxVelocity: 3900

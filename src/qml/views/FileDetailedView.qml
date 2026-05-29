@@ -564,6 +564,9 @@ FocusScope {
 
             ScrollBar.vertical: ScrollBar {
                 policy: ScrollBar.AsNeeded
+                // Above the z:10 rubber-band MouseArea so the thumb is draggable.
+                z: 20
+                interactive: true
             }
 
             model: root.viewModel
@@ -1039,7 +1042,7 @@ FocusScope {
         z: 12
         flickable: listView
         wheelStep: 42
-        mouseWheelMultiplier: 0.75
+        mouseWheelMultiplier: 0.75 * config.scrollSpeed
         touchpadMultiplier: 1.35
         minVelocity: 135
         maxVelocity: 3900
