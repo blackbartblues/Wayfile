@@ -272,7 +272,14 @@ ApplicationWindow {
     // from the path-change signals in the Connections blocks above and on
     // activePaneIndex changes.
     property string activePanePath: ""
+    // Bumped on every pane navigation. The per-pane currentPath binding in the
+    // PaneFrame Repeater delegate references this so it re-evaluates
+    // panePath(index) — which reads an untracked Q_INVOKABLE and would
+    // otherwise stay stale, sending drops/operations to the previously-viewed
+    // folder.
+    property int paneNavTick: 0
     function refreshActivePanePath() {
+        paneNavTick++
         activePanePath = panePath(activePaneIndex)
     }
     onActivePaneIndexChanged: refreshActivePanePath()
@@ -746,9 +753,15 @@ ApplicationWindow {
 
         for (var i = 0; i < plan.length; ++i) {
             var item = plan[i]
+            // Dropping an item onto its own location is a no-op: skip it
+            // entirely. It must never reach the overwrite/backup path, which
+            // would move the file to a backup and then fail to copy the now
+            // missing source — destroying it. (Guards drag into source's dir.)
+            if (item.samePath)
+                continue
             var targetPath = item.targetPath
             var hasReservedConflict = reserved[targetPath] === true
-            if (item.targetExists || item.samePath || hasReservedConflict) {
+            if (item.targetExists || hasReservedConflict) {
                 conflicts.push(item)
                 continue
             }
@@ -760,6 +773,10 @@ ApplicationWindow {
                 overwrite: false
             })
         }
+
+        // Everything was a self-drop (or nothing actionable): do nothing.
+        if (resolved.length === 0 && conflicts.length === 0)
+            return
 
         if (conflicts.length === 0) {
             executeTransferOperation(resolved, moveOperation, clearClipboardOnSuccess)
@@ -3716,7 +3733,15 @@ ApplicationWindow {
                             splitTransitionProgress: paneRow.multiPane ? 1 : 0
                             paneTitle: root.paneDisplayName(index)
                             paneFileModel: root.paneModel(index)
-                            paneCurrentPath: root.panePath(index)
+                            // panePath() reads an untracked Q_INVOKABLE; depend
+                            // on paneNavTick (bumped on every navigation) and
+                            // the active tab so this re-evaluates instead of
+                            // staying on the previously-viewed folder.
+                            paneCurrentPath: {
+                                root.paneNavTick
+                                var _t = tabModel.activeTab
+                                return root.panePath(index)
+                            }
                             paneViewMode: tabModel.activeTab ? tabModel.activeTab.viewMode : "grid"
 
                             onInteractionStarted: root.setActivePane(index)
