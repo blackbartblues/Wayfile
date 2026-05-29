@@ -251,8 +251,13 @@ void DiskUsageService::cancelRequest(int requestId)
 
     if (activeRequest.worker)
         activeRequest.worker->cancel();
-    if (activeRequest.thread)
+    if (activeRequest.thread) {
         activeRequest.thread->quit();
+        // Join: the worker thread may still emit into this service (which the
+        // destructor calls this from), so it must stop before we return.
+        // cancel() makes the scan loop exit promptly, keeping this bounded.
+        activeRequest.thread->wait(3000);
+    }
 }
 
 void DiskUsageService::clearCache()
