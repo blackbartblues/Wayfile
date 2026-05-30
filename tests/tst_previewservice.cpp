@@ -401,6 +401,34 @@ private slots:
         QVERIFY2(seenPaths.contains(a), "first pdf preview was lost (single-slot regression)");
         QVERIFY2(seenPaths.contains(b), "second pdf preview was lost");
     }
+
+    void testLargeTextFileBatOutputBounded()
+    {
+        // Repro for the large-file freeze/RAM bug: bat must highlight only the capped bytes, not the whole file.
+        if (QStandardPaths::findExecutable("bat").isEmpty() && QStandardPaths::findExecutable("batcat").isEmpty())
+            QSKIP("bat not installed");
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString p = dir.path() + "/big.html";
+        QFile f(p);
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        // A single ~3 MB line — exactly the pathological shape (long line + large file).
+        f.write("<div class=\"x\">");
+        f.write(QByteArray(3 * 1024 * 1024, 'a'));
+        f.write("</div>\n");
+        f.close();
+
+        PreviewService service;
+        const QVariantMap r = service.loadTextPreview(p);   // default maxBytes=131072, maxLines=400
+        // content is always capped:
+        QVERIFY(r.value("content").toString().toUtf8().size() <= 131072 + 8);
+        // If bat ran, its html MUST be bounded by the cap, not derived from the full 3 MB file.
+        if (r.value("usesBat").toBool()) {
+            const int htmlBytes = r.value("html").toString().toUtf8().size();
+            QVERIFY2(htmlBytes < 1024 * 1024,
+                     qPrintable(QStringLiteral("bat html must be bounded by the byte cap; got %1 bytes").arg(htmlBytes)));
+        }
+    }
 };
 
 QTEST_MAIN(TestPreviewService)

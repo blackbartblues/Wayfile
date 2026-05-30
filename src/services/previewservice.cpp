@@ -230,7 +230,7 @@ QString ansiToHtml(const QByteArray &ansiText)
     return html;
 }
 
-QByteArray batPreview(const QString &path, int maxLines, QString *error)
+QByteArray batPreview(const QByteArray &data, const QString &fileName, int maxLines, QString *error)
 {
     if (error)
         error->clear();
@@ -247,11 +247,19 @@ QByteArray batPreview(const QString &path, int maxLines, QString *error)
     };
     if (maxLines > 0)
         args.append(QStringLiteral("--line-range=:%1").arg(maxLines));
-    args.append(QStringLiteral("--"));
-    args.append(path);
+    if (!fileName.isEmpty())
+        args.append(QStringLiteral("--file-name=") + fileName);
+    args.append(QStringLiteral("-"));
 
     QProcess proc;
     proc.start(executable, args);
+    if (!proc.waitForStarted(5000)) {
+        if (error)
+            *error = QStringLiteral("bat failed to start");
+        return {};
+    }
+    proc.write(data);
+    proc.closeWriteChannel();
     if (!proc.waitForFinished(10000)) {
         if (error)
             *error = QStringLiteral("bat preview timed out");
@@ -341,14 +349,12 @@ QVariantMap PreviewService::loadTextPreview(const QString &path, int maxBytes, i
     result["lineCount"] = lines.size();
 
     if (!binary) {
-        const QString previewPath = localPreviewPath(path);
-        if (!previewPath.isEmpty()) {
-            QString batError;
-            const QByteArray coloredOutput = batPreview(previewPath, maxLines, &batError);
-            if (!coloredOutput.isEmpty()) {
-                result["html"] = ansiToHtml(coloredOutput);
-                result["usesBat"] = true;
-            }
+        QString batError;
+        const QString fileName = QFileInfo(path).fileName();
+        const QByteArray coloredOutput = batPreview(data, fileName, maxLines, &batError);
+        if (!coloredOutput.isEmpty()) {
+            result["html"] = ansiToHtml(coloredOutput);
+            result["usesBat"] = true;
         }
     }
 
