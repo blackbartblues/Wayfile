@@ -89,6 +89,7 @@ list(APPEND heimdall_qml_module_args
         qml/components/Breadcrumb.qml
         qml/components/Toolbar.qml
         qml/components/HoverRect.qml
+        qml/components/SelectionController.qml
         qml/views/FileViewContainer.qml
         qml/views/FileGridView.qml
         qml/views/FileDetailedView.qml

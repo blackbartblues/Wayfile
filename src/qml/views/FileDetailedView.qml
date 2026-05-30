@@ -9,19 +9,18 @@ FocusScope {
     Accessible.name: "File details"
     focus: visible
 
-    property var selectedIndices: []
-    property int lastSelectedIndex: -1   // anchor for shift-selection
-    property int cursorIndex: -1         // moving end for keyboard navigation
+    property alias selectedIndices: selectionController.selectedIndices
+    property alias lastSelectedIndex: selectionController.lastSelectedIndex   // anchor for shift-selection
+    property alias cursorIndex: selectionController.cursorIndex               // moving end for keyboard navigation
     property string sortColumn: "name"
     property bool sortAscending: true
 
     // Current directory path (used as drop target)
     property string currentPath: ""
     onCurrentPathChanged: {
-        clearSelection()
-        pendingFocusPath = ""
-        typeAheadBuffer = ""
-        typeAheadTimer.stop()
+        selectionController.clearSelection()
+        selectionController.pendingFocusPath = ""
+        selectionController.resetTypeAhead()
         // Reset any sticky `interactive=false` left behind by an in-flight
         // rubberband / drag in the previous directory — otherwise the wheel
         // handler short-circuits until the user clicks something.
@@ -37,10 +36,6 @@ FocusScope {
 
     // Model bound by FileViewContainer
     property var viewModel
-    property string pendingFocusPath: ""
-    property bool pendingFocusReveal: true
-    property bool focusScheduled: false
-    property string typeAheadBuffer: ""
 
     property int rowHeight: 28
     readonly property int minRowHeight: 22
@@ -61,8 +56,8 @@ FocusScope {
 
         var paths = []
         for (var i = first; i <= last; ++i) {
-            if (isDirForRow(i)) {
-                var p = pathForRow(i)
+            if (selectionController.isDirForRow(i)) {
+                var p = selectionController.pathForRow(i)
                 if (p && !fileOps.isRemotePath(p))
                     paths.push(p)
             }
@@ -102,217 +97,26 @@ FocusScope {
         return paths
     }
 
-    function selectIndex(idx, ctrl, shift) {
-        if (shift && lastSelectedIndex >= 0) {
-            var lo = Math.min(idx, lastSelectedIndex)
-            var hi = Math.max(idx, lastSelectedIndex)
-            var newSel = ctrl ? selectedIndices.slice() : []
-            for (var i = lo; i <= hi; i++) {
-                if (newSel.indexOf(i) < 0) newSel.push(i)
-            }
-            selectedIndices = newSel
-        } else if (ctrl) {
-            var newSel2 = selectedIndices.slice()
-            var pos = newSel2.indexOf(idx)
-            if (pos >= 0)
-                newSel2.splice(pos, 1)
-            else
-                newSel2.push(idx)
-            selectedIndices = newSel2
-            lastSelectedIndex = idx
-        } else {
-            selectedIndices = [idx]
-            lastSelectedIndex = idx
-        }
-        cursorIndex = idx
-    }
-
-    function clearSelection() {
-        selectedIndices = []
-        lastSelectedIndex = -1
-        cursorIndex = -1
-    }
-
-    function pathForRow(row) {
-        if (!viewModel || row < 0)
-            return ""
-
-        if (viewModel.filePath)
-            return viewModel.filePath(row)
-
-        return viewModel.data(viewModel.index(row, 0), 258 /* FilePathRole */) || ""
-    }
-
-    function fileNameForRow(row) {
-        if (!viewModel || row < 0)
-            return ""
-
-        if (viewModel.fileName)
-            return viewModel.fileName(row)
-
-        return viewModel.data(viewModel.index(row, 0), 257 /* FileNameRole */) || ""
-    }
-
-    function isDirForRow(row) {
-        if (!viewModel || row < 0)
-            return false
-
-        if (viewModel.isDir)
-            return viewModel.isDir(row)
-
-        return viewModel.data(viewModel.index(row, 0), 265 /* IsDirRole */) || false
-    }
-
-    function rowForPath(path) {
-        if (!path)
-            return -1
-
-        for (var i = 0; i < listView.count; ++i) {
-            if (pathForRow(i) === path)
-                return i
-        }
-
-        return -1
-    }
-
-    function isPrintableTypeAheadText(text) {
-        return typeof text === "string" && text.length === 1 && /[^\x00-\x1f\x7f]/.test(text)
-    }
-
-    function findTypeAheadMatch(query, keepCurrentMatch) {
-        if (!query || listView.count <= 0)
-            return -1
-
-        var needle = query.toLocaleLowerCase()
-        var current = cursorIndex >= 0 ? cursorIndex : (selectedIndices.length > 0 ? selectedIndices[selectedIndices.length - 1] : -1)
-        if (keepCurrentMatch && current >= 0 && fileNameForRow(current).toLocaleLowerCase().startsWith(needle))
-            return current
-
-        for (var step = 1; step <= listView.count; ++step) {
-            var idx = current >= 0 ? (current + step) % listView.count : step - 1
-            if (fileNameForRow(idx).toLocaleLowerCase().startsWith(needle))
-                return idx
-        }
-
-        return -1
-    }
-
-    function handleTypeAhead(event) {
-        if (event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))
-            return
-
-        if (event.key === Qt.Key_Backspace) {
-            if (typeAheadBuffer.length === 0)
-                return
-
-            typeAheadBuffer = typeAheadBuffer.slice(0, -1)
-            if (typeAheadBuffer.length > 0) {
-                typeAheadTimer.restart()
-                var backspaceMatch = findTypeAheadMatch(typeAheadBuffer, true)
-                if (backspaceMatch >= 0) {
-                    selectIndex(backspaceMatch, false, false)
-                    listView.positionViewAtIndex(backspaceMatch, ListView.Contain)
-                }
-            } else {
-                typeAheadTimer.stop()
-            }
-            event.accepted = true
-            return
-        }
-
-        if (!isPrintableTypeAheadText(event.text))
-            return
-
-        var nextBuffer = typeAheadBuffer + event.text
-        var keepCurrentMatch = typeAheadBuffer.length > 0 && nextBuffer.startsWith(typeAheadBuffer)
-        var match = findTypeAheadMatch(nextBuffer, keepCurrentMatch)
-        if (match < 0) {
-            nextBuffer = event.text
-            match = findTypeAheadMatch(nextBuffer, false)
-        }
-
-        typeAheadBuffer = nextBuffer
-        typeAheadTimer.restart()
-        if (match >= 0) {
-            selectIndex(match, false, false)
-            listView.positionViewAtIndex(match, ListView.Contain)
-        }
-        event.accepted = true
-    }
-
     function activateCurrentSelection() {
         var idx = cursorIndex >= 0 ? cursorIndex : (selectedIndices.length > 0 ? selectedIndices[selectedIndices.length - 1] : -1)
         if (idx < 0)
             return
 
-        root.fileActivated(pathForRow(idx), isDirForRow(idx))
+        root.fileActivated(selectionController.pathForRow(idx), selectionController.isDirForRow(idx))
     }
 
-    function moveSelectionTo(index, extend) {
-        wheelScroller.stopAndSettle()
-        if (listView.count <= 0)
-            return
-
-        var next = Math.max(0, Math.min(listView.count - 1, index))
-        if (extend && lastSelectedIndex >= 0) {
-            var lo = Math.min(next, lastSelectedIndex)
-            var hi = Math.max(next, lastSelectedIndex)
-            var newSel = []
-            for (var i = lo; i <= hi; i++) newSel.push(i)
-            selectedIndices = newSel
-        } else {
-            selectedIndices = [next]
-            lastSelectedIndex = next
-        }
-
-        cursorIndex = next
-        listView.positionViewAtIndex(next, ListView.Contain)
+    SelectionController {
+        id: selectionController
+        fileModel: root.viewModel
+        itemCount: listView.count
+        onEnsureIndexVisible: (index, mode) => listView.positionViewAtIndex(
+            index, mode === selectionController.positionBeginning ? ListView.Beginning : ListView.Contain)
+        onRequestFocus: listView.forceActiveFocus()
     }
 
-    Timer {
-        id: typeAheadTimer
-        interval: 1000
-        repeat: false
-        onTriggered: root.typeAheadBuffer = ""
-    }
-
-    function schedulePendingFocus() {
-        if (focusScheduled)
-            return
-
-        focusScheduled = true
-        Qt.callLater(function() {
-            focusScheduled = false
-            if (pendingFocusPath !== "")
-                focusPath(pendingFocusPath, pendingFocusReveal)
-        })
-    }
-
-    function focusPath(path, reveal) {
-        if (!path || !viewModel)
-            return false
-
-        var idx = rowForPath(path)
-        if (idx < 0) {
-            pendingFocusPath = path
-            pendingFocusReveal = (reveal !== false)
-            return false
-        }
-
-        pendingFocusPath = ""
-        pendingFocusReveal = true
-        listView.forceActiveFocus()
-        selectIndex(idx, false, false)
-        if (reveal !== false)
-            listView.positionViewAtIndex(idx, ListView.Contain)
-        return true
-    }
-
-    function selectAll() {
-        var all = []
-        for (var i = 0; i < listView.count; i++) all.push(i)
-        selectedIndices = all
-    }
+    // Forwarders for external callers (FileViewContainer / Main.qml).
+    function focusPath(path, reveal) { selectionController.focusPath(path, reveal) }
+    function selectAll() { selectionController.selectAll() }
 
     function clickHeader(col) {
         if (sortColumn === col) {
@@ -534,12 +338,14 @@ FocusScope {
             Keys.onDownPressed: (event) => moveSelection(1, event.modifiers & Qt.ShiftModifier)
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Home) {
-                    root.moveSelectionTo(0, event.modifiers & Qt.ShiftModifier)
+                    wheelScroller.stopAndSettle()
+                    selectionController.moveSelectionTo(0, event.modifiers & Qt.ShiftModifier)
                     event.accepted = true
                     return
                 }
                 if (event.key === Qt.Key_End) {
-                    root.moveSelectionTo(count - 1, event.modifiers & Qt.ShiftModifier)
+                    wheelScroller.stopAndSettle()
+                    selectionController.moveSelectionTo(count - 1, event.modifiers & Qt.ShiftModifier)
                     event.accepted = true
                     return
                 }
@@ -550,16 +356,15 @@ FocusScope {
                     return
                 }
                 if (event.key === Qt.Key_Escape) {
-                    if (root.typeAheadBuffer.length > 0) {
-                        root.typeAheadBuffer = ""
-                        typeAheadTimer.stop()
+                    if (selectionController.typeAheadBuffer.length > 0) {
+                        selectionController.resetTypeAhead()
                     } else if (root.selectedIndices.length > 0) {
-                        root.clearSelection()
+                        selectionController.clearSelection()
                     }
                     event.accepted = true
                     return
                 }
-                root.handleTypeAhead(event)
+                selectionController.handleTypeAhead(event)
             }
 
             ScrollBar.vertical: ScrollBar {
@@ -849,9 +654,9 @@ FocusScope {
                             if (Math.sqrt(dx*dx + dy*dy) > 10) {
                                 dragPending = false
                                 if (!detRow.isSelected)
-                                    root.selectIndex(detRow.index, false, false)
+                                    selectionController.selectIndex(detRow.index, false, false)
                                 var paths = root.selectedIndices.length > 1
-                                    ? root.selectedIndices.map(function(i) { return root.pathForRow(i) })
+                                    ? root.selectedIndices.map(function(i) { return selectionController.pathForRow(i) })
                                     : [detRow.filePath]
                                 detRow.dragStarted = true
                                 dragHelper.startDrag(paths, detRow.fileIconName, paths.length)
@@ -866,7 +671,7 @@ FocusScope {
                                 // clicked file; an already-selected row keeps
                                 // the (possibly multi-) selection.
                                 if (!detRow.isSelected)
-                                    root.selectIndex(detRow.index, false, false)
+                                    selectionController.selectIndex(detRow.index, false, false)
                                 root.contextMenuRequested(
                                     detRow.filePath,
                                     detRow.isDir,
@@ -874,7 +679,7 @@ FocusScope {
                                 )
                                 return
                             }
-                            root.selectIndex(
+                            selectionController.selectIndex(
                                 detRow.index,
                                 mouse.modifiers & Qt.ControlModifier,
                                 mouse.modifiers & Qt.ShiftModifier
@@ -984,7 +789,7 @@ FocusScope {
                         rubberBandJustFinished = false
                         return
                     }
-                    root.clearSelection()
+                    selectionController.clearSelection()
                 }
 
                 onPositionChanged: (mouse) => {
@@ -1013,17 +818,10 @@ FocusScope {
                         if (!item) continue
                         var itemPos = listView.mapFromItem(item, 0, 0)
                         var itemRect = Qt.rect(itemPos.x, itemPos.y, item.width, item.height)
-                        if (rectsIntersect(rb, itemRect))
+                        if (selectionController.rectsIntersect(rb, itemRect))
                             newSel.push(i)
                     }
                     root.selectedIndices = newSel
-                }
-
-                function rectsIntersect(a, b) {
-                    return a.x < b.x + b.width  &&
-                           a.x + a.width  > b.x &&
-                           a.y < b.y + b.height &&
-                           a.y + a.height > b.y
                 }
             }
 
@@ -1055,11 +853,11 @@ FocusScope {
         ignoreUnknownSignals: true
 
         function onModelReset() {
-            root.schedulePendingFocus()
+            selectionController.schedulePendingFocus()
         }
 
         function onRowsInserted() {
-            root.schedulePendingFocus()
+            selectionController.schedulePendingFocus()
         }
     }
 
