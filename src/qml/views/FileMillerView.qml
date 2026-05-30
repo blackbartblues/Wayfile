@@ -153,13 +153,13 @@ FocusScope {
         }
         var fp = currentColumn.pathForRow(idx)
         var isDir = currentColumn.isDirForRow(idx)
-        // Set previewIsDir BEFORE previewFilePath. Assigning previewFilePath
-        // synchronously fires onPreviewFilePathChanged -> refreshPreview(),
-        // which reads previewIsDir to pick the preview type (isImage/isPdf/
-        // isText are gated on !previewIsDir). Setting it afterward left the
-        // first refresh running against the previous item's previewIsDir
-        // (e.g. true from a folder), so every type flag was false and the
-        // first preview after a directory load rendered blank.
+        // Set previewIsDir BEFORE previewFilePath. The shared PreviewState
+        // binds filePath to previewFilePath, so assigning previewFilePath
+        // triggers its refresh(), which reads isDir (bound to previewIsDir) to
+        // pick the preview type (isImage/isPdf/isText are gated on !isDir).
+        // Setting it afterward left the first refresh running against the
+        // previous item's previewIsDir (e.g. true from a folder), so every type
+        // flag was false and the first preview after a directory load was blank.
         previewColumn.previewIsDir = isDir
         previewColumn.previewFilePath = fp
         if (isDir) {
@@ -1115,253 +1115,49 @@ FocusScope {
             property string previewFilePath: ""
             property bool previewIsDir: false
 
-            // Rich preview data (like QuickPreview)
-            property var fileProps: ({})
-            property var textPreview: ({ content: "", truncated: false, isBinary: false, error: "" })
-            property var directoryPreview: ({ entries: [], truncated: false, error: "", count: 0 })
-            property var pdfPreview: ({ localPath: "", pageCount: 0, error: "" })
-            property var fontPreview: ({ family: "", styleName: "", weight: 400, italic: false, valid: false, error: "" })
-            property var fileMetadata: ({})
-            property string metadataHint: ""
-            property bool metadataLoading: false
-            property int pdfPageIndex: 0
-            property real pdfWheelAccumulator: 0
-
-            readonly property string _mime: fileProps.mimeType || ""
-            readonly property bool isRemoteUri: previewFilePath !== "" && fileOps.isRemotePath(previewFilePath)
-            readonly property bool isTrashUri: previewFilePath.startsWith("trash:///")
-            readonly property bool isArchive: !previewIsDir && fileOps.isArchive(previewFilePath)
-            readonly property bool isImage: !isRemoteUri && !previewIsDir && _mime.startsWith("image/")
-            readonly property bool isSvg: isImage && _mime === "image/svg+xml"
-            readonly property bool isVideo: !isRemoteUri && !previewIsDir && _mime.startsWith("video/")
-            readonly property bool isAudio: !isRemoteUri && !previewIsDir && (_mime.startsWith("audio/") || false)
-            readonly property bool isPdf: !isRemoteUri && !previewIsDir && _mime === "application/pdf"
-            readonly property bool pdfPreviewAvailable: previewService.pdfPreviewAvailable
-            readonly property bool videoPreviewAvailable: runtimeFeatures.ffmpegAvailable
-            readonly property bool textHighlightAvailable: runtimeFeatures.batAvailable
-            readonly property bool hasVisualPreview: isImage || (isVideo && videoPreviewAvailable)
-            readonly property string visualSource: {
-                if (!hasVisualPreview || previewFilePath === "") return ""
-                if (isVideo || isTrashUri || isSvg) return "image://thumbnail/" + previewFilePath
-                return "file://" + previewFilePath
-            }
-            readonly property string pdfImageSource: {
-                if (!isPdf || !pdfPreview.localPath || pdfPreview.error !== "")
-                    return ""
-                return "image://pdfpreview/" + encodeURIComponent(pdfPreview.localPath)
-                    + "?page=" + pdfPageIndex
-            }
-            readonly property string pdfPageLabel: {
-                if (!isPdf || pdfPreview.pageCount <= 0)
-                    return ""
-                return "Page " + (pdfPageIndex + 1) + " of " + pdfPreview.pageCount
-            }
-            readonly property bool isFont: {
-                if (isRemoteUri || previewIsDir)
-                    return false
-                if (_mime.startsWith("font/") || _mime === "application/x-font-ttf"
-                    || _mime === "application/x-font-otf" || _mime === "application/vnd.ms-fontobject")
-                    return true
-                var ext = previewFileName.lastIndexOf(".") >= 0
-                    ? previewFileName.substring(previewFileName.lastIndexOf(".") + 1).toLowerCase() : ""
-                return ["ttf", "otf", "woff", "woff2"].indexOf(ext) >= 0
-            }
-            readonly property bool isText: {
-                if (isRemoteUri || previewIsDir || isPdf || isImage || isVideo || isAudio || isArchive || isFont) return false
-                if (_mime.startsWith("text/")) return true
-                var textMimes = [
-                    "application/json", "application/xml", "application/x-yaml",
-                    "application/toml", "application/x-shellscript",
-                    "application/javascript", "application/typescript",
-                    "application/x-tex", "application/x-makefile",
-                    "application/x-desktop", "application/x-ruby",
-                    "application/x-perl", "application/x-python"
-                ]
-                if (textMimes.indexOf(_mime) >= 0) return true
-                var ext = previewFileName.lastIndexOf(".") >= 0
-                    ? previewFileName.substring(previewFileName.lastIndexOf(".") + 1).toLowerCase() : ""
-                if (ext === "") return previewFilePath !== ""
-                var textExt = ["txt", "md", "json", "yaml", "yml", "toml", "ini", "cfg", "conf",
-                               "sh", "bash", "zsh", "fish", "py", "js", "ts", "tsx", "jsx",
-                               "css", "html", "htm", "xml", "c", "cpp", "h", "hpp", "rs",
-                               "go", "java", "tex", "rb", "lua", "vim", "log", "diff",
-                               "patch", "cmake", "qml", "mk", "desktop"]
-                return textExt.indexOf(ext) >= 0
+            // Shared preview state + loaders — file-type detection, async
+            // preview/metadata loading and PDF paging all live in
+            // PreviewState.qml (previously duplicated here and in QuickPreview).
+            // previewIsDir is set before previewFilePath in updatePreview() so
+            // the refresh triggered by the filePath change sees the right flag.
+            PreviewState {
+                id: previewState
+                filePath: previewColumn.previewFilePath
+                isDir: previewColumn.previewIsDir
             }
 
-            readonly property string previewFileName: {
-                if (fileProps.name)
-                    return fileProps.name
-                if (previewFilePath === "") return ""
-                var idx = previewFilePath.lastIndexOf("/")
-                return idx >= 0 ? previewFilePath.substring(idx + 1) : previewFilePath
-            }
-
-            readonly property var metadataEntries: {
-                var result = []
-                var md = previewColumn.fileMetadata || {}
-                var keys = Object.keys(md)
-                for (var i = 0; i < keys.length; ++i) {
-                    var value = md[keys[i]]
-                    if (value !== undefined && value !== null && String(value) !== "")
-                        result.push({ label: keys[i], value: String(value) })
-                }
-                return result
-            }
-
-            readonly property string detailKind: {
-                if (previewIsDir) return "Folder"
-                if (isArchive) return "Archive"
-                if (isAudio) return "Audio"
-                if (isVideo) return "Video"
-                if (fileProps.mimeDescription) return fileProps.mimeDescription
-                var ext = previewFileName.lastIndexOf(".") >= 0
-                    ? previewFileName.substring(previewFileName.lastIndexOf(".") + 1).toUpperCase() : ""
-                return ext !== "" ? ext + " file" : "File"
-            }
+            // Forward the shared state so the rendering below stays unchanged.
+            property alias fileProps: previewState.fileProps
+            property alias textPreview: previewState.textPreview
+            property alias directoryPreview: previewState.directoryPreview
+            property alias pdfPreview: previewState.pdfPreview
+            property alias fontPreview: previewState.fontPreview
+            property alias metadataHint: previewState.metadataHint
+            property alias metadataLoading: previewState.metadataLoading
+            property alias pdfPageIndex: previewState.pdfPageIndex
+            property alias previewFileName: previewState.fileName
+            property alias detailKind: previewState.detailKind
+            property alias metadataEntries: previewState.metadataEntries
+            property alias isArchive: previewState.isArchive
+            property alias isAudio: previewState.isAudio
+            property alias isFont: previewState.isFont
+            property alias isPdf: previewState.isPdf
+            property alias isText: previewState.isText
+            property alias isVideo: previewState.isVideo
+            property alias hasVisualPreview: previewState.hasVisualPreview
+            property alias visualSource: previewState.visualSource
+            property alias pdfImageSource: previewState.pdfImageSource
+            property alias pdfPageLabel: previewState.pdfPageLabel
+            property alias pdfPreviewAvailable: previewState.pdfPreviewAvailable
+            property alias videoPreviewAvailable: previewState.videoPreviewAvailable
+            property alias textHighlightAvailable: previewState.textHighlightAvailable
 
             function changePdfPage(delta) {
-                if (!isPdf || pdfPreview.pageCount <= 0)
-                    return
-                pdfPageIndex = Math.max(0, Math.min(pdfPreview.pageCount - 1, pdfPageIndex + delta))
+                previewState.changePdfPage(delta)
             }
 
             function handlePdfWheel(wheel) {
-                if (!isPdf || pdfPreview.pageCount <= 1)
-                    return
-
-                var delta = 0
-                if (wheel.angleDelta && wheel.angleDelta.y !== 0)
-                    delta = wheel.angleDelta.y
-                else if (wheel.pixelDelta && wheel.pixelDelta.y !== 0)
-                    delta = wheel.pixelDelta.y * 3
-
-                if (delta === 0)
-                    return
-
-                pdfWheelAccumulator += delta
-                while (pdfWheelAccumulator >= 120) {
-                    changePdfPage(-1)
-                    pdfWheelAccumulator -= 120
-                }
-                while (pdfWheelAccumulator <= -120) {
-                    changePdfPage(1)
-                    pdfWheelAccumulator += 120
-                }
-
-                wheel.accepted = true
-            }
-
-            function refreshPreview() {
-                if (previewFilePath === "") {
-                    fileProps = ({})
-                    textPreview = ({ content: "", truncated: false, isBinary: false, error: "" })
-                    directoryPreview = ({ entries: [], truncated: false, error: "", count: 0 })
-                    pdfPreview = ({ localPath: "", pageCount: 0, error: "" })
-                    fileMetadata = ({})
-                    metadataLoading = false
-                    metadataHint = ""
-                    return
-                }
-
-                // Always go through the canonical fsModel for property
-                // lookup. Other models that can feed miller view
-                // (RecentFilesModel, SearchProxyModel) don't expose
-                // fileProperties(), and fsModel.fileProperties() already
-                // handles local / trash:// / remote URIs internally.
-                if (fsModel && fsModel.fileProperties)
-                    fileProps = fsModel.fileProperties(previewFilePath)
-                else
-                    fileProps = ({})
-
-                if (isRemoteUri) {
-                    textPreview = ({ content: "", truncated: false, isBinary: false, error: "" })
-                    directoryPreview = ({ entries: [], truncated: false, error: "", count: 0 })
-                    pdfPreview = ({ localPath: "", pageCount: 0, error: "" })
-                    fontPreview = ({ family: "", styleName: "", weight: 400, italic: false, valid: false, error: "" })
-                    fileMetadata = ({})
-                    metadataLoading = false
-                    metadataHint = ""
-                    return
-                }
-
-                if (isText) {
-                    // Render plain text instantly, then highlight asynchronously
-                    // so a slow/hung bat can't block the GUI. The highlighted
-                    // result arrives via onPreviewReady and fades in over
-                    // identical content.
-                    textPreview = previewService.loadTextPlain(previewFilePath)
-                    previewService.requestTextHighlight(previewFilePath)
-                } else {
-                    textPreview = ({ content: "", truncated: false, isBinary: false, error: "" })
-                }
-
-                if (isPdf) {
-                    // pdfinfo can block for seconds; load asynchronously and
-                    // show a placeholder until previewReady.
-                    pdfPreview = ({ localPath: "", pageCount: 0, error: "", loading: true })
-                    previewService.requestPdfPreview(previewFilePath)
-                } else {
-                    pdfPreview = ({ localPath: "", pageCount: 0, error: "" })
-                }
-
-                if (isFont)
-                    fontPreview = previewService.loadFontPreview(previewFilePath)
-                else
-                    fontPreview = ({ family: "", styleName: "", weight: 400, italic: false, valid: false, error: "" })
-
-                if (previewIsDir)
-                    directoryPreview = previewService.loadDirectoryPreview(previewFilePath)
-                else if (isArchive) {
-                    // Listing a large archive can block for seconds; load it
-                    // asynchronously and show a placeholder until previewReady.
-                    directoryPreview = ({ entries: [], truncated: false, error: "", count: 0, loading: true })
-                    previewService.requestArchivePreview(previewFilePath)
-                } else
-                    directoryPreview = ({ entries: [], truncated: false, error: "", count: 0 })
-
-                // exiftool/ffprobe/pdfinfo can block for seconds; extract
-                // asynchronously and show a placeholder until metadataReady.
-                fileMetadata = ({})
-                metadataLoading = true
-                metadataExtractor.requestExtract(previewFilePath)
-                metadataHint = metadataExtractor.missingDepsHint(fileProps.mimeType || "")
-            }
-
-            // Async metadata result. Guard on previewFilePath so a slow
-            // extraction for a file we've navigated away from is discarded.
-            Connections {
-                target: metadataExtractor
-                function onMetadataReady(path, result) {
-                    if (path === previewColumn.previewFilePath) {
-                        previewColumn.fileMetadata = result
-                        previewColumn.metadataLoading = false
-                    }
-                }
-            }
-
-            onPreviewFilePathChanged: {
-                pdfPageIndex = 0
-                pdfWheelAccumulator = 0
-                refreshPreview()
-            }
-
-            // Async preview results (archive listing, pdfinfo, text highlight).
-            // Guard on previewFilePath so a slow result for a file we've
-            // navigated away from is discarded.
-            Connections {
-                target: previewService
-                function onPreviewReady(kind, path, result) {
-                    if (kind === "archive" && path === previewColumn.previewFilePath)
-                        previewColumn.directoryPreview = result
-                    else if (kind === "pdf" && path === previewColumn.previewFilePath) {
-                        previewColumn.pdfPreview = result
-                        if (previewColumn.pdfPageIndex >= (previewColumn.pdfPreview.pageCount || 0))
-                            previewColumn.pdfPageIndex = 0
-                    }
-                    else if (kind === "text" && path === previewColumn.previewFilePath)
-                        previewColumn.textPreview = result
-                }
+                previewState.handlePdfWheel(wheel)
             }
 
             // ── Preview content area (top) + info bar (bottom) ───────────

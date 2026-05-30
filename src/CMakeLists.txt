@@ -99,6 +99,7 @@ list(APPEND heimdall_qml_module_args
         qml/components/PropertiesDialog.qml
         qml/components/BulkRenameDialog.qml
         qml/components/RemoteConnectDialog.qml
+        qml/components/PreviewState.qml
         qml/components/QuickPreview.qml
         qml/components/Toast.qml
         qml/components/RubberBand.qml
