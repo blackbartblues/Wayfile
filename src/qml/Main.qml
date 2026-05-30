@@ -553,9 +553,16 @@ ApplicationWindow {
     }
 
     function reservedTargetNames() {
+        return namesFromReserved(transferReservedTargets)
+    }
+
+    // Extract the basenames of the truthy keys of a {targetPath: bool} map, so a
+    // batch transfer can block names already claimed within the same batch when
+    // generating the next unique "(copy)" name.
+    function namesFromReserved(reservedMap) {
         var names = []
-        for (var path in transferReservedTargets) {
-            if (!transferReservedTargets[path])
+        for (var path in reservedMap) {
+            if (!reservedMap[path])
                 continue
             var slashIndex = path.lastIndexOf("/")
             names.push(slashIndex >= 0 ? path.substring(slashIndex + 1) : path)
@@ -796,12 +803,27 @@ ApplicationWindow {
 
         for (var i = 0; i < plan.length; ++i) {
             var item = plan[i]
-            // Dropping an item onto its own location is a no-op: skip it
-            // entirely. It must never reach the overwrite/backup path, which
-            // would move the file to a backup and then fail to copy the now
-            // missing source — destroying it. (Guards drag into source's dir.)
-            if (item.samePath)
+            if (item.samePath) {
+                // A move onto an item's own location is meaningless — skip it.
+                // It must never reach the overwrite/backup path, which would
+                // move the file to a backup then fail to copy the now-missing
+                // source, destroying it. (Also guards drag into source's dir.)
+                if (moveOperation)
+                    continue
+                // A COPY into the source's own folder becomes "name (copy).ext"
+                // (Windows/Nautilus behaviour) rather than a no-op. Reserve the
+                // generated name so a multi-file batch doesn't collide.
+                var copyName = fileOps.uniqueNameForDestination(
+                    destinationPath, item.sourceName, namesFromReserved(reserved))
+                var copyTarget = destinationPath + "/" + copyName
+                reserved[copyTarget] = true
+                resolved.push({
+                    sourcePath: item.sourcePath,
+                    targetPath: copyTarget,
+                    overwrite: false
+                })
                 continue
+            }
             var targetPath = item.targetPath
             var hasReservedConflict = reserved[targetPath] === true
             if (item.targetExists || hasReservedConflict) {
