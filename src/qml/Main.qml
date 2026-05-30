@@ -1767,109 +1767,23 @@ ApplicationWindow {
     }
 
     // ── Permanent Delete Confirmation Dialog ───────────────────────────────
-    Q.Dialog {
+    ConfirmActionDialog {
         id: deleteConfirmDialog
-        anchors.fill: parent
-        z: 9998
-        dialogWidth: 360
         title: "Permanently Delete?"
-        initialFocusItem: cancelDeleteButton
-        onAccepted: fileOps.deleteFiles(root.deleteConfirmPaths)
-
-        Text {
-            Layout.fillWidth: true
-            text: root.deleteConfirmPaths.length === 1
-                ? "\"" + root.deleteConfirmPaths[0].substring(root.deleteConfirmPaths[0].lastIndexOf("/") + 1) + "\" will be permanently deleted. This cannot be undone."
-                : root.deleteConfirmPaths.length + " items will be permanently deleted. This cannot be undone."
-            color: Theme.subtext
-            font.pointSize: Theme.fontNormal
-            wrapMode: Text.WordWrap
-        }
-
-        RowLayout {
-            Layout.alignment: Qt.AlignRight
-            spacing: 12
-
-            Q.Button {
-                id: cancelDeleteButton
-                text: "Cancel"
-                variant: "ghost"
-                size: "small"
-                KeyNavigation.left: confirmDeleteButton
-                KeyNavigation.right: confirmDeleteButton
-                KeyNavigation.tab: confirmDeleteButton
-                KeyNavigation.backtab: confirmDeleteButton
-                Keys.onLeftPressed: confirmDeleteButton.forceActiveFocus()
-                Keys.onRightPressed: confirmDeleteButton.forceActiveFocus()
-                onClicked: deleteConfirmDialog.reject()
-            }
-
-            Q.Button {
-                id: confirmDeleteButton
-                text: "Delete"
-                variant: "danger"
-                size: "small"
-                KeyNavigation.left: cancelDeleteButton
-                KeyNavigation.right: cancelDeleteButton
-                KeyNavigation.tab: cancelDeleteButton
-                KeyNavigation.backtab: cancelDeleteButton
-                Keys.onLeftPressed: cancelDeleteButton.forceActiveFocus()
-                Keys.onRightPressed: cancelDeleteButton.forceActiveFocus()
-                onClicked: deleteConfirmDialog.accept()
-            }
-        }
+        confirmLabel: "Delete"
+        bodyText: root.deleteConfirmPaths.length === 1
+            ? "\"" + root.deleteConfirmPaths[0].substring(root.deleteConfirmPaths[0].lastIndexOf("/") + 1) + "\" will be permanently deleted. This cannot be undone."
+            : root.deleteConfirmPaths.length + " items will be permanently deleted. This cannot be undone."
+        onConfirmed: fileOps.deleteFiles(root.deleteConfirmPaths)
     }
 
     // ── Empty Trash Confirmation Dialog ──────────────────────────────────────
-    Q.Dialog {
+    ConfirmActionDialog {
         id: emptyTrashConfirmDialog
-        anchors.fill: parent
-        z: 9998
-        dialogWidth: 360
         title: "Empty Trash?"
-        initialFocusItem: cancelEmptyTrashButton
-        onAccepted: fileOps.emptyTrash()
-
-        Text {
-            Layout.fillWidth: true
-            text: "All items in the Trash will be permanently deleted. This cannot be undone."
-            color: Theme.subtext
-            font.pointSize: Theme.fontNormal
-            wrapMode: Text.WordWrap
-        }
-
-        RowLayout {
-            Layout.alignment: Qt.AlignRight
-            spacing: 12
-
-            Q.Button {
-                id: cancelEmptyTrashButton
-                text: "Cancel"
-                variant: "ghost"
-                size: "small"
-                KeyNavigation.left: confirmEmptyTrashButton
-                KeyNavigation.right: confirmEmptyTrashButton
-                KeyNavigation.tab: confirmEmptyTrashButton
-                KeyNavigation.backtab: confirmEmptyTrashButton
-                Keys.onLeftPressed: confirmEmptyTrashButton.forceActiveFocus()
-                Keys.onRightPressed: confirmEmptyTrashButton.forceActiveFocus()
-                onClicked: emptyTrashConfirmDialog.reject()
-            }
-
-            Q.Button {
-                id: confirmEmptyTrashButton
-                text: "Empty Trash"
-                variant: "danger"
-                size: "small"
-                KeyNavigation.left: cancelEmptyTrashButton
-                KeyNavigation.right: cancelEmptyTrashButton
-                KeyNavigation.tab: cancelEmptyTrashButton
-                KeyNavigation.backtab: cancelEmptyTrashButton
-                Keys.onLeftPressed: cancelEmptyTrashButton.forceActiveFocus()
-                Keys.onRightPressed: cancelEmptyTrashButton.forceActiveFocus()
-                onClicked: emptyTrashConfirmDialog.accept()
-            }
-        }
+        confirmLabel: "Empty Trash"
+        bodyText: "All items in the Trash will be permanently deleted. This cannot be undone."
+        onConfirmed: fileOps.emptyTrash()
     }
 
     // ── Context Menu ────────────────────────────────────────────────────────
