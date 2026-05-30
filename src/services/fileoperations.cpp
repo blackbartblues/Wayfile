@@ -1550,62 +1550,35 @@ void FileOperations::emptyTrash()
     startSimpleOperation(
         QStringLiteral("Emptying trash..."), {},
         [](ProgressReporter report) -> QString {
-            // Inside a Flatpak the GLib trash:// URI resolves to the
-            // sandbox's trash, not the host's. Shell out to host gio so we
-            // empty the user's real trash. We lose per-file progress in
-            // this branch (gio trash --empty is one shot) but the result
-            // matches what the user expects.
+            // Empty via the `gio` CLI rather than g_file_delete() on individual
+            // trash:/// URIs. GVFS refuses per-item deletion in uid-named
+            // top-level trash dirs — e.g. /home/.Trash-1000 when /home is its
+            // own mount/subvolume — with "Items in the wastebasket may not be
+            // modified", so the old per-item loop failed on every item there.
+            // `gio trash --empty` is the reference implementation and clears
+            // every trash dir the user owns (home + per-volume). We trade
+            // per-file progress for correctness (one shot), matching the
+            // Flatpak path which already did this.
+            report(0, 1, QStringLiteral("Emptying trash..."));
+            QProcess proc;
             if (runningInFlatpak()) {
-                report(0, 1, QStringLiteral("Emptying trash..."));
-                QProcess proc;
+                // GLib's trash:// inside a sandbox is the sandbox's trash; shell
+                // out to the host gio so we empty the user's real trash.
                 proc.start(QStringLiteral("flatpak-spawn"),
                            {QStringLiteral("--host"), QStringLiteral("gio"),
                             QStringLiteral("trash"), QStringLiteral("--empty")});
-                proc.waitForFinished(60000);
-                if (proc.exitCode() != 0) {
-                    const QString err = QString::fromUtf8(proc.readAllStandardError()).trimmed();
-                    return err.isEmpty() ? QStringLiteral("gio trash --empty failed") : err;
-                }
-                return QString();
-            }
-
-            // First pass: count items
-            GFile *trash = g_file_new_for_uri("trash:///");
-            GError *enumErr = nullptr;
-            GFileEnumerator *counter = g_file_enumerate_children(trash,
-                G_FILE_ATTRIBUTE_STANDARD_NAME,
-                G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS, nullptr, &enumErr);
-
-            QStringList names;
-            if (counter) {
-                GFileInfo *ci = nullptr;
-                while ((ci = g_file_enumerator_next_file(counter, nullptr, nullptr)) != nullptr) {
-                    names.append(QString::fromUtf8(g_file_info_get_name(ci)));
-                    g_object_unref(ci);
-                }
-                g_file_enumerator_close(counter, nullptr, nullptr);
-                g_object_unref(counter);
             } else {
-                QString err;
-                if (enumErr) { err = QString::fromUtf8(enumErr->message); g_error_free(enumErr); }
-                g_object_unref(trash);
-                return err.isEmpty() ? QStringLiteral("Could not enumerate trash") : err;
+                proc.start(QStringLiteral("gio"),
+                           {QStringLiteral("trash"), QStringLiteral("--empty")});
             }
-
-            // Second pass: delete with progress
-            QString lastError;
-            const int total = names.size();
-            for (int i = 0; i < total; ++i) {
-                report(i, total, names[i]);
-                GFile *child = g_file_get_child(trash, names[i].toUtf8().constData());
-                QString err;
-                if (!deleteGFileRecursive(child, &err) && !err.isEmpty())
-                    lastError = err;
-                g_object_unref(child);
+            if (!proc.waitForStarted(5000))
+                return QStringLiteral("Could not start gio to empty trash");
+            proc.waitForFinished(60000);
+            if (proc.exitCode() != 0) {
+                const QString err = QString::fromUtf8(proc.readAllStandardError()).trimmed();
+                return err.isEmpty() ? QStringLiteral("gio trash --empty failed") : err;
             }
-
-            g_object_unref(trash);
-            return lastError;
+            return QString();
         });
 }
 

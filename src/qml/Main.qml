@@ -1686,10 +1686,13 @@ ApplicationWindow {
                 fileOps.openInTerminal(path)
         }
 
+        // ContextMenu.executeAction routes the "emptytrash" action through the
+        // dedicated emptyTrashRequested() signal (not customActionRequested), so
+        // the sidebar needs this handler — mirroring the main file-view menu.
+        onEmptyTrashRequested: emptyTrashConfirmDialog.open()
+
         onCustomActionRequested: (action) => {
-            if (action === "emptytrash") {
-                emptyTrashConfirmDialog.open()
-            } else if (action === "removebookmark") {
+            if (action === "removebookmark") {
                 if (sidebarItem.kind === "bookmark" && sidebarItem.index >= 0)
                     bookmarks.removeBookmark(sidebarItem.index)
             } else if (action === "mountdevice") {
