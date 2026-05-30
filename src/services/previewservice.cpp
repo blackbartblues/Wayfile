@@ -273,6 +273,21 @@ PreviewService::PreviewService(QObject *parent)
 {
 }
 
+PreviewService::~PreviewService()
+{
+    // Stop any in-flight archive listings so QProcess doesn't warn ("Destroyed
+    // while process is still running") or block during teardown. Disconnect
+    // first so the finished/errorOccurred lambdas — which touch members — can't
+    // fire while the object is being destroyed.
+    const QList<QProcess *> procs = m_archiveProcs.values();
+    m_archiveProcs.clear();
+    for (QProcess *proc : procs) {
+        proc->disconnect(this);
+        proc->kill();
+        proc->waitForFinished(100);
+    }
+}
+
 bool PreviewService::pdfPreviewAvailable() const
 {
     return !QStandardPaths::findExecutable(QStringLiteral("pdftoppm")).isEmpty()
@@ -350,20 +365,10 @@ QVariantMap PreviewService::loadDirectoryPreview(const QString &path, int maxEnt
     return result;
 }
 
-QVariantMap PreviewService::loadArchivePreview(const QString &path, int maxEntries) const
+bool PreviewService::archiveListCommand(const QString &path, QString &program, QStringList &args)
 {
-    QVariantMap result;
-    result["entries"] = QStringList();
-    result["truncated"] = false;
-    result["error"] = QString();
-    result["count"] = 0;
-
-    // Determine list command based on archive type
-    // Reuse the same detection as fileoperations
+    // Reuse the same detection as fileoperations.
     const QString lower = path.toLower();
-    QString program;
-    QStringList args;
-
     if (lower.endsWith(".zip")) {
         program = "unzip";
         args = {"-Z1", path};
@@ -383,18 +388,14 @@ QVariantMap PreviewService::loadArchivePreview(const QString &path, int maxEntri
         program = "7z";
         args = {"l", "-slt", path};
     } else {
-        result["error"] = "Unsupported archive format";
-        return result;
+        return false;
     }
+    return true;
+}
 
-    QProcess proc;
-    proc.start(program, args);
-    if (!proc.waitForFinished(10000) || proc.exitCode() != 0) {
-        result["error"] = "Could not list archive contents";
-        return result;
-    }
-
-    const QString output = QString::fromUtf8(proc.readAllStandardOutput());
+QVariantMap PreviewService::parseArchiveListing(const QString &program, const QString &output,
+                                                const QString &path, int maxEntries)
+{
     QStringList entries;
     bool truncated = false;
 
@@ -420,10 +421,100 @@ QVariantMap PreviewService::loadArchivePreview(const QString &path, int maxEntri
         }
     }
 
+    QVariantMap result;
     result["entries"] = entries;
     result["truncated"] = truncated;
+    result["error"] = QString();
     result["count"] = entries.size();
     return result;
+}
+
+QVariantMap PreviewService::loadArchivePreview(const QString &path, int maxEntries) const
+{
+    QVariantMap result;
+    result["entries"] = QStringList();
+    result["truncated"] = false;
+    result["error"] = QString();
+    result["count"] = 0;
+
+    QString program;
+    QStringList args;
+    if (!archiveListCommand(path, program, args)) {
+        result["error"] = "Unsupported archive format";
+        return result;
+    }
+
+    QProcess proc;
+    proc.start(program, args);
+    if (!proc.waitForFinished(10000) || proc.exitCode() != 0) {
+        result["error"] = "Could not list archive contents";
+        return result;
+    }
+    return parseArchiveListing(program, QString::fromUtf8(proc.readAllStandardOutput()), path, maxEntries);
+}
+
+void PreviewService::requestArchivePreview(const QString &path, int maxEntries)
+{
+    // A listing for this exact path is already running. Its previewReady will
+    // reach every consumer guarding on this path, so don't start a duplicate —
+    // this also means two panes previewing the same archive share one process.
+    if (m_archiveProcs.contains(path))
+        return;
+
+    QString program;
+    QStringList args;
+    if (!archiveListCommand(path, program, args)) {
+        QVariantMap result;
+        result["entries"] = QStringList();
+        result["truncated"] = false;
+        result["count"] = 0;
+        result["error"] = QStringLiteral("Unsupported archive format");
+        emit previewReady(QStringLiteral("archive"), path, result);
+        return;
+    }
+
+    auto *proc = new QProcess(this);
+    m_archiveProcs.insert(path, proc);
+
+    connect(proc, &QProcess::finished, this,
+            [this, proc, path, program, maxEntries](int code, QProcess::ExitStatus status) {
+                // Ignore if this proc is no longer the tracked listing for
+                // `path` (superseded/cancelled). value() defaults to nullptr.
+                if (m_archiveProcs.value(path) != proc) {
+                    proc->deleteLater();
+                    return;
+                }
+                m_archiveProcs.remove(path);
+                QVariantMap result;
+                if (status != QProcess::NormalExit || code != 0) {
+                    result["entries"] = QStringList();
+                    result["truncated"] = false;
+                    result["count"] = 0;
+                    result["error"] = QStringLiteral("Could not list archive contents");
+                } else {
+                    result = parseArchiveListing(
+                        program, QString::fromUtf8(proc->readAllStandardOutput()), path, maxEntries);
+                }
+                emit previewReady(QStringLiteral("archive"), path, result);
+                proc->deleteLater();
+            });
+    connect(proc, &QProcess::errorOccurred, this,
+            [this, proc, path](QProcess::ProcessError) {
+                if (m_archiveProcs.value(path) != proc) {
+                    proc->deleteLater();
+                    return;
+                }
+                m_archiveProcs.remove(path);
+                QVariantMap result;
+                result["entries"] = QStringList();
+                result["truncated"] = false;
+                result["count"] = 0;
+                result["error"] = QStringLiteral("Could not list archive contents");
+                emit previewReady(QStringLiteral("archive"), path, result);
+                proc->deleteLater();
+            });
+
+    proc->start(program, args);
 }
 
 QString PreviewService::localPreviewPath(const QString &path) const

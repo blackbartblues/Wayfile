@@ -4,6 +4,8 @@
 #include <QPainter>
 #include <QPdfWriter>
 #include <QProcess>
+#include <QSet>
+#include <QSignalSpy>
 #include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QUuid>
@@ -19,6 +21,26 @@ private:
     {
         return !QStandardPaths::findExecutable("bat").isEmpty()
             || !QStandardPaths::findExecutable("batcat").isEmpty();
+    }
+
+    // Build a tiny uncompressed .tar so archive tests don't depend on
+    // compression tools; tar -tf is what archiveListCommand() runs for .tar.
+    // Returns the archive path, or empty on failure.
+    static QString makeTar(const QString &dirPath, const QString &archiveName,
+                           const QStringList &innerNames)
+    {
+        for (const QString &name : innerNames) {
+            QFile f(dirPath + "/" + name);
+            if (!f.open(QIODevice::WriteOnly))
+                return {};
+            f.write(name.toUtf8());
+        }
+        const QString archivePath = dirPath + "/" + archiveName;
+        QProcess tar;
+        tar.start("tar", QStringList{"-cf", archivePath, "-C", dirPath} << innerNames);
+        if (!tar.waitForFinished(5000) || tar.exitCode() != 0)
+            return {};
+        return archivePath;
     }
 
     static QString findTrashEntryUri(const QString &originalPath)
@@ -184,6 +206,97 @@ private slots:
         removeProc.start("gio", {"remove", "-f", trashUri});
         removeProc.waitForFinished(5000);
         QDir(dirPath).removeRecursively();
+    }
+
+    void testRequestArchivePreviewAsync()
+    {
+        if (QStandardPaths::findExecutable("tar").isEmpty())
+            QSKIP("tar not found in PATH");
+
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString archivePath = makeTar(dir.path(), "test.tar", {"one.txt", "two.txt"});
+        QVERIFY(!archivePath.isEmpty());
+
+        PreviewService service;
+        QSignalSpy spy(&service, &PreviewService::previewReady);
+        service.requestArchivePreview(archivePath, 200);
+
+        QVERIFY(spy.wait(10000));
+        QCOMPARE(spy.count(), 1);
+
+        const QList<QVariant> args = spy.takeFirst();
+        QCOMPARE(args.at(0).toString(), QStringLiteral("archive")); // kind
+        QCOMPARE(args.at(1).toString(), archivePath);               // path
+        const QVariantMap result = args.at(2).toMap();
+        QCOMPARE(result.value("error").toString(), QString());
+        const QStringList entries = result.value("entries").toStringList();
+        QVERIFY(entries.contains("one.txt"));
+        QVERIFY(entries.contains("two.txt"));
+
+        // Async result must have the same shape/content as the sync loader so
+        // QML bindings (entries/truncated/error/count) behave identically.
+        const QVariantMap sync = service.loadArchivePreview(archivePath, 200);
+        QCOMPARE(result.value("entries").toStringList(), sync.value("entries").toStringList());
+        QCOMPARE(result.value("truncated").toBool(), sync.value("truncated").toBool());
+        QCOMPARE(result.value("count").toInt(), sync.value("count").toInt());
+    }
+
+    void testDuplicateArchiveRequestDeduped()
+    {
+        if (QStandardPaths::findExecutable("tar").isEmpty())
+            QSKIP("tar not found in PATH");
+
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString archivePath = makeTar(dir.path(), "dup.tar", {"inner.txt"});
+        QVERIFY(!archivePath.isEmpty());
+
+        PreviewService service;
+        QSignalSpy spy(&service, &PreviewService::previewReady);
+        // Two requests for the SAME path before the event loop spins: the
+        // second must be deduped onto the first's in-flight process, so exactly
+        // one previewReady is emitted.
+        service.requestArchivePreview(archivePath, 200);
+        service.requestArchivePreview(archivePath, 200);
+
+        QVERIFY(spy.wait(10000));
+        QTest::qWait(200); // give any erroneous second emission time to arrive
+        QCOMPARE(spy.count(), 1);
+    }
+
+    void testConcurrentArchivePreviewsBothEmit()
+    {
+        // Regression: previewService is shared across every supertab pane's
+        // FileMillerView plus the global QuickPreview. A single in-flight slot
+        // would let a second consumer's request cancel the first's process,
+        // leaving that consumer stuck on "Listing archive…" forever. Two
+        // concurrent requests for DIFFERENT paths must each emit.
+        if (QStandardPaths::findExecutable("tar").isEmpty())
+            QSKIP("tar not found in PATH");
+
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString a = makeTar(dir.path(), "alpha.tar", {"a_inner.txt"});
+        const QString b = makeTar(dir.path(), "beta.tar", {"b_inner.txt"});
+        QVERIFY(!a.isEmpty());
+        QVERIFY(!b.isEmpty());
+
+        PreviewService service;
+        QSignalSpy spy(&service, &PreviewService::previewReady);
+        service.requestArchivePreview(a, 200);
+        service.requestArchivePreview(b, 200);
+
+        QSet<QString> seenPaths;
+        while (seenPaths.size() < 2 && spy.wait(5000)) {
+            while (!spy.isEmpty())
+                seenPaths.insert(spy.takeFirst().at(1).toString());
+        }
+        while (!spy.isEmpty())
+            seenPaths.insert(spy.takeFirst().at(1).toString());
+
+        QVERIFY2(seenPaths.contains(a), "first archive listing was lost (single-slot regression)");
+        QVERIFY2(seenPaths.contains(b), "second archive listing was lost");
     }
 };
 

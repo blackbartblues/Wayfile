@@ -224,14 +224,28 @@ Item {
 
         if (isDirectory)
             directoryPreview = previewService.loadDirectoryPreview(filePath)
-        else if (isArchive)
-            directoryPreview = previewService.loadArchivePreview(filePath)
-        else
+        else if (isArchive) {
+            // Listing a large archive (unzip/tar/7z) can block for seconds, so
+            // load it asynchronously and show a placeholder until previewReady.
+            directoryPreview = ({ entries: [], truncated: false, error: "", count: 0, loading: true })
+            previewService.requestArchivePreview(filePath)
+        } else
             directoryPreview = ({ entries: [], truncated: false, error: "", count: 0 })
 
         // Extract rich metadata
         fileMetadata = metadataExtractor.extract(filePath)
         metadataHint = metadataExtractor.missingDepsHint(fileProps.mimeType || "")
+    }
+
+    // Async archive listing result. Guard on filePath so a slow listing for a
+    // file the user already navigated away from doesn't overwrite the current
+    // preview.
+    Connections {
+        target: previewService
+        function onPreviewReady(kind, path, result) {
+            if (kind === "archive" && path === root.filePath)
+                directoryPreview = result
+        }
     }
 
     onActiveChanged: {
@@ -822,6 +836,14 @@ Item {
                                 color: Theme.error
                                 font.pointSize: Theme.fontNormal
                                 wrapMode: Text.WordWrap
+                            }
+
+                            Text {
+                                Layout.fillWidth: true
+                                visible: directoryPreview.loading === true
+                                text: "Listing archive…"
+                                color: Theme.subtext
+                                font.pointSize: Theme.fontNormal
                             }
 
                             Item {

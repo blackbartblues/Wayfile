@@ -1295,9 +1295,12 @@ FocusScope {
 
                 if (previewIsDir)
                     directoryPreview = previewService.loadDirectoryPreview(previewFilePath)
-                else if (isArchive)
-                    directoryPreview = previewService.loadArchivePreview(previewFilePath)
-                else
+                else if (isArchive) {
+                    // Listing a large archive can block for seconds; load it
+                    // asynchronously and show a placeholder until previewReady.
+                    directoryPreview = ({ entries: [], truncated: false, error: "", count: 0, loading: true })
+                    previewService.requestArchivePreview(previewFilePath)
+                } else
                     directoryPreview = ({ entries: [], truncated: false, error: "", count: 0 })
 
                 fileMetadata = metadataExtractor.extract(previewFilePath)
@@ -1308,6 +1311,16 @@ FocusScope {
                 pdfPageIndex = 0
                 pdfWheelAccumulator = 0
                 refreshPreview()
+            }
+
+            // Async archive listing result. Guard on previewFilePath so a slow
+            // listing for a file we've navigated away from is discarded.
+            Connections {
+                target: previewService
+                function onPreviewReady(kind, path, result) {
+                    if (kind === "archive" && path === previewColumn.previewFilePath)
+                        previewColumn.directoryPreview = result
+                }
             }
 
             // ── Preview content area (top) + info bar (bottom) ───────────
@@ -1397,6 +1410,17 @@ FocusScope {
                             color: Theme.error
                             font.pointSize: Theme.fontSmall
                             wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                        }
+
+                        Text {
+                            anchors.top: archivePreviewTitle.bottom
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.margins: 8
+                            visible: previewColumn.directoryPreview.loading === true
+                            text: "Listing archive…"
+                            color: Theme.subtext
+                            font.pointSize: Theme.fontSmall
                         }
 
                         ListView {
