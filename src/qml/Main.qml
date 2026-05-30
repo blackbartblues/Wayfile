@@ -772,12 +772,12 @@ ApplicationWindow {
 
         transferConflictIndex = index
         var item = transferConflictItems[index]
-        conflictRenameField.text = fileOps.uniqueNameForDestination(
+        conflictDialog.renameText = fileOps.uniqueNameForDestination(
             transferDestinationPath,
             item.sourceName,
             reservedTargetNames()
         )
-        conflictErrorText.text = ""
+        conflictDialog.errorText = ""
         conflictDialog.currentItem = item
         conflictDialog.open()
     }
@@ -843,22 +843,22 @@ ApplicationWindow {
         var item = transferConflictItems[transferConflictIndex]
         if (action === "overwrite") {
             if (item.samePath) {
-                conflictErrorText.text = "Cannot overwrite an item with itself"
+                conflictDialog.errorText = "Cannot overwrite an item with itself"
                 return
             }
 
             transferReservedTargets[item.targetPath] = true
             transferResolvedItems = transferResolvedItems.concat([{ sourcePath: item.sourcePath, targetPath: item.targetPath, overwrite: true }])
         } else if (action === "rename") {
-            var name = conflictRenameField.text.trim()
+            var name = conflictDialog.renameText.trim()
             if (name === "" || name === "." || name === ".." || name.indexOf("/") >= 0) {
-                conflictErrorText.text = "Enter a valid file name"
+                conflictDialog.errorText = "Enter a valid file name"
                 return
             }
 
             var targetPath = transferDestinationPath + "/" + name
             if (transferReservedTargets[targetPath] || fileOps.pathExists(targetPath) || targetPath === item.sourcePath) {
-                conflictErrorText.text = "That name already exists"
+                conflictDialog.errorText = "That name already exists"
                 return
             }
 
@@ -875,13 +875,13 @@ ApplicationWindow {
         transferConflictIndex = nextIndex
         var nextItem = transferConflictItems[nextIndex]
         conflictDialog.currentItem = nextItem
-        conflictRenameField.text = fileOps.uniqueNameForDestination(
+        conflictDialog.renameText = fileOps.uniqueNameForDestination(
             transferDestinationPath,
             nextItem.sourceName,
             reservedTargetNames()
         )
-        conflictErrorText.text = ""
-        conflictRenameField.forceActiveFocus()
+        conflictDialog.errorText = ""
+        conflictDialog.focusRenameField()
     }
 
     function cancelTransferConflicts() {
@@ -1535,96 +1535,13 @@ ApplicationWindow {
         }
     }
 
-    Q.Dialog {
+    TransferConflictDialog {
         id: conflictDialog
-        anchors.fill: parent
-        z: 9998
-        dialogWidth: 460
-        title: root.transferMoveOperation ? "Move Conflict" : "Copy Conflict"
-        initialFocusItem: conflictRenameField
-
-        property var currentItem: ({})
-
+        isMoveOperation: root.transferMoveOperation
+        onResolveRequested: (action) => root.resolveTransferConflict(action)
         onRejected: {
             root.resetTransferConflictState()
             root.scheduleActivePaneFocus()
-        }
-
-        Text {
-            Layout.fillWidth: true
-            text: conflictDialog.currentItem.samePath
-                ? "\"" + (conflictDialog.currentItem.sourceName || "") + "\" is already in this folder."
-                : "\"" + (conflictDialog.currentItem.sourceName || "") + "\" already exists in the destination."
-            color: Theme.text
-            font.pointSize: Theme.fontNormal
-            wrapMode: Text.WordWrap
-        }
-
-        Text {
-            Layout.fillWidth: true
-            text: root.transferMoveOperation
-                ? "Choose whether to skip it, replace the existing item, or keep both with a new name."
-                : "Choose whether to skip it, overwrite the existing item, or keep both with a new name."
-            color: Theme.subtext
-            font.pointSize: Theme.fontNormal
-            wrapMode: Text.WordWrap
-        }
-
-        Q.TextField {
-            id: conflictRenameField
-            Layout.fillWidth: true
-            autoFocus: true
-            variant: "filled"
-            placeholder: "New name"
-            Keys.onReturnPressed: root.resolveTransferConflict("rename")
-            Keys.onEscapePressed: conflictDialog.reject()
-        }
-
-        Text {
-            id: conflictErrorText
-            Layout.fillWidth: true
-            visible: text !== ""
-            color: Theme.error
-            font.pointSize: Theme.fontSmall
-            wrapMode: Text.WordWrap
-        }
-
-        RowLayout {
-            Layout.alignment: Qt.AlignRight
-            spacing: 12
-
-            Q.Button {
-                id: cancelConflictButton
-                text: "Cancel"
-                variant: "ghost"
-                size: "small"
-                onClicked: conflictDialog.reject()
-            }
-
-            Q.Button {
-                id: skipConflictButton
-                text: "Skip"
-                variant: "ghost"
-                size: "small"
-                onClicked: root.resolveTransferConflict("skip")
-            }
-
-            Q.Button {
-                id: overwriteConflictButton
-                text: root.transferMoveOperation ? "Replace" : "Overwrite"
-                variant: "danger"
-                size: "small"
-                enabled: !(conflictDialog.currentItem.samePath || false)
-                onClicked: root.resolveTransferConflict("overwrite")
-            }
-
-            Q.Button {
-                id: renameConflictButton
-                text: "Rename"
-                variant: "primary"
-                size: "small"
-                onClicked: root.resolveTransferConflict("rename")
-            }
         }
     }
 
