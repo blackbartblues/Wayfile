@@ -96,6 +96,7 @@ list(APPEND heimdall_qml_module_args
         qml/views/KineticWheelScroller.qml
         qml/components/ContextMenu.qml
         qml/components/AnimatedInputDialog.qml
+        qml/components/PropertiesDialog.qml
         qml/components/BulkRenameDialog.qml
         qml/components/RemoteConnectDialog.qml
         qml/components/QuickPreview.qml
