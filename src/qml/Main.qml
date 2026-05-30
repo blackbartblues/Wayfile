@@ -1180,8 +1180,7 @@ ApplicationWindow {
             return
 
         root.renameTargetPath = path
-        renameField.text = path.substring(path.lastIndexOf("/") + 1)
-        renameDialog.open()
+        renameDialog.openDialog(path.substring(path.lastIndexOf("/") + 1))
     }
 
     function openBulkRenameDialog(paths) {
@@ -1193,7 +1192,7 @@ ApplicationWindow {
 
     function toggleRenameWorkflow(paths) {
         if (renameDialog.visible) {
-            renameDialog.reject()
+            renameDialog.closeDialog()
             return
         }
 
@@ -1213,13 +1212,12 @@ ApplicationWindow {
             return
 
         root.newItemParentPath = parentPath
-        newFolderField.text = ""
-        newFolderDialog.open()
+        newFolderDialog.openDialog()
     }
 
     function toggleNewFolderDialog(parentPath) {
         if (newFolderDialog.visible) {
-            newFolderDialog.reject()
+            newFolderDialog.closeDialog()
             return
         }
 
@@ -1234,13 +1232,12 @@ ApplicationWindow {
             return
 
         root.newItemParentPath = parentPath
-        newFileField.text = ""
-        newFileDialog.open()
+        newFileDialog.openDialog()
     }
 
     function toggleNewFileDialog(parentPath) {
         if (newFileDialog.visible) {
-            newFileDialog.reject()
+            newFileDialog.closeDialog()
             return
         }
 
@@ -1434,505 +1431,88 @@ ApplicationWindow {
     // ── Rename dialog ───────────────────────────────────────────────────────
     property string renameTargetPath: ""
 
-    Item {
+    AnimatedInputDialog {
         id: renameDialog
-        anchors.fill: parent
-        visible: false
-        z: 1000
-        Accessible.role: Accessible.Dialog
-        Accessible.name: "Rename"
-
-        function open() {
-            renameErrorText.text = ""
-            visible = true
-            renameBox.opacity = 0
-            renameBox.scale = 0.88
-            renameBox.yOffset = -8
-            renameOpenAnim.start()
-            Qt.callLater(function() {
-                renameField.inputItem.forceActiveFocus()
-                renameField.inputItem.selectAll()
-            })
-            renameField.forceActiveFocus()
-        }
-        function accept() {
-            var name = renameField.text.trim()
-            if (renameTargetPath === "" || name === "") return
-            var parentDir = fileOps.parentPath(renameTargetPath)
+        title: "Rename"
+        placeholder: "Enter new name"
+        confirmText: "Rename"
+        selectAllOnOpen: true
+        onSubmitted: (name) => {
+            if (root.renameTargetPath === "")
+                return
+            var parentDir = fileOps.parentPath(root.renameTargetPath)
             var targetPath = parentDir + "/" + name
             if (fileOps.pathExists(targetPath)) {
-                renameErrorText.text = "\"" + name + "\" already exists"
+                showError("\"" + name + "\" already exists")
                 return
             }
-
-            if (fileOps.isRemotePath(renameTargetPath)) {
-                var result = fileOps.renameResolvedItems([{ sourcePath: renameTargetPath, targetPath: targetPath }])
+            if (fileOps.isRemotePath(root.renameTargetPath)) {
+                var result = fileOps.renameResolvedItems([{ sourcePath: root.renameTargetPath, targetPath: targetPath }])
                 if (!result.success) {
-                    renameErrorText.text = result.error || "Rename failed"
+                    showError(result.error || "Rename failed")
                     return
                 }
                 root.refreshAllPanes()
             } else {
-                undoManager.rename(renameTargetPath, name)
+                undoManager.rename(root.renameTargetPath, name)
             }
-            renameCloseAnim.start()
-        }
-        function reject() { renameCloseAnim.start() }
-
-        ParallelAnimation {
-            id: renameOpenAnim
-            NumberAnimation {
-                target: renameBox; property: "opacity"
-                from: 0; to: 1; duration: Theme.animDurationFast
-                easing.type: Theme.animEasingEnter; easing.bezierCurve: Theme.animBezierCurve
-            }
-            NumberAnimation {
-                target: renameBox; property: "scale"
-                from: 0.88; to: 1; duration: Theme.animDurationSlow
-                easing.type: Easing.OutBack
-                easing.overshoot: 0.8
-            }
-            NumberAnimation {
-                target: renameBox; property: "yOffset"
-                from: -8; to: 0; duration: Theme.animDuration
-                easing.type: Theme.animEasingEnter; easing.bezierCurve: Theme.animBezierCurve
-            }
-        }
-        SequentialAnimation {
-            id: renameCloseAnim
-            ParallelAnimation {
-                NumberAnimation {
-                    target: renameBox; property: "opacity"
-                    to: 0; duration: Theme.animDurationFast
-                    easing.type: Theme.animEasingExit; easing.bezierCurve: Theme.animBezierCurve
-                }
-                NumberAnimation {
-                    target: renameBox; property: "scale"
-                    to: 0.92; duration: Theme.animDurationFast
-                    easing.type: Theme.animEasingExit; easing.bezierCurve: Theme.animBezierCurve
-                }
-                NumberAnimation {
-                    target: renameBox; property: "yOffset"
-                    to: -4; duration: Theme.animDurationFast
-                    easing.type: Theme.animEasingExit; easing.bezierCurve: Theme.animBezierCurve
-                }
-            }
-            ScriptAction { script: renameDialog.visible = false }
-        }
-
-        MouseArea {
-            anchors.fill: parent
-            onClicked: renameDialog.reject()
-        }
-
-        Item {
-            id: renameBox
-            width: 340
-            height: renameCard.implicitHeight
-            anchors.centerIn: parent
-
-            opacity: 0
-            scale: 0.88
-            transformOrigin: Item.Center
-
-            property real yOffset: 0
-            transform: Translate { y: renameBox.yOffset }
-
-            Q.Card {
-                id: renameCard
-                anchors.fill: parent
-                title: "Rename"
-                padding: 20
-                color: Theme.mantle
-                border.color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.1)
-
-                Q.TextField {
-                    id: renameField
-                    Layout.fillWidth: true
-                    autoFocus: true
-                    variant: "filled"
-                    placeholder: "Enter new name"
-                    onTextChanged: renameErrorText.text = ""
-                    Keys.onReturnPressed: renameDialog.accept()
-                    Keys.onEscapePressed: renameDialog.reject()
-                }
-
-                Text {
-                    id: renameErrorText
-                    Layout.fillWidth: true
-                    visible: text !== ""
-                    color: Theme.error
-                    font.pointSize: Theme.fontSmall
-                    wrapMode: Text.WordWrap
-                }
-
-                RowLayout {
-                    Layout.alignment: Qt.AlignRight
-                    spacing: 12
-
-                    Q.Button {
-                        id: cancelRenameButton
-                        text: "Cancel"
-                        variant: "ghost"
-                        size: "small"
-                        KeyNavigation.left: confirmRenameButton
-                        KeyNavigation.right: confirmRenameButton
-                        KeyNavigation.tab: confirmRenameButton
-                        KeyNavigation.backtab: confirmRenameButton
-                        Keys.onLeftPressed: confirmRenameButton.forceActiveFocus()
-                        Keys.onRightPressed: confirmRenameButton.forceActiveFocus()
-                        Keys.onEscapePressed: renameDialog.reject()
-                        onClicked: renameDialog.reject()
-                    }
-
-                    Q.Button {
-                        id: confirmRenameButton
-                        text: "Rename"
-                        variant: "primary"
-                        size: "small"
-                        KeyNavigation.left: cancelRenameButton
-                        KeyNavigation.right: cancelRenameButton
-                        KeyNavigation.tab: cancelRenameButton
-                        KeyNavigation.backtab: cancelRenameButton
-                        Keys.onLeftPressed: cancelRenameButton.forceActiveFocus()
-                        Keys.onRightPressed: cancelRenameButton.forceActiveFocus()
-                        Keys.onEscapePressed: renameDialog.reject()
-                        onClicked: renameDialog.accept()
-                    }
-                }
-            }
+            closeDialog()
         }
     }
 
-    // ── New Folder dialog ───────────────────────────────────────────────────
+    // ── New Folder / New File dialogs ───────────────────────────────────────
     property string newItemParentPath: ""
 
-    Item {
+    AnimatedInputDialog {
         id: newFolderDialog
-        anchors.fill: parent
-        visible: false
-        z: 1000
-        Accessible.role: Accessible.Dialog
-        Accessible.name: "New folder"
-
-        function open() {
-            newFolderErrorText.text = ""
-            visible = true
-            folderBox.opacity = 0
-            folderBox.scale = 0.88
-            folderBox.yOffset = -8
-            folderOpenAnim.start()
-            Qt.callLater(function() { newFolderField.inputItem.forceActiveFocus() })
-            newFolderField.forceActiveFocus()
-        }
-        function accept() {
-            var name = newFolderField.text.trim()
-            if (newItemParentPath === "" || name === "") return
-            var createdPath = newItemParentPath + "/" + name
+        title: "New Folder"
+        placeholder: "Folder name"
+        confirmText: "Create"
+        onSubmitted: (name) => {
+            if (root.newItemParentPath === "")
+                return
+            var createdPath = root.newItemParentPath + "/" + name
             if (fileOps.pathExists(createdPath)) {
-                newFolderErrorText.text = "\"" + name + "\" already exists"
+                showError("\"" + name + "\" already exists")
                 return
             }
-            if (fileOps.isRemotePath(newItemParentPath)) {
-                fileOps.createFolder(newItemParentPath, name)
+            if (fileOps.isRemotePath(root.newItemParentPath)) {
+                fileOps.createFolder(root.newItemParentPath, name)
                 root.refreshAllPanes()
             } else {
-                undoManager.createFolder(newItemParentPath, name)
+                undoManager.createFolder(root.newItemParentPath, name)
             }
             if (fileOps.pathExists(createdPath))
                 root.focusPathInPane(root.activePaneIndex, createdPath, true)
-            folderCloseAnim.start()
-        }
-        function reject() { folderCloseAnim.start() }
-
-        ParallelAnimation {
-            id: folderOpenAnim
-            NumberAnimation {
-                target: folderBox; property: "opacity"
-                from: 0; to: 1; duration: Theme.animDurationFast
-                easing.type: Theme.animEasingEnter; easing.bezierCurve: Theme.animBezierCurve
-            }
-            NumberAnimation {
-                target: folderBox; property: "scale"
-                from: 0.88; to: 1; duration: Theme.animDurationSlow
-                easing.type: Easing.OutBack
-                easing.overshoot: 0.8
-            }
-            NumberAnimation {
-                target: folderBox; property: "yOffset"
-                from: -8; to: 0; duration: Theme.animDuration
-                easing.type: Theme.animEasingEnter; easing.bezierCurve: Theme.animBezierCurve
-            }
-        }
-        SequentialAnimation {
-            id: folderCloseAnim
-            ParallelAnimation {
-                NumberAnimation {
-                    target: folderBox; property: "opacity"
-                    to: 0; duration: Theme.animDurationFast
-                    easing.type: Theme.animEasingExit; easing.bezierCurve: Theme.animBezierCurve
-                }
-                NumberAnimation {
-                    target: folderBox; property: "scale"
-                    to: 0.92; duration: Theme.animDurationFast
-                    easing.type: Theme.animEasingExit; easing.bezierCurve: Theme.animBezierCurve
-                }
-                NumberAnimation {
-                    target: folderBox; property: "yOffset"
-                    to: -4; duration: Theme.animDurationFast
-                    easing.type: Theme.animEasingExit; easing.bezierCurve: Theme.animBezierCurve
-                }
-            }
-            ScriptAction { script: newFolderDialog.visible = false }
-        }
-
-        MouseArea {
-            anchors.fill: parent
-            onClicked: newFolderDialog.reject()
-        }
-
-        Item {
-            id: folderBox
-            width: 340
-            height: folderCard.implicitHeight
-            anchors.centerIn: parent
-
-            opacity: 0
-            scale: 0.88
-            transformOrigin: Item.Center
-
-            property real yOffset: 0
-            transform: Translate { y: folderBox.yOffset }
-
-            Q.Card {
-                id: folderCard
-                anchors.fill: parent
-                title: "New Folder"
-                padding: 20
-                color: Theme.mantle
-                border.color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.1)
-
-                Q.TextField {
-                    id: newFolderField
-                    Layout.fillWidth: true
-                    autoFocus: true
-                    variant: "filled"
-                    placeholder: "Folder name"
-                    onTextChanged: newFolderErrorText.text = ""
-                    Keys.onReturnPressed: newFolderDialog.accept()
-                    Keys.onEscapePressed: newFolderDialog.reject()
-                }
-
-                Text {
-                    id: newFolderErrorText
-                    Layout.fillWidth: true
-                    visible: text !== ""
-                    color: Theme.error
-                    font.pointSize: Theme.fontSmall
-                    wrapMode: Text.WordWrap
-                }
-
-                RowLayout {
-                    Layout.alignment: Qt.AlignRight
-                    spacing: 12
-
-                    Q.Button {
-                        id: cancelNewFolderButton
-                        text: "Cancel"
-                        variant: "ghost"
-                        size: "small"
-                        KeyNavigation.left: confirmNewFolderButton
-                        KeyNavigation.right: confirmNewFolderButton
-                        KeyNavigation.tab: confirmNewFolderButton
-                        KeyNavigation.backtab: confirmNewFolderButton
-                        Keys.onLeftPressed: confirmNewFolderButton.forceActiveFocus()
-                        Keys.onRightPressed: confirmNewFolderButton.forceActiveFocus()
-                        Keys.onEscapePressed: newFolderDialog.reject()
-                        onClicked: newFolderDialog.reject()
-                    }
-
-                    Q.Button {
-                        id: confirmNewFolderButton
-                        text: "Create"
-                        variant: "primary"
-                        size: "small"
-                        KeyNavigation.left: cancelNewFolderButton
-                        KeyNavigation.right: cancelNewFolderButton
-                        KeyNavigation.tab: cancelNewFolderButton
-                        KeyNavigation.backtab: cancelNewFolderButton
-                        Keys.onLeftPressed: cancelNewFolderButton.forceActiveFocus()
-                        Keys.onRightPressed: cancelNewFolderButton.forceActiveFocus()
-                        Keys.onEscapePressed: newFolderDialog.reject()
-                        onClicked: newFolderDialog.accept()
-                    }
-                }
-            }
+            closeDialog()
         }
     }
 
-    // ── New File dialog ─────────────────────────────────────────────────────
-    Item {
+    AnimatedInputDialog {
         id: newFileDialog
-        anchors.fill: parent
-        visible: false
-        z: 1000
-        Accessible.role: Accessible.Dialog
-        Accessible.name: "New file"
-
-        function open() {
-            newFileErrorText.text = ""
-            visible = true
-            fileBox.opacity = 0
-            fileBox.scale = 0.88
-            fileBox.yOffset = -8
-            fileOpenAnim.start()
-            Qt.callLater(function() { newFileField.inputItem.forceActiveFocus() })
-            newFileField.forceActiveFocus()
-        }
-        function accept() {
-            var name = newFileField.text.trim()
-            if (newItemParentPath === "" || name === "") return
-            var createdPath = newItemParentPath + "/" + name
+        title: "New File"
+        placeholder: "File name"
+        confirmText: "Create"
+        onSubmitted: (name) => {
+            if (root.newItemParentPath === "")
+                return
+            var createdPath = root.newItemParentPath + "/" + name
             if (fileOps.pathExists(createdPath)) {
-                newFileErrorText.text = "\"" + name + "\" already exists"
+                showError("\"" + name + "\" already exists")
                 return
             }
-            if (fileOps.isRemotePath(newItemParentPath)) {
-                fileOps.createFile(newItemParentPath, name)
+            if (fileOps.isRemotePath(root.newItemParentPath)) {
+                fileOps.createFile(root.newItemParentPath, name)
                 root.refreshAllPanes()
             } else {
-                undoManager.createFile(newItemParentPath, name)
+                undoManager.createFile(root.newItemParentPath, name)
             }
             if (fileOps.pathExists(createdPath))
                 root.focusPathInPane(root.activePaneIndex, createdPath, true)
-            fileCloseAnim.start()
-        }
-        function reject() { fileCloseAnim.start() }
-
-        ParallelAnimation {
-            id: fileOpenAnim
-            NumberAnimation {
-                target: fileBox; property: "opacity"
-                from: 0; to: 1; duration: Theme.animDurationFast
-                easing.type: Theme.animEasingEnter; easing.bezierCurve: Theme.animBezierCurve
-            }
-            NumberAnimation {
-                target: fileBox; property: "scale"
-                from: 0.88; to: 1; duration: Theme.animDurationSlow
-                easing.type: Easing.OutBack
-                easing.overshoot: 0.8
-            }
-            NumberAnimation {
-                target: fileBox; property: "yOffset"
-                from: -8; to: 0; duration: Theme.animDuration
-                easing.type: Theme.animEasingEnter; easing.bezierCurve: Theme.animBezierCurve
-            }
-        }
-        SequentialAnimation {
-            id: fileCloseAnim
-            ParallelAnimation {
-                NumberAnimation {
-                    target: fileBox; property: "opacity"
-                    to: 0; duration: Theme.animDurationFast
-                    easing.type: Theme.animEasingExit; easing.bezierCurve: Theme.animBezierCurve
-                }
-                NumberAnimation {
-                    target: fileBox; property: "scale"
-                    to: 0.92; duration: Theme.animDurationFast
-                    easing.type: Theme.animEasingExit; easing.bezierCurve: Theme.animBezierCurve
-                }
-                NumberAnimation {
-                    target: fileBox; property: "yOffset"
-                    to: -4; duration: Theme.animDurationFast
-                    easing.type: Theme.animEasingExit; easing.bezierCurve: Theme.animBezierCurve
-                }
-            }
-            ScriptAction { script: newFileDialog.visible = false }
-        }
-
-        MouseArea {
-            anchors.fill: parent
-            onClicked: newFileDialog.reject()
-        }
-
-        Item {
-            id: fileBox
-            width: 340
-            height: fileCard.implicitHeight
-            anchors.centerIn: parent
-
-            opacity: 0
-            scale: 0.88
-            transformOrigin: Item.Center
-
-            property real yOffset: 0
-            transform: Translate { y: fileBox.yOffset }
-
-            Q.Card {
-                id: fileCard
-                anchors.fill: parent
-                title: "New File"
-                color: Theme.mantle
-                border.color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.1)
-                padding: 20
-
-                Q.TextField {
-                    id: newFileField
-                    Layout.fillWidth: true
-                    autoFocus: true
-                    variant: "filled"
-                    placeholder: "File name"
-                    onTextChanged: newFileErrorText.text = ""
-                    Keys.onReturnPressed: newFileDialog.accept()
-                    Keys.onEscapePressed: newFileDialog.reject()
-                }
-
-                Text {
-                    id: newFileErrorText
-                    Layout.fillWidth: true
-                    visible: text !== ""
-                    color: Theme.error
-                    font.pointSize: Theme.fontSmall
-                    wrapMode: Text.WordWrap
-                }
-
-                RowLayout {
-                    Layout.alignment: Qt.AlignRight
-                    spacing: 12
-
-                    Q.Button {
-                        id: cancelNewFileButton
-                        text: "Cancel"
-                        variant: "ghost"
-                        size: "small"
-                        KeyNavigation.left: confirmNewFileButton
-                        KeyNavigation.right: confirmNewFileButton
-                        KeyNavigation.tab: confirmNewFileButton
-                        KeyNavigation.backtab: confirmNewFileButton
-                        Keys.onLeftPressed: confirmNewFileButton.forceActiveFocus()
-                        Keys.onRightPressed: confirmNewFileButton.forceActiveFocus()
-                        Keys.onEscapePressed: newFileDialog.reject()
-                        onClicked: newFileDialog.reject()
-                    }
-
-                    Q.Button {
-                        id: confirmNewFileButton
-                        text: "Create"
-                        variant: "primary"
-                        size: "small"
-                        KeyNavigation.left: cancelNewFileButton
-                        KeyNavigation.right: cancelNewFileButton
-                        KeyNavigation.tab: cancelNewFileButton
-                        KeyNavigation.backtab: cancelNewFileButton
-                        Keys.onLeftPressed: cancelNewFileButton.forceActiveFocus()
-                        Keys.onRightPressed: cancelNewFileButton.forceActiveFocus()
-                        Keys.onEscapePressed: newFileDialog.reject()
-                        onClicked: newFileDialog.accept()
-                    }
-                }
-            }
+            closeDialog()
         }
     }
+
 
     // ── App Chooser dialog ──────────────────────────────────────────────────
     Q.Dialog {
