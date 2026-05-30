@@ -8,17 +8,16 @@ GridView {
     Accessible.role: Accessible.List
     Accessible.name: "File grid"
 
-    property var selectedIndices: []
-    property int lastSelectedIndex: -1   // anchor for shift-selection
-    property int cursorIndex: -1         // moving end for keyboard navigation
+    property alias selectedIndices: selectionController.selectedIndices
+    property alias lastSelectedIndex: selectionController.lastSelectedIndex   // anchor for shift-selection
+    property alias cursorIndex: selectionController.cursorIndex               // moving end for keyboard navigation
 
     // Current directory path (used as drop target)
     property string currentPath: ""
     onCurrentPathChanged: {
-        clearSelection()
-        pendingFocusPath = ""
-        typeAheadBuffer = ""
-        typeAheadTimer.stop()
+        selectionController.clearSelection()
+        selectionController.pendingFocusPath = ""
+        selectionController.resetTypeAhead()
         // Reset any sticky state from the outgoing directory (rubberband,
         // in-progress drag) so wheel scrolling works immediately in the
         // new one instead of waiting for the user to click.
@@ -31,10 +30,18 @@ GridView {
     signal interactionStarted()
     signal transferRequested(var paths, string destinationPath, bool moveOperation)
 
-    property string pendingFocusPath: ""
-    property bool pendingFocusReveal: true
-    property bool focusScheduled: false
-    property string typeAheadBuffer: ""
+    SelectionController {
+        id: selectionController
+        fileModel: root.model
+        itemCount: root.count
+        onEnsureIndexVisible: (index, mode) => root.positionViewAtIndex(
+            index, mode === selectionController.positionBeginning ? GridView.Beginning : GridView.Contain)
+        onRequestFocus: root.forceActiveFocus()
+    }
+
+    // Forwarders for external callers (FileViewContainer / Main.qml).
+    function focusPath(path, reveal) { selectionController.focusPath(path, reveal) }
+    function selectAll() { selectionController.selectAll() }
 
     clip: true
     reuseItems: true
@@ -140,39 +147,20 @@ GridView {
         positionViewAtIndex(next, GridView.Contain)
     }
 
-    function moveSelectionTo(index, extend) {
-        wheelScroller.stopAndSettle()
-        if (count <= 0)
-            return
-
-        var next = Math.max(0, Math.min(count - 1, index))
-        if (extend && lastSelectedIndex >= 0) {
-            var lo = Math.min(next, lastSelectedIndex)
-            var hi = Math.max(next, lastSelectedIndex)
-            var newSel = []
-            for (var i = lo; i <= hi; i++) newSel.push(i)
-            selectedIndices = newSel
-        } else {
-            selectedIndices = [next]
-            lastSelectedIndex = next
-        }
-
-        cursorIndex = next
-        positionViewAtIndex(next, GridView.Contain)
-    }
-
     Keys.onLeftPressed: (event) => moveSelection(-1, event.modifiers & Qt.ShiftModifier)
     Keys.onRightPressed: (event) => moveSelection(1, event.modifiers & Qt.ShiftModifier)
     Keys.onUpPressed: (event) => moveSelection(-effectiveColumnCount, event.modifiers & Qt.ShiftModifier)
     Keys.onDownPressed: (event) => moveSelection(effectiveColumnCount, event.modifiers & Qt.ShiftModifier)
     Keys.onPressed: (event) => {
         if (event.key === Qt.Key_Home) {
-            moveSelectionTo(0, event.modifiers & Qt.ShiftModifier)
+            wheelScroller.stopAndSettle()
+            selectionController.moveSelectionTo(0, event.modifiers & Qt.ShiftModifier)
             event.accepted = true
             return
         }
         if (event.key === Qt.Key_End) {
-            moveSelectionTo(count - 1, event.modifiers & Qt.ShiftModifier)
+            wheelScroller.stopAndSettle()
+            selectionController.moveSelectionTo(count - 1, event.modifiers & Qt.ShiftModifier)
             event.accepted = true
             return
         }
@@ -183,23 +171,15 @@ GridView {
             return
         }
         if (event.key === Qt.Key_Escape) {
-            if (typeAheadBuffer.length > 0) {
-                typeAheadBuffer = ""
-                typeAheadTimer.stop()
+            if (selectionController.typeAheadBuffer.length > 0) {
+                selectionController.resetTypeAhead()
             } else if (selectedIndices.length > 0) {
-                clearSelection()
+                selectionController.clearSelection()
             }
             event.accepted = true
             return
         }
-        handleTypeAhead(event)
-    }
-
-    Timer {
-        id: typeAheadTimer
-        interval: 1000
-        repeat: false
-        onTriggered: root.typeAheadBuffer = ""
+        selectionController.handleTypeAhead(event)
     }
 
     ScrollBar.vertical: ScrollBar {
@@ -210,188 +190,12 @@ GridView {
         interactive: true
     }
 
-    function selectIndex(idx, ctrl, shift) {
-        if (shift && lastSelectedIndex >= 0) {
-            var lo = Math.min(idx, lastSelectedIndex)
-            var hi = Math.max(idx, lastSelectedIndex)
-            var newSel = ctrl ? selectedIndices.slice() : []
-            for (var i = lo; i <= hi; i++) {
-                if (newSel.indexOf(i) < 0) newSel.push(i)
-            }
-            selectedIndices = newSel
-        } else if (ctrl) {
-            var newSel2 = selectedIndices.slice()
-            var pos = newSel2.indexOf(idx)
-            if (pos >= 0)
-                newSel2.splice(pos, 1)
-            else
-                newSel2.push(idx)
-            selectedIndices = newSel2
-            lastSelectedIndex = idx
-        } else {
-            selectedIndices = [idx]
-            lastSelectedIndex = idx
-        }
-        cursorIndex = idx
-    }
-
-    function clearSelection() {
-        selectedIndices = []
-        lastSelectedIndex = -1
-        cursorIndex = -1
-    }
-
-    function pathForRow(row) {
-        if (!model || row < 0)
-            return ""
-
-        if (model.filePath)
-            return model.filePath(row)
-
-        return model.data(model.index(row, 0), 258 /* FilePathRole */) || ""
-    }
-
-    function fileNameForRow(row) {
-        if (!model || row < 0)
-            return ""
-
-        if (model.fileName)
-            return model.fileName(row)
-
-        return model.data(model.index(row, 0), 257 /* FileNameRole */) || ""
-    }
-
-    function isDirForRow(row) {
-        if (!model || row < 0)
-            return false
-
-        if (model.isDir)
-            return model.isDir(row)
-
-        return model.data(model.index(row, 0), 265 /* IsDirRole */) || false
-    }
-
-    function rowForPath(path) {
-        if (!path)
-            return -1
-
-        for (var i = 0; i < count; ++i) {
-            if (pathForRow(i) === path)
-                return i
-        }
-
-        return -1
-    }
-
-    function isPrintableTypeAheadText(text) {
-        return typeof text === "string" && text.length === 1 && /[^\x00-\x1f\x7f]/.test(text)
-    }
-
-    function findTypeAheadMatch(query, keepCurrentMatch) {
-        if (!query || count <= 0)
-            return -1
-
-        var needle = query.toLocaleLowerCase()
-        var current = cursorIndex >= 0 ? cursorIndex : (selectedIndices.length > 0 ? selectedIndices[selectedIndices.length - 1] : -1)
-        if (keepCurrentMatch && current >= 0 && fileNameForRow(current).toLocaleLowerCase().startsWith(needle))
-            return current
-
-        for (var step = 1; step <= count; ++step) {
-            var idx = current >= 0 ? (current + step) % count : step - 1
-            if (fileNameForRow(idx).toLocaleLowerCase().startsWith(needle))
-                return idx
-        }
-
-        return -1
-    }
-
-    function handleTypeAhead(event) {
-        if (event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))
-            return
-
-        if (event.key === Qt.Key_Backspace) {
-            if (typeAheadBuffer.length === 0)
-                return
-
-            typeAheadBuffer = typeAheadBuffer.slice(0, -1)
-            if (typeAheadBuffer.length > 0) {
-                typeAheadTimer.restart()
-                var backspaceMatch = findTypeAheadMatch(typeAheadBuffer, true)
-                if (backspaceMatch >= 0) {
-                    selectIndex(backspaceMatch, false, false)
-                    positionViewAtIndex(backspaceMatch, GridView.Contain)
-                }
-            } else {
-                typeAheadTimer.stop()
-            }
-            event.accepted = true
-            return
-        }
-
-        if (!isPrintableTypeAheadText(event.text))
-            return
-
-        var nextBuffer = typeAheadBuffer + event.text
-        var keepCurrentMatch = typeAheadBuffer.length > 0 && nextBuffer.startsWith(typeAheadBuffer)
-        var match = findTypeAheadMatch(nextBuffer, keepCurrentMatch)
-        if (match < 0) {
-            nextBuffer = event.text
-            match = findTypeAheadMatch(nextBuffer, false)
-        }
-
-        typeAheadBuffer = nextBuffer
-        typeAheadTimer.restart()
-        if (match >= 0) {
-            selectIndex(match, false, false)
-            positionViewAtIndex(match, GridView.Contain)
-        }
-        event.accepted = true
-    }
-
     function activateCurrentSelection() {
         var idx = cursorIndex >= 0 ? cursorIndex : (selectedIndices.length > 0 ? selectedIndices[selectedIndices.length - 1] : -1)
         if (idx < 0)
             return
 
-        root.fileActivated(pathForRow(idx), isDirForRow(idx))
-    }
-
-    function schedulePendingFocus() {
-        if (focusScheduled)
-            return
-
-        focusScheduled = true
-        Qt.callLater(function() {
-            focusScheduled = false
-            if (pendingFocusPath !== "")
-                focusPath(pendingFocusPath, pendingFocusReveal)
-        })
-    }
-
-    function focusPath(path, reveal) {
-        if (!path || !model)
-            return false
-
-        var idx = rowForPath(path)
-        if (idx < 0) {
-            pendingFocusPath = path
-            pendingFocusReveal = (reveal !== false)
-            return false
-        }
-
-        pendingFocusPath = ""
-        pendingFocusReveal = true
-        forceActiveFocus()
-        selectIndex(idx, false, false)
-        if (reveal !== false)
-            positionViewAtIndex(idx, GridView.Contain)
-        return true
-    }
-
-    function selectAll() {
-        var all = []
-        for (var i = 0; i < count; i++) all.push(i)
-        selectedIndices = all
+        root.fileActivated(selectionController.pathForRow(idx), selectionController.isDirForRow(idx))
     }
 
     // Parse file paths from a drop event
@@ -435,7 +239,7 @@ GridView {
     // Start a drag from a delegate — uses C++ QDrag for system-wide DnD
     function beginDrag(filePath, iconName, fileName, mouseX, mouseY) {
         var paths = selectedIndices.length > 1
-            ? selectedIndices.map(function(i) { return pathForRow(i) })
+            ? selectedIndices.map(function(i) { return selectionController.pathForRow(i) })
             : [filePath]
         dragIconName = iconName
         dragFileName = selectedIndices.length > 1
@@ -478,11 +282,11 @@ GridView {
         ignoreUnknownSignals: true
 
         function onModelReset() {
-            root.schedulePendingFocus()
+            selectionController.schedulePendingFocus()
         }
 
         function onRowsInserted() {
-            root.schedulePendingFocus()
+            selectionController.schedulePendingFocus()
         }
     }
 
@@ -728,7 +532,7 @@ GridView {
                 if (Math.sqrt(dx*dx + dy*dy) > 10) {
                     dragPending = false
                     if (!delegateItem.isSelected)
-                        root.selectIndex(delegateItem.index, false, false)
+                        selectionController.selectIndex(delegateItem.index, false, false)
                     // Map mouse to GridView coordinates
                     var mapped = ma.mapToItem(root, mouse.x, mouse.y)
                     root.beginDrag(
@@ -754,7 +558,7 @@ GridView {
                     // — standard file-manager behaviour. An already-selected
                     // item keeps the (possibly multi-) selection.
                     if (!delegateItem.isSelected)
-                        root.selectIndex(delegateItem.index, false, false)
+                        selectionController.selectIndex(delegateItem.index, false, false)
                     root.contextMenuRequested(
                         delegateItem.filePath,
                         delegateItem.isDir,
@@ -762,7 +566,7 @@ GridView {
                     )
                     return
                 }
-                root.selectIndex(
+                selectionController.selectIndex(
                     delegateItem.index,
                     mouse.modifiers & Qt.ControlModifier,
                     mouse.modifiers & Qt.ShiftModifier
@@ -880,7 +684,7 @@ GridView {
                 rubberBandJustFinished = false
                 return
             }
-            root.clearSelection()
+            selectionController.clearSelection()
         }
 
         onPositionChanged: (mouse) => {
@@ -909,17 +713,10 @@ GridView {
                 if (!item) continue
                 var itemPos = root.mapFromItem(item, 0, 0)
                 var itemRect = Qt.rect(itemPos.x, itemPos.y, item.width, item.height)
-                if (rectsIntersect(rb, itemRect))
+                if (selectionController.rectsIntersect(rb, itemRect))
                     newSel.push(i)
             }
             root.selectedIndices = newSel
-        }
-
-        function rectsIntersect(a, b) {
-            return a.x < b.x + b.width  &&
-                   a.x + a.width  > b.x &&
-                   a.y < b.y + b.height &&
-                   a.y + a.height > b.y
         }
     }
 
