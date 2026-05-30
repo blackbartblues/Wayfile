@@ -153,8 +153,15 @@ FocusScope {
         }
         var fp = currentColumn.pathForRow(idx)
         var isDir = currentColumn.isDirForRow(idx)
-        previewColumn.previewFilePath = fp
+        // Set previewIsDir BEFORE previewFilePath. Assigning previewFilePath
+        // synchronously fires onPreviewFilePathChanged -> refreshPreview(),
+        // which reads previewIsDir to pick the preview type (isImage/isPdf/
+        // isText are gated on !previewIsDir). Setting it afterward left the
+        // first refresh running against the previous item's previewIsDir
+        // (e.g. true from a folder), so every type flag was false and the
+        // first preview after a directory load rendered blank.
         previewColumn.previewIsDir = isDir
+        previewColumn.previewFilePath = fp
         if (isDir) {
             millerPreviewModel.setRootPath(fp)
         } else {
