@@ -210,9 +210,10 @@ Item {
             textPreview = ({ content: "", truncated: false, isBinary: false, error: "" })
 
         if (isPdf) {
-            pdfPreview = previewService.loadPdfPreview(filePath)
-            if (pdfPageIndex >= (pdfPreview.pageCount || 0))
-                pdfPageIndex = 0
+            // pdfinfo can block for seconds, so load asynchronously and show a
+            // placeholder until previewReady.
+            pdfPreview = ({ localPath: "", pageCount: 0, error: "", loading: true })
+            previewService.requestPdfPreview(filePath)
         } else {
             pdfPreview = ({ localPath: "", pageCount: 0, error: "" })
         }
@@ -245,6 +246,11 @@ Item {
         function onPreviewReady(kind, path, result) {
             if (kind === "archive" && path === root.filePath)
                 directoryPreview = result
+            else if (kind === "pdf" && path === root.filePath) {
+                pdfPreview = result
+                if (pdfPageIndex >= (pdfPreview.pageCount || 0))
+                    pdfPageIndex = 0
+            }
         }
     }
 
@@ -735,6 +741,16 @@ Item {
                                 color: Theme.text
                                 font.pointSize: Theme.fontNormal
                             }
+                        }
+
+                        // Async pdfinfo placeholder: shown while the page count
+                        // is still being read (localPath/error not yet set).
+                        Text {
+                            anchors.centerIn: parent
+                            visible: root.isPdf && root.pdfPreview.loading === true
+                            text: "Reading PDF…"
+                            color: Theme.subtext
+                            font.pointSize: Theme.fontNormal
                         }
 
                         Flickable {

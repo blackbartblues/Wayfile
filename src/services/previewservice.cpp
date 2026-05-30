@@ -279,13 +279,17 @@ PreviewService::~PreviewService()
     // while process is still running") or block during teardown. Disconnect
     // first so the finished/errorOccurred lambdas — which touch members — can't
     // fire while the object is being destroyed.
-    const QList<QProcess *> procs = m_archiveProcs.values();
-    m_archiveProcs.clear();
-    for (QProcess *proc : procs) {
-        proc->disconnect(this);
-        proc->kill();
-        proc->waitForFinished(100);
-    }
+    const auto stopAll = [this](QHash<QString, QProcess *> &procMap) {
+        const QList<QProcess *> procs = procMap.values();
+        procMap.clear();
+        for (QProcess *proc : procs) {
+            proc->disconnect(this);
+            proc->kill();
+            proc->waitForFinished(100);
+        }
+    };
+    stopAll(m_archiveProcs);
+    stopAll(m_pdfProcs);
 }
 
 bool PreviewService::pdfPreviewAvailable() const
@@ -611,6 +615,26 @@ QVariantMap PreviewService::loadFontPreview(const QString &path)
     return result;
 }
 
+QVariantMap PreviewService::parsePdfInfo(const QString &output, const QString &localPath)
+{
+    QVariantMap result;
+    result["localPath"] = QString();
+    result["pageCount"] = 0;
+    result["error"] = QString();
+
+    static const QRegularExpression pagesRe(QStringLiteral(R"(^Pages:\s*(\d+))"),
+                                            QRegularExpression::MultilineOption);
+    const auto m = pagesRe.match(output);
+    if (!m.hasMatch()) {
+        result["error"] = QStringLiteral("Unable to read PDF page count");
+        return result;
+    }
+
+    result["localPath"] = localPath;
+    result["pageCount"] = m.captured(1).toInt();
+    return result;
+}
+
 QVariantMap PreviewService::loadPdfPreview(const QString &path) const
 {
     QVariantMap result;
@@ -636,18 +660,75 @@ QVariantMap PreviewService::loadPdfPreview(const QString &path) const
         return result;
     }
 
-    const QString out = QString::fromUtf8(proc.readAllStandardOutput());
-    static const QRegularExpression pagesRe(QStringLiteral(R"(^Pages:\s*(\d+))"),
-                                            QRegularExpression::MultilineOption);
-    const auto m = pagesRe.match(out);
-    if (!m.hasMatch()) {
-        result["error"] = QStringLiteral("Unable to read PDF page count");
-        return result;
+    return parsePdfInfo(QString::fromUtf8(proc.readAllStandardOutput()), localPath);
+}
+
+void PreviewService::requestPdfPreview(const QString &path)
+{
+    // A pdfinfo for this exact path is already running. Its previewReady will
+    // reach every consumer guarding on this path, so don't start a duplicate —
+    // this also means two panes previewing the same PDF share one process.
+    if (m_pdfProcs.contains(path))
+        return;
+
+    const QString localPath = localPreviewPath(path);
+    if (localPath.isEmpty()) {
+        QVariantMap result;
+        result["localPath"] = QString();
+        result["pageCount"] = 0;
+        result["error"] = QStringLiteral("Unable to prepare PDF preview");
+        emit previewReady(QStringLiteral("pdf"), path, result);
+        return;
     }
 
-    result["localPath"] = localPath;
-    result["pageCount"] = m.captured(1).toInt();
-    return result;
+    if (!pdfPreviewAvailable()) {
+        QVariantMap result;
+        result["localPath"] = QString();
+        result["pageCount"] = 0;
+        result["error"] = QStringLiteral("Install poppler-utils for PDF preview");
+        emit previewReady(QStringLiteral("pdf"), path, result);
+        return;
+    }
+
+    auto *proc = new QProcess(this);
+    m_pdfProcs.insert(path, proc);
+
+    connect(proc, &QProcess::finished, this,
+            [this, proc, path, localPath](int code, QProcess::ExitStatus status) {
+                // Ignore if this proc is no longer the tracked pdfinfo for
+                // `path` (superseded/cancelled). value() defaults to nullptr.
+                if (m_pdfProcs.value(path) != proc) {
+                    proc->deleteLater();
+                    return;
+                }
+                m_pdfProcs.remove(path);
+                QVariantMap result;
+                if (status != QProcess::NormalExit || code != 0) {
+                    result["localPath"] = QString();
+                    result["pageCount"] = 0;
+                    result["error"] = QStringLiteral("Unable to open PDF document");
+                } else {
+                    result = parsePdfInfo(QString::fromUtf8(proc->readAllStandardOutput()), localPath);
+                }
+                emit previewReady(QStringLiteral("pdf"), path, result);
+                proc->deleteLater();
+            });
+    connect(proc, &QProcess::errorOccurred, this,
+            [this, proc, path](QProcess::ProcessError) {
+                if (m_pdfProcs.value(path) != proc) {
+                    proc->deleteLater();
+                    return;
+                }
+                m_pdfProcs.remove(path);
+                QVariantMap result;
+                result["localPath"] = QString();
+                result["pageCount"] = 0;
+                result["error"] = QStringLiteral("Unable to open PDF document");
+                emit previewReady(QStringLiteral("pdf"), path, result);
+                proc->deleteLater();
+            });
+
+    proc->start(QStringLiteral("pdfinfo"), {localPath});
 }
 
 QByteArray PreviewService::readPathBytes(const QString &path, qint64 maxBytes, bool *truncated,

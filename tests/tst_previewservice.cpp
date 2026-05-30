@@ -298,6 +298,109 @@ private slots:
         QVERIFY2(seenPaths.contains(a), "first archive listing was lost (single-slot regression)");
         QVERIFY2(seenPaths.contains(b), "second archive listing was lost");
     }
+
+    // Write a tiny valid single-page PDF via QPdfWriter so the async pdf tests
+    // don't depend on any external PDF fixture. Returns the path, or empty.
+    static QString makePdf(const QString &dirPath, const QString &name)
+    {
+        const QString path = dirPath + "/" + name;
+        QPdfWriter writer(path);
+        writer.setPageSize(QPageSize(QPageSize::A4));
+        QPainter painter(&writer);
+        painter.drawText(QPointF(72.0, 100.0), QStringLiteral("Async PDF Test"));
+        painter.end();
+        return QFileInfo::exists(path) ? path : QString();
+    }
+
+    void testRequestPdfPreviewAsync()
+    {
+        PreviewService service;
+        if (!service.pdfPreviewAvailable())
+            QSKIP("PDF preview support is unavailable in this build");
+
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString pdfPath = makePdf(dir.path(), "async.pdf");
+        QVERIFY(!pdfPath.isEmpty());
+
+        QSignalSpy spy(&service, &PreviewService::previewReady);
+        service.requestPdfPreview(pdfPath);
+
+        QVERIFY(spy.wait(10000));
+        QCOMPARE(spy.count(), 1);
+
+        const QList<QVariant> args = spy.takeFirst();
+        QCOMPARE(args.at(0).toString(), QStringLiteral("pdf")); // kind
+        QCOMPARE(args.at(1).toString(), pdfPath);               // path
+        const QVariantMap result = args.at(2).toMap();
+
+        // Async result must be byte-for-byte identical to the sync loader for
+        // localPath/pageCount/error so QML bindings behave the same.
+        const QVariantMap sync = service.loadPdfPreview(pdfPath);
+        QCOMPARE(result.value("error").toString(), sync.value("error").toString());
+        QCOMPARE(result.value("localPath").toString(), sync.value("localPath").toString());
+        QCOMPARE(result.value("pageCount").toInt(), sync.value("pageCount").toInt());
+        QCOMPARE(result.value("error").toString(), QString());
+        QCOMPARE(result.value("localPath").toString(), pdfPath);
+        QVERIFY(result.value("pageCount").toInt() >= 1);
+    }
+
+    void testDuplicatePdfRequestDeduped()
+    {
+        PreviewService service;
+        if (!service.pdfPreviewAvailable())
+            QSKIP("PDF preview support is unavailable in this build");
+
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString pdfPath = makePdf(dir.path(), "dup.pdf");
+        QVERIFY(!pdfPath.isEmpty());
+
+        QSignalSpy spy(&service, &PreviewService::previewReady);
+        // Two requests for the SAME path before the event loop spins: the
+        // second must be deduped onto the first's in-flight process, so exactly
+        // one previewReady is emitted.
+        service.requestPdfPreview(pdfPath);
+        service.requestPdfPreview(pdfPath);
+
+        QVERIFY(spy.wait(10000));
+        QTest::qWait(200); // give any erroneous second emission time to arrive
+        QCOMPARE(spy.count(), 1);
+    }
+
+    void testConcurrentPdfPreviewsBothEmit()
+    {
+        // Regression: previewService is shared across every supertab pane's
+        // FileMillerView plus the global QuickPreview. A single in-flight slot
+        // would let a second consumer's request cancel the first's pdfinfo,
+        // leaving that consumer stuck on "Reading PDF…" forever. Two concurrent
+        // requests for DIFFERENT paths must each emit.
+        PreviewService service;
+        if (!service.pdfPreviewAvailable())
+            QSKIP("PDF preview support is unavailable in this build");
+
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString a = makePdf(dir.path(), "alpha.pdf");
+        const QString b = makePdf(dir.path(), "beta.pdf");
+        QVERIFY(!a.isEmpty());
+        QVERIFY(!b.isEmpty());
+
+        QSignalSpy spy(&service, &PreviewService::previewReady);
+        service.requestPdfPreview(a);
+        service.requestPdfPreview(b);
+
+        QSet<QString> seenPaths;
+        while (seenPaths.size() < 2 && spy.wait(5000)) {
+            while (!spy.isEmpty())
+                seenPaths.insert(spy.takeFirst().at(1).toString());
+        }
+        while (!spy.isEmpty())
+            seenPaths.insert(spy.takeFirst().at(1).toString());
+
+        QVERIFY2(seenPaths.contains(a), "first pdf preview was lost (single-slot regression)");
+        QVERIFY2(seenPaths.contains(b), "second pdf preview was lost");
+    }
 };
 
 QTEST_MAIN(TestPreviewService)

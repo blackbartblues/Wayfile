@@ -34,6 +34,7 @@ public:
     // it has since navigated away from. The synchronous load* variants above
     // stay for tests / callers that want a blocking result.
     Q_INVOKABLE void requestArchivePreview(const QString &path, int maxEntries = 200);
+    Q_INVOKABLE void requestPdfPreview(const QString &path);
     Q_INVOKABLE QVariantMap loadFontPreview(const QString &path);
     Q_INVOKABLE QString localPreviewPath(const QString &path) const;
 
@@ -45,9 +46,9 @@ public slots:
 
 signals:
     void supportChanged();
-    // kind is "archive" (more kinds as other loaders go async). path is the
-    // file the result is for; result has the same shape the matching sync
-    // load* method returns.
+    // kind is "archive" or "pdf" (more kinds as other loaders go async). path
+    // is the file the result is for; result has the same shape the matching
+    // sync load* method returns.
     void previewReady(const QString &kind, const QString &path, const QVariantMap &result);
 
 private:
@@ -64,6 +65,10 @@ private:
     static bool archiveListCommand(const QString &path, QString &program, QStringList &args);
     static QVariantMap parseArchiveListing(const QString &program, const QString &output,
                                            const QString &path, int maxEntries);
+    // Shared by the sync + async pdf loaders: parse pdfinfo stdout into the
+    // localPath/pageCount/error result map. localPath is set only on success;
+    // error is "Unable to read PDF page count" when the Pages line is absent.
+    static QVariantMap parsePdfInfo(const QString &output, const QString &localPath);
 
     int m_activeFontPreviewId = -1;
     QString m_activeFontPreviewPath;
@@ -75,4 +80,10 @@ private:
     // A duplicate request for a path already in flight is deduped: the one
     // process's previewReady reaches every consumer guarding on that path.
     QHash<QString, QProcess *> m_archiveProcs;
+    // In-flight async pdfinfo calls, keyed by pdf path. Same per-path keying
+    // and dedup rationale as m_archiveProcs: one shared service, many consumers
+    // (every supertab pane's FileMillerView plus the global QuickPreview), so a
+    // single slot would let one consumer cancel another's pdfinfo and leave it
+    // stuck "loading".
+    QHash<QString, QProcess *> m_pdfProcs;
 };

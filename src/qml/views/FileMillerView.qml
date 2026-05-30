@@ -1281,9 +1281,10 @@ FocusScope {
                     textPreview = ({ content: "", truncated: false, isBinary: false, error: "" })
 
                 if (isPdf) {
-                    pdfPreview = previewService.loadPdfPreview(previewFilePath)
-                    if (pdfPageIndex >= (pdfPreview.pageCount || 0))
-                        pdfPageIndex = 0
+                    // pdfinfo can block for seconds; load asynchronously and
+                    // show a placeholder until previewReady.
+                    pdfPreview = ({ localPath: "", pageCount: 0, error: "", loading: true })
+                    previewService.requestPdfPreview(previewFilePath)
                 } else {
                     pdfPreview = ({ localPath: "", pageCount: 0, error: "" })
                 }
@@ -1320,6 +1321,11 @@ FocusScope {
                 function onPreviewReady(kind, path, result) {
                     if (kind === "archive" && path === previewColumn.previewFilePath)
                         previewColumn.directoryPreview = result
+                    else if (kind === "pdf" && path === previewColumn.previewFilePath) {
+                        previewColumn.pdfPreview = result
+                        if (previewColumn.pdfPageIndex >= (previewColumn.pdfPreview.pageCount || 0))
+                            previewColumn.pdfPageIndex = 0
+                    }
                 }
             }
 
@@ -1567,6 +1573,16 @@ FocusScope {
                             color: Theme.text
                             font.pointSize: Theme.fontSmall
                         }
+                    }
+
+                    // Async pdfinfo placeholder: shown while the page count is
+                    // still being read (localPath/error not yet set).
+                    Text {
+                        anchors.centerIn: parent
+                        visible: previewColumn.isPdf && previewColumn.pdfPreview.loading === true
+                        text: "Reading PDF…"
+                        color: Theme.subtext
+                        font.pointSize: Theme.fontSmall
                     }
 
                     Column {
