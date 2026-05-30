@@ -10,3 +10,6 @@ CLAUDE.md
 docs/*
 !docs/screenshots/
 !docs/superpowers/
+
+# manual GUI test fixtures (scratch, not source)
+test/
