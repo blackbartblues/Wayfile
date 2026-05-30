@@ -12,6 +12,7 @@
 #include <QRegularExpression>
 #include <QRawFont>
 #include <QStandardPaths>
+#include <QTimer>
 #include <QUrl>
 
 namespace {
@@ -283,10 +284,11 @@ PreviewService::PreviewService(QObject *parent)
 
 PreviewService::~PreviewService()
 {
-    // Stop any in-flight archive listings so QProcess doesn't warn ("Destroyed
-    // while process is still running") or block during teardown. Disconnect
-    // first so the finished/errorOccurred lambdas — which touch members — can't
-    // fire while the object is being destroyed.
+    // Stop any in-flight async processes (archive listings, pdfinfo, bat
+    // highlights) so QProcess doesn't warn ("Destroyed while process is still
+    // running") or block during teardown. Disconnect first so the
+    // finished/errorOccurred lambdas — which touch members — can't fire while
+    // the object is being destroyed.
     const auto stopAll = [this](QHash<QString, QProcess *> &procMap) {
         const QList<QProcess *> procs = procMap.values();
         procMap.clear();
@@ -298,6 +300,23 @@ PreviewService::~PreviewService()
     };
     stopAll(m_archiveProcs);
     stopAll(m_pdfProcs);
+    stopAll(m_textProcs);
+}
+
+void PreviewService::armProcessTimeout(QProcess *proc, int ms)
+{
+    // Single-shot watchdog parented to the process. On expiry, kill it if it's
+    // still running; the kill drives the proc's finished/errorOccurred handler,
+    // which emits the fallback result and frees its per-path dedup slot. The
+    // timer dies with the process (proc->deleteLater() takes its child timer),
+    // so a process that finishes first never gets killed.
+    auto *timer = new QTimer(proc);
+    timer->setSingleShot(true);
+    connect(timer, &QTimer::timeout, proc, [proc]() {
+        if (proc->state() != QProcess::NotRunning)
+            proc->kill();
+    });
+    timer->start(ms);
 }
 
 bool PreviewService::pdfPreviewAvailable() const
@@ -311,7 +330,7 @@ void PreviewService::refreshSupport()
     emit supportChanged();
 }
 
-QVariantMap PreviewService::loadTextPreview(const QString &path, int maxBytes, int maxLines) const
+QVariantMap PreviewService::loadTextPlain(const QString &path, int maxBytes, int maxLines) const
 {
     QVariantMap result;
     bool truncated = false;
@@ -347,18 +366,113 @@ QVariantMap PreviewService::loadTextPreview(const QString &path, int maxBytes, i
     result["usesBat"] = false;
     result["error"] = QString();
     result["lineCount"] = lines.size();
+    return result;
+}
 
-    if (!binary) {
-        QString batError;
-        const QString fileName = QFileInfo(path).fileName();
-        const QByteArray coloredOutput = batPreview(data, fileName, maxLines, &batError);
-        if (!coloredOutput.isEmpty()) {
-            result["html"] = ansiToHtml(coloredOutput);
-            result["usesBat"] = true;
-        }
+QVariantMap PreviewService::loadTextPreview(const QString &path, int maxBytes, int maxLines) const
+{
+    // Plain text plus bat syntax highlighting in one blocking call (kept for
+    // tests / callers that want a synchronous result). The QML preview uses the
+    // async path instead: loadTextPlain() renders instantly, then
+    // requestTextHighlight() layers the highlight on without blocking the GUI.
+    QVariantMap result = loadTextPlain(path, maxBytes, maxLines);
+    if (!result.value("error").toString().isEmpty() || result.value("isBinary").toBool())
+        return result;
+
+    bool truncated = false;
+    QString error;
+    const QByteArray data = readPathBytes(path, maxBytes, &truncated, &error);
+    QString batError;
+    const QString fileName = QFileInfo(path).fileName();
+    const QByteArray coloredOutput = batPreview(data, fileName, maxLines, &batError);
+    if (!coloredOutput.isEmpty()) {
+        result["html"] = ansiToHtml(coloredOutput);
+        result["usesBat"] = true;
+    }
+    return result;
+}
+
+void PreviewService::requestTextHighlight(const QString &path, int maxBytes, int maxLines)
+{
+    // A highlight for this exact path is already running. Its previewReady will
+    // reach every consumer guarding on this path, so don't start a duplicate —
+    // this also means two panes previewing the same file share one bat process.
+    if (m_textProcs.contains(path))
+        return;
+
+    // The plain result is both the instant render the QML already showed and
+    // the fallback when there's nothing to highlight. Re-read the byte-capped
+    // data for bat's stdin (cheap — capped at maxBytes).
+    const QVariantMap plain = loadTextPlain(path, maxBytes, maxLines);
+    bool truncated = false;
+    QString error;
+    const QByteArray data = readPathBytes(path, maxBytes, &truncated, &error);
+    const QString executable = batExecutable();
+
+    if (!error.isEmpty() || plain.value("isBinary").toBool() || data.isEmpty()
+        || executable.isEmpty()) {
+        // Read error, binary, empty, or no bat installed — nothing to highlight.
+        // Emit the plain result once; no process is spawned.
+        emit previewReady(QStringLiteral("text"), path, plain);
+        return;
     }
 
-    return result;
+    QStringList args = {
+        QStringLiteral("--color=always"),
+        QStringLiteral("--paging=never"),
+        QStringLiteral("--style=plain"),
+        QStringLiteral("--wrap=never")
+    };
+    if (maxLines > 0)
+        args.append(QStringLiteral("--line-range=:%1").arg(maxLines));
+    const QString fileName = QFileInfo(path).fileName();
+    if (!fileName.isEmpty())
+        args.append(QStringLiteral("--file-name=") + fileName);
+    args.append(QStringLiteral("-"));
+
+    auto *proc = new QProcess(this);
+    m_textProcs.insert(path, proc);
+
+    connect(proc, &QProcess::finished, this,
+            [this, proc, path, plain](int code, QProcess::ExitStatus status) {
+                // Ignore if this proc is no longer the tracked highlight for
+                // `path` (superseded/cancelled). value() defaults to nullptr.
+                if (m_textProcs.value(path) != proc) {
+                    proc->deleteLater();
+                    return;
+                }
+                m_textProcs.remove(path);
+                QVariantMap result = plain;
+                if (status == QProcess::NormalExit && code == 0) {
+                    const QByteArray out = proc->readAllStandardOutput();
+                    if (!out.isEmpty()) {
+                        result["html"] = ansiToHtml(out);
+                        result["usesBat"] = true;
+                    }
+                }
+                // On non-zero exit / crash (incl. watchdog kill) fall back to the
+                // plain result so the preview still shows the file.
+                emit previewReady(QStringLiteral("text"), path, result);
+                proc->deleteLater();
+            });
+    connect(proc, &QProcess::errorOccurred, this,
+            [this, proc, path, plain](QProcess::ProcessError) {
+                if (m_textProcs.value(path) != proc) {
+                    proc->deleteLater();
+                    return;
+                }
+                m_textProcs.remove(path);
+                emit previewReady(QStringLiteral("text"), path, plain);
+                proc->deleteLater();
+            });
+
+    armProcessTimeout(proc, 10000);
+    proc->start(executable, args);
+    // QProcess buffers writes made while it's still starting and flushes them
+    // once it's running; closeWriteChannel closes stdin after that flush. bat
+    // deadlocks waiting on stdin if the channel is never closed.
+    proc->write(data);
+    proc->closeWriteChannel();
 }
 
 QVariantMap PreviewService::loadDirectoryPreview(const QString &path, int maxEntries) const
@@ -524,6 +638,7 @@ void PreviewService::requestArchivePreview(const QString &path, int maxEntries)
                 proc->deleteLater();
             });
 
+    armProcessTimeout(proc, 10000);
     proc->start(program, args);
 }
 
@@ -734,6 +849,7 @@ void PreviewService::requestPdfPreview(const QString &path)
                 proc->deleteLater();
             });
 
+    armProcessTimeout(proc, 5000);
     proc->start(QStringLiteral("pdfinfo"), {localPath});
 }
 

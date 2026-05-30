@@ -1285,10 +1285,16 @@ FocusScope {
                     return
                 }
 
-                if (isText)
-                    textPreview = previewService.loadTextPreview(previewFilePath)
-                else
+                if (isText) {
+                    // Render plain text instantly, then highlight asynchronously
+                    // so a slow/hung bat can't block the GUI. The highlighted
+                    // result arrives via onPreviewReady and fades in over
+                    // identical content.
+                    textPreview = previewService.loadTextPlain(previewFilePath)
+                    previewService.requestTextHighlight(previewFilePath)
+                } else {
                     textPreview = ({ content: "", truncated: false, isBinary: false, error: "" })
+                }
 
                 if (isPdf) {
                     // pdfinfo can block for seconds; load asynchronously and
@@ -1340,8 +1346,9 @@ FocusScope {
                 refreshPreview()
             }
 
-            // Async archive listing result. Guard on previewFilePath so a slow
-            // listing for a file we've navigated away from is discarded.
+            // Async preview results (archive listing, pdfinfo, text highlight).
+            // Guard on previewFilePath so a slow result for a file we've
+            // navigated away from is discarded.
             Connections {
                 target: previewService
                 function onPreviewReady(kind, path, result) {
@@ -1352,6 +1359,8 @@ FocusScope {
                         if (previewColumn.pdfPageIndex >= (previewColumn.pdfPreview.pageCount || 0))
                             previewColumn.pdfPageIndex = 0
                     }
+                    else if (kind === "text" && path === previewColumn.previewFilePath)
+                        previewColumn.textPreview = result
                 }
             }
 

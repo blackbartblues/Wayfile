@@ -429,6 +429,135 @@ private slots:
                      qPrintable(QStringLiteral("bat html must be bounded by the byte cap; got %1 bytes").arg(htmlBytes)));
         }
     }
+
+    void testRequestTextHighlightAsync()
+    {
+        if (!batAvailable())
+            QSKIP("bat not installed");
+
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString path = dir.path() + "/highlight.txt";
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write("alpha\nbeta\ngamma\n");
+        file.close();
+
+        PreviewService service;
+        QSignalSpy spy(&service, &PreviewService::previewReady);
+        service.requestTextHighlight(path);
+
+        QVERIFY(spy.wait(10000));
+        QCOMPARE(spy.count(), 1);
+
+        const QList<QVariant> args = spy.takeFirst();
+        QCOMPARE(args.at(0).toString(), QStringLiteral("text")); // kind
+        QCOMPARE(args.at(1).toString(), path);                   // path
+        const QVariantMap result = args.at(2).toMap();
+
+        QCOMPARE(result.value("error").toString(), QString());
+        QCOMPARE(result.value("isBinary").toBool(), false);
+        QCOMPARE(result.value("usesBat").toBool(), true);
+        QVERIFY(!result.value("html").toString().isEmpty());
+
+        // The async result is a superset of the plain one: identical content so
+        // the highlight fades in over the same text, plus html/usesBat.
+        const QVariantMap plain = service.loadTextPlain(path);
+        QCOMPARE(result.value("content").toString(), plain.value("content").toString());
+        QVERIFY(result.value("content").toString().contains("beta"));
+    }
+
+    void testTextHighlightWithoutBatEmitsPlain()
+    {
+        // No process is spawned when there's nothing to highlight; the plain
+        // result must still be emitted so the preview shows the file. Use a
+        // binary file so this holds whether or not bat is installed.
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString path = dir.path() + "/blob.bin";
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write(QByteArray::fromHex("89504e470d0a1a0a00000000"));
+        file.close();
+
+        PreviewService service;
+        QSignalSpy spy(&service, &PreviewService::previewReady);
+        // No bat process is spawned, so previewReady fires synchronously during
+        // the call — assert directly rather than waiting for a queued signal.
+        service.requestTextHighlight(path);
+
+        QCOMPARE(spy.count(), 1);
+        const QList<QVariant> args = spy.takeFirst();
+        QCOMPARE(args.at(0).toString(), QStringLiteral("text"));
+        QCOMPARE(args.at(1).toString(), path);
+        const QVariantMap result = args.at(2).toMap();
+        QCOMPARE(result.value("isBinary").toBool(), true);
+        QCOMPARE(result.value("usesBat").toBool(), false);
+    }
+
+    void testDuplicateTextHighlightDeduped()
+    {
+        if (!batAvailable())
+            QSKIP("bat not installed");
+
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString path = dir.path() + "/dup.txt";
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write("one\ntwo\n");
+        file.close();
+
+        PreviewService service;
+        QSignalSpy spy(&service, &PreviewService::previewReady);
+        // Two requests for the SAME path before the event loop spins: the second
+        // must be deduped onto the first's in-flight bat, so exactly one
+        // previewReady is emitted.
+        service.requestTextHighlight(path);
+        service.requestTextHighlight(path);
+
+        QVERIFY(spy.wait(10000));
+        QTest::qWait(200); // give any erroneous second emission time to arrive
+        QCOMPARE(spy.count(), 1);
+    }
+
+    void testConcurrentTextHighlightsBothEmit()
+    {
+        // Regression: previewService is shared across every supertab pane's
+        // FileMillerView plus the global QuickPreview. A single in-flight slot
+        // would let a second consumer's request cancel the first's bat, leaving
+        // that consumer's preview un-highlighted. Two concurrent requests for
+        // DIFFERENT paths must each emit.
+        if (!batAvailable())
+            QSKIP("bat not installed");
+
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString a = dir.path() + "/alpha.txt";
+        const QString b = dir.path() + "/beta.txt";
+        for (const QString &p : {a, b}) {
+            QFile f(p);
+            QVERIFY(f.open(QIODevice::WriteOnly));
+            f.write("content\n");
+            f.close();
+        }
+
+        PreviewService service;
+        QSignalSpy spy(&service, &PreviewService::previewReady);
+        service.requestTextHighlight(a);
+        service.requestTextHighlight(b);
+
+        QSet<QString> seenPaths;
+        while (seenPaths.size() < 2 && spy.wait(5000)) {
+            while (!spy.isEmpty())
+                seenPaths.insert(spy.takeFirst().at(1).toString());
+        }
+        while (!spy.isEmpty())
+            seenPaths.insert(spy.takeFirst().at(1).toString());
+
+        QVERIFY2(seenPaths.contains(a), "first text highlight was lost (single-slot regression)");
+        QVERIFY2(seenPaths.contains(b), "second text highlight was lost");
+    }
 };
 
 QTEST_MAIN(TestPreviewService)

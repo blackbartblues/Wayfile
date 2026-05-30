@@ -206,10 +206,15 @@ Item {
             return
         }
 
-        if (isText)
-            textPreview = previewService.loadTextPreview(filePath)
-        else
+        if (isText) {
+            // Render plain text instantly, then highlight asynchronously so a
+            // slow/hung bat can't block the GUI. The highlighted result arrives
+            // via onPreviewReady and just fades in over identical content.
+            textPreview = previewService.loadTextPlain(filePath)
+            previewService.requestTextHighlight(filePath)
+        } else {
             textPreview = ({ content: "", truncated: false, isBinary: false, error: "" })
+        }
 
         if (isPdf) {
             // pdfinfo can block for seconds, so load asynchronously and show a
@@ -255,9 +260,9 @@ Item {
         }
     }
 
-    // Async archive listing result. Guard on filePath so a slow listing for a
-    // file the user already navigated away from doesn't overwrite the current
-    // preview.
+    // Async preview results (archive listing, pdfinfo, text highlight). Guard on
+    // filePath so a slow result for a file the user already navigated away from
+    // doesn't overwrite the current preview.
     Connections {
         target: previewService
         function onPreviewReady(kind, path, result) {
@@ -268,6 +273,8 @@ Item {
                 if (pdfPageIndex >= (pdfPreview.pageCount || 0))
                     pdfPageIndex = 0
             }
+            else if (kind === "text" && path === root.filePath)
+                textPreview = result
         }
     }
 
