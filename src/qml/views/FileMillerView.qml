@@ -1123,6 +1123,7 @@ FocusScope {
             property var fontPreview: ({ family: "", styleName: "", weight: 400, italic: false, valid: false, error: "" })
             property var fileMetadata: ({})
             property string metadataHint: ""
+            property bool metadataLoading: false
             property int pdfPageIndex: 0
             property real pdfWheelAccumulator: 0
 
@@ -1258,6 +1259,7 @@ FocusScope {
                     directoryPreview = ({ entries: [], truncated: false, error: "", count: 0 })
                     pdfPreview = ({ localPath: "", pageCount: 0, error: "" })
                     fileMetadata = ({})
+                    metadataLoading = false
                     metadataHint = ""
                     return
                 }
@@ -1278,6 +1280,7 @@ FocusScope {
                     pdfPreview = ({ localPath: "", pageCount: 0, error: "" })
                     fontPreview = ({ family: "", styleName: "", weight: 400, italic: false, valid: false, error: "" })
                     fileMetadata = ({})
+                    metadataLoading = false
                     metadataHint = ""
                     return
                 }
@@ -1311,8 +1314,24 @@ FocusScope {
                 } else
                     directoryPreview = ({ entries: [], truncated: false, error: "", count: 0 })
 
-                fileMetadata = metadataExtractor.extract(previewFilePath)
+                // exiftool/ffprobe/pdfinfo can block for seconds; extract
+                // asynchronously and show a placeholder until metadataReady.
+                fileMetadata = ({})
+                metadataLoading = true
+                metadataExtractor.requestExtract(previewFilePath)
                 metadataHint = metadataExtractor.missingDepsHint(fileProps.mimeType || "")
+            }
+
+            // Async metadata result. Guard on previewFilePath so a slow
+            // extraction for a file we've navigated away from is discarded.
+            Connections {
+                target: metadataExtractor
+                function onMetadataReady(path, result) {
+                    if (path === previewColumn.previewFilePath) {
+                        previewColumn.fileMetadata = result
+                        previewColumn.metadataLoading = false
+                    }
+                }
             }
 
             onPreviewFilePathChanged: {
@@ -1988,6 +2007,16 @@ FocusScope {
                                     font.pointSize: Theme.fontSmall - 1
                                     wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                                 }
+                            }
+
+                            Text {
+                                width: parent.width
+                                visible: previewColumn.metadataLoading
+                                text: "Reading metadata…"
+                                color: Theme.muted
+                                font.pointSize: Theme.fontSmall - 1
+                                font.italic: true
+                                wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                             }
 
                             Text {

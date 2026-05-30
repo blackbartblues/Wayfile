@@ -1701,6 +1701,7 @@ ApplicationWindow {
 
         property var _metadataKeys: []
         property string _metadataHint: ""
+        property string _metadataPath: ""
 
         function showProperties(path) {
             fileModelRef = root.paneBaseModel(root.activePaneIndex) || fsModel
@@ -1713,16 +1714,14 @@ ApplicationWindow {
             else
                 apps = []
 
-            // Extract rich metadata
-            var md = fileOps.isRemotePath(path) ? ({}) : metadataExtractor.extract(path)
-            var keys = Object.keys(md)
-            var result = []
-            for (var i = 0; i < keys.length; ++i) {
-                if (md[keys[i]] !== "")
-                    result.push({ label: keys[i], value: String(md[keys[i]]) })
-            }
-            _metadataKeys = result
+            // Extract rich metadata. exiftool/ffprobe/pdfinfo can block for
+            // seconds; extract asynchronously and populate the metadata section
+            // on metadataReady.
+            _metadataPath = path
+            _metadataKeys = []
             _metadataHint = fileOps.isRemotePath(path) ? "" : metadataExtractor.missingDepsHint(props.mimeType || "")
+            if (!fileOps.isRemotePath(path))
+                metadataExtractor.requestExtract(path)
 
             visible = true
             propsBox.opacity = 0
@@ -1733,6 +1732,23 @@ ApplicationWindow {
         function close() {
             cancelFolderDiskUsageRequest()
             propsCloseAnim.start()
+        }
+
+        // Async metadata result. Guard on _metadataPath so a slow extraction for
+        // a path the dialog is no longer showing doesn't overwrite the current.
+        Connections {
+            target: metadataExtractor
+            function onMetadataReady(path, result) {
+                if (path !== propertiesDialog._metadataPath)
+                    return
+                var keys = Object.keys(result)
+                var arr = []
+                for (var i = 0; i < keys.length; ++i) {
+                    if (result[keys[i]] !== "")
+                        arr.push({ label: keys[i], value: String(result[keys[i]]) })
+                }
+                propertiesDialog._metadataKeys = arr
+            }
         }
 
         ParallelAnimation {

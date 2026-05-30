@@ -20,6 +20,7 @@ Item {
     property var fontPreview: ({ family: "", styleName: "", weight: 400, italic: false, valid: false, error: "" })
     property var fileMetadata: ({})
     property string metadataHint: ""
+    property bool metadataLoading: false
     property int pdfPageIndex: 0
     property real pdfWheelAccumulator: 0
     property bool closing: false
@@ -200,6 +201,7 @@ Item {
             fontPreview = ({ family: "", styleName: "", weight: 400, italic: false, valid: false, error: "" })
             directoryPreview = ({ entries: [], truncated: false, error: "", count: 0 })
             fileMetadata = ({})
+            metadataLoading = false
             metadataHint = ""
             return
         }
@@ -233,9 +235,24 @@ Item {
         } else
             directoryPreview = ({ entries: [], truncated: false, error: "", count: 0 })
 
-        // Extract rich metadata
-        fileMetadata = metadataExtractor.extract(filePath)
+        // Extract rich metadata. exiftool/ffprobe/pdfinfo can block for seconds,
+        // so extract asynchronously and show a placeholder until metadataReady.
+        fileMetadata = ({})
+        metadataLoading = true
+        metadataExtractor.requestExtract(filePath)
         metadataHint = metadataExtractor.missingDepsHint(fileProps.mimeType || "")
+    }
+
+    // Async metadata result. Guard on filePath so a slow extraction for a file
+    // the user already navigated away from doesn't overwrite the current preview.
+    Connections {
+        target: metadataExtractor
+        function onMetadataReady(path, result) {
+            if (path === root.filePath) {
+                root.fileMetadata = result
+                root.metadataLoading = false
+            }
+        }
     }
 
     // Async archive listing result. Guard on filePath so a slow listing for a
@@ -1129,6 +1146,16 @@ Item {
                                     return result
                                 }
                                 delegate: InfoBlock { label: modelData.label; value: modelData.value }
+                            }
+
+                            Text {
+                                width: parent.width
+                                visible: root.metadataLoading
+                                text: "Reading metadata…"
+                                color: Theme.muted
+                                font.pointSize: Theme.fontSmall
+                                font.italic: true
+                                wrapMode: Text.WordWrap
                             }
 
                             InfoBlock { label: root.fileProps.originalPath ? "Original Location" : "Location"; value: root.sidebarPathLabel }

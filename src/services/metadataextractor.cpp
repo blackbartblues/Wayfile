@@ -51,11 +51,43 @@ bool hasExec(const QString &name)
     return !QStandardPaths::findExecutable(name).isEmpty();
 }
 
+// Parse an ffprobe JSON object out of its raw stdout. Empty object on failure.
+QJsonObject ffprobeObject(const QByteArray &out)
+{
+    const QJsonDocument doc = QJsonDocument::fromJson(out);
+    return doc.isObject() ? doc.object() : QJsonObject();
+}
+
+QJsonObject firstStreamOfType(const QJsonObject &probe, const QString &type)
+{
+    for (const QJsonValue &s : probe.value("streams").toArray()) {
+        const QJsonObject o = s.toObject();
+        if (o.value("codec_type").toString() == type)
+            return o;
+    }
+    return {};
+}
+
 }
 
 MetadataExtractor::MetadataExtractor(QObject *parent)
     : QObject(parent)
 {
+}
+
+MetadataExtractor::~MetadataExtractor()
+{
+    // Stop any in-flight extractions so QProcess doesn't warn ("Destroyed while
+    // process is still running") or block during teardown. Disconnect first so
+    // the finished/errorOccurred lambdas — which touch members — can't fire
+    // while the object is being destroyed. Mirrors PreviewService::~PreviewService.
+    const QList<QProcess *> procs = m_procs.values();
+    m_procs.clear();
+    for (QProcess *proc : procs) {
+        proc->disconnect(this);
+        proc->kill();
+        proc->waitForFinished(100);
+    }
 }
 
 bool MetadataExtractor::hasExifSupport() const
@@ -100,6 +132,104 @@ QVariantMap MetadataExtractor::extract(const QString &path) const
     return {};
 }
 
+void MetadataExtractor::requestExtract(const QString &path)
+{
+    // An extraction for this exact path is already running. Its metadataReady
+    // will reach every consumer guarding on this path, so don't start a
+    // duplicate — this also means two panes previewing the same file share one
+    // process.
+    if (m_procs.contains(path))
+        return;
+
+    QMimeDatabase mimeDb;
+    const QString mime = mimeDb.mimeTypeForFile(path).name();
+
+    if (mime.startsWith("image/")) {
+        const QVariantMap base = imageBaseMeta(path);
+        if (!hasExifSupport()) {
+            emit metadataReady(path, base);
+            return;
+        }
+        startMetaProc(path, QStringLiteral("exiftool"), exiftoolArgs(path),
+                      [base](const QByteArray &out, bool ok) {
+                          return ok ? parseExifJson(out, base) : base;
+                      });
+        return;
+    }
+    if (mime.startsWith("audio/")) {
+        if (!hasTagLibSupport()) {
+            emit metadataReady(path, QVariantMap());
+            return;
+        }
+        startMetaProc(path, QStringLiteral("ffprobe"), ffprobeArgs(path),
+                      [](const QByteArray &out, bool ok) {
+                          return ok ? parseAudioProbe(out) : QVariantMap();
+                      });
+        return;
+    }
+    if (mime.startsWith("video/")) {
+        if (!hasVideoSupport()) {
+            emit metadataReady(path, QVariantMap());
+            return;
+        }
+        startMetaProc(path, QStringLiteral("ffprobe"), ffprobeArgs(path),
+                      [](const QByteArray &out, bool ok) {
+                          return ok ? parseVideoProbe(out) : QVariantMap();
+                      });
+        return;
+    }
+    if (mime == "application/pdf") {
+        if (!hasPdfSupport()) {
+            emit metadataReady(path, QVariantMap());
+            return;
+        }
+        startMetaProc(path, QStringLiteral("pdfinfo"), {path},
+                      [](const QByteArray &out, bool ok) {
+                          return ok ? parsePdfMeta(out) : QVariantMap();
+                      });
+        return;
+    }
+
+    // Unknown type — emit empty so consumers clear their loading state.
+    emit metadataReady(path, QVariantMap());
+}
+
+void MetadataExtractor::startMetaProc(
+    const QString &path, const QString &program, const QStringList &args,
+    const std::function<QVariantMap(const QByteArray &stdoutBytes, bool ok)> &parse)
+{
+    auto *proc = new QProcess(this);
+    m_procs.insert(path, proc);
+
+    connect(proc, &QProcess::finished, this,
+            [this, proc, path, parse](int code, QProcess::ExitStatus status) {
+                // Ignore if this proc is no longer the tracked extraction for
+                // `path` (superseded/cancelled). value() defaults to nullptr.
+                if (m_procs.value(path) != proc) {
+                    proc->deleteLater();
+                    return;
+                }
+                m_procs.remove(path);
+                const bool ok = (status == QProcess::NormalExit && code == 0);
+                const QVariantMap result = parse(proc->readAllStandardOutput(), ok);
+                emit metadataReady(path, result);
+                proc->deleteLater();
+            });
+    connect(proc, &QProcess::errorOccurred, this,
+            [this, proc, path, parse](QProcess::ProcessError) {
+                if (m_procs.value(path) != proc) {
+                    proc->deleteLater();
+                    return;
+                }
+                m_procs.remove(path);
+                const QVariantMap result = parse(QByteArray(), false);
+                emit metadataReady(path, result);
+                proc->deleteLater();
+            });
+
+    proc->start(program, args);
+}
+
 QString MetadataExtractor::missingDepsHint(const QString &mimeType) const
 {
     if (mimeType.startsWith("image/") && !hasExifSupport())
@@ -115,7 +245,34 @@ QString MetadataExtractor::missingDepsHint(const QString &mimeType) const
 
 // ── Image ──
 
-QVariantMap MetadataExtractor::extractImage(const QString &path) const
+QStringList MetadataExtractor::exiftoolArgs(const QString &path)
+{
+    // `-json` returns structured data, `-n` keeps numeric values numeric,
+    // and explicit tags keep the output small and stable.
+    return {
+        QStringLiteral("-json"),
+        QStringLiteral("-n"),
+        QStringLiteral("-Make"),
+        QStringLiteral("-Model"),
+        QStringLiteral("-LensModel"),
+        QStringLiteral("-DateTimeOriginal"),
+        QStringLiteral("-ExposureTime"),
+        QStringLiteral("-FNumber"),
+        QStringLiteral("-ISO"),
+        QStringLiteral("-FocalLength"),
+        QStringLiteral("-Flash"),
+        QStringLiteral("-WhiteBalance"),
+        QStringLiteral("-MeteringMode"),
+        QStringLiteral("-Software"),
+        QStringLiteral("-GPSLatitude"),
+        QStringLiteral("-GPSLatitudeRef"),
+        QStringLiteral("-GPSLongitude"),
+        QStringLiteral("-GPSLongitudeRef"),
+        path,
+    };
+}
+
+QVariantMap MetadataExtractor::imageBaseMeta(const QString &path)
 {
     QVariantMap meta;
 
@@ -136,37 +293,12 @@ QVariantMap MetadataExtractor::extractImage(const QString &path) const
             meta["Bit depth"] = QString("%1-bit").arg(depth);
     }
 
-    if (!hasExifSupport())
-        return meta;
+    return meta;
+}
 
-    QProcess proc;
-    // `-json` returns structured data, `-n` keeps numeric values numeric,
-    // and explicit tags keep the output small and stable.
-    proc.start(QStringLiteral("exiftool"), {
-        QStringLiteral("-json"),
-        QStringLiteral("-n"),
-        QStringLiteral("-Make"),
-        QStringLiteral("-Model"),
-        QStringLiteral("-LensModel"),
-        QStringLiteral("-DateTimeOriginal"),
-        QStringLiteral("-ExposureTime"),
-        QStringLiteral("-FNumber"),
-        QStringLiteral("-ISO"),
-        QStringLiteral("-FocalLength"),
-        QStringLiteral("-Flash"),
-        QStringLiteral("-WhiteBalance"),
-        QStringLiteral("-MeteringMode"),
-        QStringLiteral("-Software"),
-        QStringLiteral("-GPSLatitude"),
-        QStringLiteral("-GPSLatitudeRef"),
-        QStringLiteral("-GPSLongitude"),
-        QStringLiteral("-GPSLongitudeRef"),
-        path,
-    });
-    if (!proc.waitForFinished(5000) || proc.exitCode() != 0)
-        return meta;
-
-    const QJsonDocument doc = QJsonDocument::fromJson(proc.readAllStandardOutput());
+QVariantMap MetadataExtractor::parseExifJson(const QByteArray &out, QVariantMap meta)
+{
+    const QJsonDocument doc = QJsonDocument::fromJson(out);
     if (!doc.isArray() || doc.array().isEmpty())
         return meta;
 
@@ -211,45 +343,39 @@ QVariantMap MetadataExtractor::extractImage(const QString &path) const
     return meta;
 }
 
+QVariantMap MetadataExtractor::extractImage(const QString &path) const
+{
+    QVariantMap meta = imageBaseMeta(path);
+
+    if (!hasExifSupport())
+        return meta;
+
+    QProcess proc;
+    proc.start(QStringLiteral("exiftool"), exiftoolArgs(path));
+    if (!proc.waitForFinished(5000) || proc.exitCode() != 0)
+        return meta;
+
+    return parseExifJson(proc.readAllStandardOutput(), meta);
+}
+
 // ── ffprobe-backed audio / video ──
 
-namespace {
-
-QJsonObject runFfprobe(const QString &path)
+QStringList MetadataExtractor::ffprobeArgs(const QString &path)
 {
-    QProcess proc;
-    proc.start(QStringLiteral("ffprobe"), {
+    return {
         QStringLiteral("-v"), QStringLiteral("error"),
         QStringLiteral("-show_format"),
         QStringLiteral("-show_streams"),
         QStringLiteral("-of"), QStringLiteral("json"),
         path,
-    });
-    if (!proc.waitForFinished(5000) || proc.exitCode() != 0)
-        return {};
-    const QJsonDocument doc = QJsonDocument::fromJson(proc.readAllStandardOutput());
-    return doc.isObject() ? doc.object() : QJsonObject();
+    };
 }
 
-QJsonObject firstStreamOfType(const QJsonObject &probe, const QString &type)
-{
-    for (const QJsonValue &s : probe.value("streams").toArray()) {
-        const QJsonObject o = s.toObject();
-        if (o.value("codec_type").toString() == type)
-            return o;
-    }
-    return {};
-}
-
-}
-
-QVariantMap MetadataExtractor::extractAudio(const QString &path) const
+QVariantMap MetadataExtractor::parseAudioProbe(const QByteArray &ffprobeOut)
 {
     QVariantMap meta;
-    if (!hasTagLibSupport())
-        return meta;
 
-    const QJsonObject probe = runFfprobe(path);
+    const QJsonObject probe = ffprobeObject(ffprobeOut);
     if (probe.isEmpty())
         return meta;
 
@@ -306,13 +432,24 @@ QVariantMap MetadataExtractor::extractAudio(const QString &path) const
     return meta;
 }
 
-QVariantMap MetadataExtractor::extractVideo(const QString &path) const
+QVariantMap MetadataExtractor::extractAudio(const QString &path) const
+{
+    if (!hasTagLibSupport())
+        return {};
+
+    QProcess proc;
+    proc.start(QStringLiteral("ffprobe"), ffprobeArgs(path));
+    if (!proc.waitForFinished(5000) || proc.exitCode() != 0)
+        return {};
+
+    return parseAudioProbe(proc.readAllStandardOutput());
+}
+
+QVariantMap MetadataExtractor::parseVideoProbe(const QByteArray &ffprobeOut)
 {
     QVariantMap meta;
-    if (!hasVideoSupport())
-        return meta;
 
-    const QJsonObject probe = runFfprobe(path);
+    const QJsonObject probe = ffprobeObject(ffprobeOut);
     if (probe.isEmpty())
         return meta;
 
@@ -380,20 +517,26 @@ QVariantMap MetadataExtractor::extractVideo(const QString &path) const
     return meta;
 }
 
-// ── PDF ──
-
-QVariantMap MetadataExtractor::extractPdf(const QString &path) const
+QVariantMap MetadataExtractor::extractVideo(const QString &path) const
 {
-    QVariantMap meta;
-    if (!hasPdfSupport())
-        return meta;
+    if (!hasVideoSupport())
+        return {};
 
     QProcess proc;
-    proc.start(QStringLiteral("pdfinfo"), {path});
+    proc.start(QStringLiteral("ffprobe"), ffprobeArgs(path));
     if (!proc.waitForFinished(5000) || proc.exitCode() != 0)
-        return meta;
+        return {};
 
-    const QString out = QString::fromUtf8(proc.readAllStandardOutput());
+    return parseVideoProbe(proc.readAllStandardOutput());
+}
+
+// ── PDF ──
+
+QVariantMap MetadataExtractor::parsePdfMeta(const QByteArray &pdfinfoOut)
+{
+    QVariantMap meta;
+
+    const QString out = QString::fromUtf8(pdfinfoOut);
 
     // pdfinfo lines look like "Key: value" with key-column padding; split on
     // the first colon to be tolerant of values that themselves contain ':'.
@@ -434,4 +577,17 @@ QVariantMap MetadataExtractor::extractPdf(const QString &path) const
     put("PDF version", "PDF version");
 
     return meta;
+}
+
+QVariantMap MetadataExtractor::extractPdf(const QString &path) const
+{
+    if (!hasPdfSupport())
+        return {};
+
+    QProcess proc;
+    proc.start(QStringLiteral("pdfinfo"), {path});
+    if (!proc.waitForFinished(5000) || proc.exitCode() != 0)
+        return {};
+
+    return parsePdfMeta(proc.readAllStandardOutput());
 }
