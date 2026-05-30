@@ -11,9 +11,9 @@ FocusScope {
     property var fileModel: null
     property string currentPath: ""
 
-    property var selectedIndices: currentColumn.selectedIndices
-    property int lastSelectedIndex: currentColumn.lastSelectedIndex
-    property int cursorIndex: currentColumn.cursorIndex
+    property alias selectedIndices: selectionController.selectedIndices
+    property alias lastSelectedIndex: selectionController.lastSelectedIndex
+    property alias cursorIndex: selectionController.cursorIndex
 
     signal fileActivated(string filePath, bool isDirectory)
     signal contextMenuRequested(string filePath, bool isDirectory, point position)
@@ -79,33 +79,26 @@ FocusScope {
         if (parentColumn) parentColumn.interactive = true
     }
 
-    function selectAll() {
-        currentColumn.selectAll()
-    }
-
-    function focusPath(path, reveal) {
-        currentColumn.focusPath(path, reveal)
-    }
-
-    function clearSelection() {
-        currentColumn.clearSelection()
-    }
+    // Forwarders for external callers (FileViewContainer / Main.qml).
+    function selectAll() { selectionController.selectAll() }
+    function focusPath(path, reveal) { selectionController.focusPath(path, reveal) }
+    function clearSelection() { selectionController.clearSelection() }
 
     function ensureCurrentColumnFocus() {
         currentColumn.forceActiveFocus()
-        if (currentColumn.cursorIndex >= 0) {
-            currentColumn.positionViewAtIndex(currentColumn.cursorIndex, ListView.Contain)
+        if (selectionController.cursorIndex >= 0) {
+            currentColumn.positionViewAtIndex(selectionController.cursorIndex, ListView.Contain)
             return
         }
-        if (currentColumn.selectedIndices.length > 0) {
+        if (selectionController.selectedIndices.length > 0) {
             currentColumn.positionViewAtIndex(
-                currentColumn.selectedIndices[currentColumn.selectedIndices.length - 1],
+                selectionController.selectedIndices[selectionController.selectedIndices.length - 1],
                 ListView.Contain
             )
             return
         }
         if (currentColumn.count > 0) {
-            currentColumn.selectIndex(0, false, false)
+            selectionController.selectIndex(0, false, false)
             currentColumn.positionViewAtIndex(0, ListView.Beginning)
         }
     }
@@ -129,8 +122,8 @@ FocusScope {
     function goUp() {
         if (parentPath) {
             // Remember current dir so we can highlight it after navigating up
-            currentColumn.pendingFocusPath = currentPath
-            currentColumn.pendingFocusReveal = true
+            selectionController.pendingFocusPath = currentPath
+            selectionController.pendingFocusReveal = true
             root.fileActivated(parentPath, true)
         }
     }
@@ -143,16 +136,16 @@ FocusScope {
             return
         }
 
-        var idx = currentColumn.cursorIndex >= 0 ? currentColumn.cursorIndex
-            : (currentColumn.selectedIndices.length > 0 ? currentColumn.selectedIndices[currentColumn.selectedIndices.length - 1] : -1)
+        var idx = selectionController.cursorIndex >= 0 ? selectionController.cursorIndex
+            : (selectionController.selectedIndices.length > 0 ? selectionController.selectedIndices[selectionController.selectedIndices.length - 1] : -1)
         if (idx < 0 || !fileModel) {
             millerPreviewModel.setRootPath("")
             previewColumn.previewFilePath = ""
             previewColumn.previewIsDir = false
             return
         }
-        var fp = currentColumn.pathForRow(idx)
-        var isDir = currentColumn.isDirForRow(idx)
+        var fp = selectionController.pathForRow(idx)
+        var isDir = selectionController.isDirForRow(idx)
         // Set previewIsDir BEFORE previewFilePath. The shared PreviewState
         // binds filePath to previewFilePath, so assigning previewFilePath
         // triggers its refresh(), which reads isDir (bound to previewIsDir) to
@@ -167,6 +160,25 @@ FocusScope {
         } else {
             millerPreviewModel.setRootPath("")
         }
+    }
+
+    // Shared selection / type-ahead / focus state. Lives at root level (not on
+    // currentColumn) so root, the delegate, and the rubber-band MouseArea all
+    // reach it. Every mutating function emits selectionChanged(); Miller wires
+    // that to BOTH updatePreview() and root.selectionChanged() so selecting an
+    // item refreshes the preview column and the status bar — the side-effects
+    // each currentColumn mutator used to fire inline.
+    SelectionController {
+        id: selectionController
+        fileModel: root.fileModel
+        itemCount: currentColumn.count
+        onSelectionChanged: {
+            root.updatePreview()
+            root.selectionChanged()
+        }
+        onEnsureIndexVisible: (index, mode) => currentColumn.positionViewAtIndex(
+            index, mode === selectionController.positionBeginning ? ListView.Beginning : ListView.Contain)
+        onRequestFocus: currentColumn.forceActiveFocus()
     }
 
     Row {
@@ -413,23 +425,17 @@ FocusScope {
                 }
             }
 
-            property var selectedIndices: []
-            property int lastSelectedIndex: -1
-            property int cursorIndex: -1
-            property string typeAheadBuffer: ""
-
             Connections {
                 target: root
                 function onCurrentPathChanged() {
-                    currentColumn.typeAheadBuffer = ""
-                    typeAheadTimer.stop()
+                    selectionController.resetTypeAhead()
                     // If we have a pendingFocusPath (going up), don't clear — let focusPath handle it
-                    if (currentColumn.pendingFocusPath === "") {
-                        currentColumn.selectedIndices = []
-                        currentColumn.lastSelectedIndex = -1
-                        currentColumn.cursorIndex = -1
+                    if (selectionController.pendingFocusPath === "") {
+                        selectionController.selectedIndices = []
+                        selectionController.lastSelectedIndex = -1
+                        selectionController.cursorIndex = -1
                         // Auto-select first item after model loads
-                        currentColumn.autoSelectFirst = true
+                        selectionController.autoSelectFirst = true
                     }
                     root.updatePreview()
                 }
@@ -438,125 +444,26 @@ FocusScope {
             // z:20 keeps the thumb above the z:10 rubber-band MouseArea so it stays draggable.
             ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded; z: 20; interactive: true }
 
-            Timer {
-                id: typeAheadTimer
-                interval: 1000
-                repeat: false
-                onTriggered: currentColumn.typeAheadBuffer = ""
-            }
-
-            function pathForRow(row) {
-                if (!root.fileModel || row < 0) return ""
-                if (root.fileModel.filePath) return root.fileModel.filePath(row)
-                return root.fileModel.data(root.fileModel.index(row, 0), 258) || ""
-            }
-
-            function fileNameForRow(row) {
-                if (!root.fileModel || row < 0) return ""
-                if (root.fileModel.fileName) return root.fileModel.fileName(row)
-                return root.fileModel.data(root.fileModel.index(row, 0), 257) || ""
-            }
-
-            function isDirForRow(row) {
-                if (!root.fileModel || row < 0) return false
-                if (root.fileModel.isDir) return root.fileModel.isDir(row)
-                return root.fileModel.data(root.fileModel.index(row, 0), 265) || false
-            }
-
-            function rowForPath(path) {
-                if (!path) return -1
-                for (var i = 0; i < count; ++i) {
-                    if (pathForRow(i) === path) return i
-                }
-                return -1
-            }
-
-            function selectIndex(idx, ctrl, shift) {
-                if (shift && lastSelectedIndex >= 0) {
-                    var lo = Math.min(idx, lastSelectedIndex)
-                    var hi = Math.max(idx, lastSelectedIndex)
-                    var newSel = ctrl ? selectedIndices.slice() : []
-                    for (var i = lo; i <= hi; i++) {
-                        if (newSel.indexOf(i) < 0) newSel.push(i)
-                    }
-                    selectedIndices = newSel
-                } else if (ctrl) {
-                    var newSel2 = selectedIndices.slice()
-                    var pos = newSel2.indexOf(idx)
-                    if (pos >= 0) newSel2.splice(pos, 1)
-                    else newSel2.push(idx)
-                    selectedIndices = newSel2
-                    lastSelectedIndex = idx
-                } else {
-                    selectedIndices = [idx]
-                    lastSelectedIndex = idx
-                }
-                cursorIndex = idx
-                root.updatePreview()
-                root.selectionChanged()
-            }
-
-            function clearSelection() {
-                selectedIndices = []
-                lastSelectedIndex = -1
-                cursorIndex = -1
-                root.updatePreview()
-            }
-
+            // Linear up/down navigation stays in the view (arrow-key coupled);
+            // it delegates the actual state change + positioning + side-effects
+            // to the shared controller's moveSelectionTo.
             function moveSelection(delta, extend) {
                 if (count <= 0) return
-                var current = cursorIndex >= 0 ? cursorIndex
-                    : (selectedIndices.length > 0 ? selectedIndices[selectedIndices.length - 1] : -1)
+                var current = selectionController.cursorIndex >= 0 ? selectionController.cursorIndex
+                    : (selectionController.selectedIndices.length > 0 ? selectionController.selectedIndices[selectionController.selectedIndices.length - 1] : -1)
                 var next = Math.max(0, Math.min(count - 1, current + delta))
                 if (next === current && current >= 0) return
-                if (extend && lastSelectedIndex >= 0) {
-                    var lo = Math.min(next, lastSelectedIndex)
-                    var hi = Math.max(next, lastSelectedIndex)
-                    var newSel = []
-                    for (var i = lo; i <= hi; i++) newSel.push(i)
-                    selectedIndices = newSel
-                } else {
-                    selectedIndices = [next]
-                    lastSelectedIndex = next
-                }
-                cursorIndex = next
-                positionViewAtIndex(next, ListView.Contain)
-                root.updatePreview()
-                root.selectionChanged()
+                selectionController.moveSelectionTo(next, extend)
             }
 
-            function moveSelectionTo(index, extend) {
-                if (count <= 0) return
-                var next = Math.max(0, Math.min(count - 1, index))
-                if (extend && lastSelectedIndex >= 0) {
-                    var lo = Math.min(next, lastSelectedIndex)
-                    var hi = Math.max(next, lastSelectedIndex)
-                    var newSel = []
-                    for (var i = lo; i <= hi; i++) newSel.push(i)
-                    selectedIndices = newSel
-                } else {
-                    selectedIndices = [next]
-                    lastSelectedIndex = next
-                }
-                cursorIndex = next
-                positionViewAtIndex(next, ListView.Contain)
-                root.updatePreview()
-                root.selectionChanged()
-            }
-
-            function selectAll() {
-                var all = []
-                for (var i = 0; i < count; i++) all.push(i)
-                selectedIndices = all
-                root.selectionChanged()
-            }
-
+            // Stays in the view: the activate policy is Miller-specific
+            // (dirs drill in via enterDirectory, files open via fileActivated).
             function activateCurrentSelection() {
-                var idx = cursorIndex >= 0 ? cursorIndex
-                    : (selectedIndices.length > 0 ? selectedIndices[selectedIndices.length - 1] : -1)
+                var idx = selectionController.cursorIndex >= 0 ? selectionController.cursorIndex
+                    : (selectionController.selectedIndices.length > 0 ? selectionController.selectedIndices[selectionController.selectedIndices.length - 1] : -1)
                 if (idx < 0) return
-                var fp = pathForRow(idx)
-                var isDir = isDirForRow(idx)
+                var fp = selectionController.pathForRow(idx)
+                var isDir = selectionController.isDirForRow(idx)
                 if (isDir) {
                     root.enterDirectory(fp)
                 } else {
@@ -564,104 +471,11 @@ FocusScope {
                 }
             }
 
-            function isPrintableTypeAheadText(text) {
-                return typeof text === "string" && text.length === 1 && /[^\x00-\x1f\x7f]/.test(text)
-            }
-
-            function findTypeAheadMatch(query, keepCurrentMatch) {
-                if (!query || count <= 0) return -1
-                var needle = query.toLocaleLowerCase()
-                var current = cursorIndex >= 0 ? cursorIndex
-                    : (selectedIndices.length > 0 ? selectedIndices[selectedIndices.length - 1] : -1)
-                if (keepCurrentMatch && current >= 0 && fileNameForRow(current).toLocaleLowerCase().startsWith(needle))
-                    return current
-                for (var step = 1; step <= count; ++step) {
-                    var idx = current >= 0 ? (current + step) % count : step - 1
-                    if (fileNameForRow(idx).toLocaleLowerCase().startsWith(needle))
-                        return idx
-                }
-                return -1
-            }
-
-            function handleTypeAhead(event) {
-                if (event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))
-                    return
-                if (event.key === Qt.Key_Backspace) {
-                    if (typeAheadBuffer.length === 0) return
-                    typeAheadBuffer = typeAheadBuffer.slice(0, -1)
-                    if (typeAheadBuffer.length > 0) {
-                        typeAheadTimer.restart()
-                        var backspaceMatch = findTypeAheadMatch(typeAheadBuffer, true)
-                        if (backspaceMatch >= 0) {
-                            selectIndex(backspaceMatch, false, false)
-                            positionViewAtIndex(backspaceMatch, ListView.Contain)
-                        }
-                    } else {
-                        typeAheadTimer.stop()
-                    }
-                    event.accepted = true
-                    return
-                }
-                if (!isPrintableTypeAheadText(event.text)) return
-                var nextBuffer = typeAheadBuffer + event.text
-                var keepCurrentMatch = typeAheadBuffer.length > 0 && nextBuffer.startsWith(typeAheadBuffer)
-                var match = findTypeAheadMatch(nextBuffer, keepCurrentMatch)
-                if (match < 0) {
-                    nextBuffer = event.text
-                    match = findTypeAheadMatch(nextBuffer, false)
-                }
-                typeAheadBuffer = nextBuffer
-                typeAheadTimer.restart()
-                if (match >= 0) {
-                    selectIndex(match, false, false)
-                    positionViewAtIndex(match, ListView.Contain)
-                }
-                event.accepted = true
-            }
-
-            property string pendingFocusPath: ""
-            property bool pendingFocusReveal: true
-            property bool focusScheduled: false
-            property bool autoSelectFirst: false
-
-            function schedulePendingFocus() {
-                if (focusScheduled) return
-                focusScheduled = true
-                Qt.callLater(function() {
-                    focusScheduled = false
-                    if (pendingFocusPath !== "") {
-                        focusPath(pendingFocusPath, pendingFocusReveal)
-                    } else if (autoSelectFirst && count > 0) {
-                        autoSelectFirst = false
-                        selectIndex(0, false, false)
-                        positionViewAtIndex(0, ListView.Beginning)
-                        forceActiveFocus()
-                    }
-                })
-            }
-
-            function focusPath(path, reveal) {
-                if (!path || !root.fileModel) return false
-                var idx = rowForPath(path)
-                if (idx < 0) {
-                    pendingFocusPath = path
-                    pendingFocusReveal = (reveal !== false)
-                    return false
-                }
-                pendingFocusPath = ""
-                pendingFocusReveal = true
-                forceActiveFocus()
-                selectIndex(idx, false, false)
-                if (reveal !== false)
-                    positionViewAtIndex(idx, ListView.Contain)
-                return true
-            }
-
             Connections {
                 target: root.fileModel
                 ignoreUnknownSignals: true
-                function onModelReset() { currentColumn.schedulePendingFocus() }
-                function onRowsInserted() { currentColumn.schedulePendingFocus() }
+                function onModelReset() { selectionController.schedulePendingFocus() }
+                function onRowsInserted() { selectionController.schedulePendingFocus() }
             }
 
             Keys.onUpPressed: (event) => moveSelection(-1, event.modifiers & Qt.ShiftModifier)
@@ -676,12 +490,12 @@ FocusScope {
             }
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Home) {
-                    moveSelectionTo(0, event.modifiers & Qt.ShiftModifier)
+                    selectionController.moveSelectionTo(0, event.modifiers & Qt.ShiftModifier)
                     event.accepted = true
                     return
                 }
                 if (event.key === Qt.Key_End) {
-                    moveSelectionTo(count - 1, event.modifiers & Qt.ShiftModifier)
+                    selectionController.moveSelectionTo(count - 1, event.modifiers & Qt.ShiftModifier)
                     event.accepted = true
                     return
                 }
@@ -692,16 +506,15 @@ FocusScope {
                     return
                 }
                 if (event.key === Qt.Key_Escape) {
-                    if (typeAheadBuffer.length > 0) {
-                        typeAheadBuffer = ""
-                        typeAheadTimer.stop()
-                    } else if (selectedIndices.length > 0) {
-                        clearSelection()
+                    if (selectionController.typeAheadBuffer.length > 0) {
+                        selectionController.resetTypeAhead()
+                    } else if (selectionController.selectedIndices.length > 0) {
+                        selectionController.clearSelection()
                     }
                     event.accepted = true
                     return
                 }
-                handleTypeAhead(event)
+                selectionController.handleTypeAhead(event)
             }
 
             delegate: Item {
@@ -722,7 +535,7 @@ FocusScope {
                 required property bool hasImagePreview
                 required property bool hasVideoPreview
 
-                readonly property bool isSelected: currentColumn.selectedIndices.indexOf(index) >= 0
+                readonly property bool isSelected: selectionController.selectedIndices.indexOf(index) >= 0
                 readonly property bool isCutPending: clipboard.isCut && clipboard.contains(currentDelegate.filePath)
                 readonly property bool isPastePending: fileOps.pendingTargetPaths.indexOf(currentDelegate.filePath) >= 0
 
@@ -914,9 +727,9 @@ FocusScope {
                         if (Math.sqrt(dx*dx + dy*dy) > 10) {
                             dragPending = false
                             if (!currentDelegate.isSelected)
-                                currentColumn.selectIndex(currentDelegate.index, false, false)
-                            var paths = currentColumn.selectedIndices.length > 1
-                                ? currentColumn.selectedIndices.map(function(i) { return currentColumn.pathForRow(i) })
+                                selectionController.selectIndex(currentDelegate.index, false, false)
+                            var paths = selectionController.selectedIndices.length > 1
+                                ? selectionController.selectedIndices.map(function(i) { return selectionController.pathForRow(i) })
                                 : [currentDelegate.filePath]
                             currentDelegate.dragStarted = true
                             dragHelper.startDrag(paths, currentDelegate.fileIconName, paths.length)
@@ -930,7 +743,7 @@ FocusScope {
                             // (single-select) so the menu targets the clicked
                             // file; an already-selected item keeps the selection.
                             if (!currentDelegate.isSelected)
-                                currentColumn.selectIndex(currentDelegate.index, false, false)
+                                selectionController.selectIndex(currentDelegate.index, false, false)
                             root.contextMenuRequested(
                                 currentDelegate.filePath,
                                 currentDelegate.isDir,
@@ -938,7 +751,7 @@ FocusScope {
                             )
                             return
                         }
-                        currentColumn.selectIndex(
+                        selectionController.selectIndex(
                             currentDelegate.index,
                             mouse.modifiers & Qt.ControlModifier,
                             mouse.modifiers & Qt.ShiftModifier
@@ -1035,7 +848,7 @@ FocusScope {
                         rubberBandJustFinished = false
                         return
                     }
-                    currentColumn.clearSelection()
+                    selectionController.clearSelection()
                 }
 
                 onPositionChanged: (mouse) => {
@@ -1064,17 +877,10 @@ FocusScope {
                         if (!item) continue
                         var itemPos = currentColumn.mapFromItem(item, 0, 0)
                         var itemRect = Qt.rect(itemPos.x, itemPos.y, item.width, item.height)
-                        if (rectsIntersect(rb, itemRect))
+                        if (selectionController.rectsIntersect(rb, itemRect))
                             newSel.push(i)
                     }
-                    currentColumn.selectedIndices = newSel
-                }
-
-                function rectsIntersect(a, b) {
-                    return a.x < b.x + b.width  &&
-                           a.x + a.width  > b.x &&
-                           a.y < b.y + b.height &&
-                           a.y + a.height > b.y
+                    selectionController.selectedIndices = newSel
                 }
             }
 
