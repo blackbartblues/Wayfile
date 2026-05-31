@@ -61,6 +61,11 @@ void GitStatusService::setRootPath(const QString &path)
         return;
 
     m_rootPath = path;
+    // Resolve symlinks up front so statusForPath can translate the literal
+    // navigated path into the canonical space git reports in. canonicalFilePath
+    // returns empty for non-existent / remote paths; in that case lookups fall
+    // back to the literal path (the no-symlink behaviour).
+    m_rootPathCanonical = QFileInfo(path).canonicalFilePath();
     m_statusCache.clear();
     m_dirtyDirs.clear();
     m_statusDebounce.stop();
@@ -92,11 +97,27 @@ QString GitStatusService::statusForPath(const QString &path) const
     if (path.isEmpty() || m_repoRoot.isEmpty())
         return {};
 
-    auto it = m_statusCache.constFind(path);
+    // Cache keys are built from `git rev-parse --show-toplevel`, which always
+    // returns the canonical (symlink-resolved) repo root, so every cached path
+    // is canonical. The model, however, queries with the literal path the user
+    // navigated to. When that literal path contains a symlinked component
+    // (e.g. browsing through ~/dev -> /mnt/data/dev), the literal and canonical
+    // forms diverge and every lookup misses — which is why no badges show up at
+    // all. Translate the literal navigated-root prefix to its canonical form so
+    // the keys line up. The common (no-symlink) case has identical forms, hits
+    // on the first compare, and pays nothing.
+    QString lookupPath = path;
+    if (!m_rootPath.isEmpty() && !m_rootPathCanonical.isEmpty() &&
+        m_rootPath != m_rootPathCanonical &&
+        (path == m_rootPath || path.startsWith(m_rootPath + QLatin1Char('/')))) {
+        lookupPath = m_rootPathCanonical + path.mid(m_rootPath.size());
+    }
+
+    auto it = m_statusCache.constFind(lookupPath);
     if (it != m_statusCache.constEnd())
         return it.value();
 
-    if (m_dirtyDirs.contains(path))
+    if (m_dirtyDirs.contains(lookupPath))
         return QStringLiteral("dirty");
 
     return {};

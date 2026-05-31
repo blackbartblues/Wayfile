@@ -31,6 +31,10 @@ private:
     bool isRemotePath(const QString &path) const;
 
     QString m_rootPath;
+    // Symlink-resolved form of m_rootPath. Git reports paths relative to the
+    // canonical repo root, so lookups must be translated into canonical space
+    // (see statusForPath). Empty when the path can't be resolved.
+    QString m_rootPathCanonical;
     QString m_repoRoot;
     QHash<QString, QString> m_statusCache;
     QHash<QString, bool> m_dirtyDirs;

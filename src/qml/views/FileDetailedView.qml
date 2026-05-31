@@ -549,25 +549,39 @@ FocusScope {
                                     }
                                 }
 
-                                Loader {
-                                    active: detRow.gitStatus !== ""
+                                // Git status badge — backing disc keeps the
+                                // small icon legible over the file icon and
+                                // above the cut/paste overlays (z:2/3).
+                                Rectangle {
+                                    visible: detRow.gitStatus !== ""
                                     anchors.right: parent.right
                                     anchors.bottom: parent.bottom
                                     anchors.rightMargin: -3
                                     anchors.bottomMargin: -3
-                                    width: 9
-                                    height: 9
-                                    sourceComponent: {
-                                        switch (detRow.gitStatusIcon) {
-                                            case "git-modified":   return gitModifiedIcon
-                                            case "git-staged":     return gitStagedIcon
-                                            case "git-untracked":  return gitUntrackedIcon
-                                            case "git-deleted":    return gitDeletedIcon
-                                            case "git-renamed":    return gitRenamedIcon
-                                            case "git-conflicted": return gitConflictedIcon
-                                            case "git-ignored":    return gitIgnoredIcon
-                                            case "git-dirty":      return gitDirtyIcon
-                                            default: return null
+                                    width: 13
+                                    height: 13
+                                    radius: 6.5
+                                    z: 4
+                                    color: Qt.rgba(Theme.mantle.r, Theme.mantle.g, Theme.mantle.b, 0.92)
+                                    border.width: 1
+                                    border.color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.18)
+
+                                    Loader {
+                                        anchors.centerIn: parent
+                                        width: 9
+                                        height: 9
+                                        sourceComponent: {
+                                            switch (detRow.gitStatusIcon) {
+                                                case "git-modified":   return gitModifiedIcon
+                                                case "git-staged":     return gitStagedIcon
+                                                case "git-untracked":  return gitUntrackedIcon
+                                                case "git-deleted":    return gitDeletedIcon
+                                                case "git-renamed":    return gitRenamedIcon
+                                                case "git-conflicted": return gitConflictedIcon
+                                                case "git-ignored":    return gitIgnoredIcon
+                                                case "git-dirty":      return gitDirtyIcon
+                                                default: return null
+                                            }
                                         }
                                     }
                                 }
