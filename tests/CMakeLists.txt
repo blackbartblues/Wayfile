@@ -116,6 +116,7 @@ add_test(NAME tst_diskusageservice COMMAND tst_diskusageservice)
 add_executable(tst_filesystemmodel tst_filesystemmodel.cpp
     ${CMAKE_SOURCE_DIR}/src/models/filesystemmodel.cpp
     ${CMAKE_SOURCE_DIR}/src/models/filesystemmodel_helpers.cpp
+    ${CMAKE_SOURCE_DIR}/src/models/filesystemmodel_apps.cpp
     ${CMAKE_SOURCE_DIR}/src/services/gitstatusservice.cpp
 )
 target_include_directories(tst_filesystemmodel PRIVATE
@@ -165,6 +166,7 @@ add_executable(tst_searchproxymodel tst_searchproxymodel.cpp
     ${CMAKE_SOURCE_DIR}/src/models/searchproxymodel.cpp
     ${CMAKE_SOURCE_DIR}/src/models/filesystemmodel.cpp
     ${CMAKE_SOURCE_DIR}/src/models/filesystemmodel_helpers.cpp
+    ${CMAKE_SOURCE_DIR}/src/models/filesystemmodel_apps.cpp
     ${CMAKE_SOURCE_DIR}/src/models/searchresultsmodel.cpp
     ${CMAKE_SOURCE_DIR}/src/services/gitstatusservice.cpp
 )

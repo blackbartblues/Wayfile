@@ -17,6 +17,7 @@ set(HEIMDALL_SOURCES
     models/bookmarkmodel.cpp
     models/filesystemmodel.cpp
     models/filesystemmodel_helpers.cpp
+    models/filesystemmodel_apps.cpp
     models/devicemodel.cpp
     models/recentfilesmodel.cpp
     models/searchresultsmodel.cpp
@@ -65,6 +66,7 @@ if(HEIMDALL_ENABLE_UNITY_BUILD)
         models/bookmarkmodel.cpp
         models/tabmodel.cpp
         models/filesystemmodel.cpp
+        models/filesystemmodel_apps.cpp
         services/fileoperations.cpp
         services/fileoperations_helpers.cpp
         services/fileoperations_archive.cpp
