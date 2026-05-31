@@ -123,6 +123,8 @@ list(APPEND heimdall_qml_module_args
         qml/views/FileMillerView.qml
         qml/views/KineticWheelScroller.qml
         qml/components/ContextMenu.qml
+        qml/components/ContextMenuRow.qml
+        qml/components/ContextMenuSubmenuRow.qml
         qml/components/AnimatedInputDialog.qml
         qml/components/ConfirmActionDialog.qml
         qml/components/AppChooserDialog.qml

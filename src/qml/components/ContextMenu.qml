@@ -462,14 +462,12 @@ Item {
 
             Repeater {
                 model: root.visible ? root.buildModel() : []
-                delegate: Loader {
-                    id: delegateLoader
+                delegate: ContextMenuRow {
                     width: menuColumn.width
-                    sourceComponent: modelData.separator ? separatorComponent
-                                   : modelData.isSubmenu ? submenuTriggerComponent
-                                   : itemComponent
-                    property var itemData: modelData
-                    property int itemIndex: index
+                    rowData: modelData
+                    menu: root
+                    submenuVisible: root.submenuVisible
+                    activeSubmenuKey: root.activeSubmenuKey
                 }
             }
         }
@@ -606,10 +604,10 @@ Item {
 
             Repeater {
                 model: submenuContainer.visible ? root.submenuItems : []
-                delegate: Loader {
+                delegate: ContextMenuSubmenuRow {
                     width: submenuColumn.width
-                    sourceComponent: modelData.separator ? submenuSeparatorComponent : submenuItemComponent
-                    property var subItemData: modelData
+                    rowData: modelData
+                    menu: root
                 }
             }
         }
@@ -781,226 +779,6 @@ Item {
         case "setwallpaper": fileOps.setWallpaper(targetPath); break
         case "emptytrash": emptyTrashRequested(); break
         default: customActionRequested(action); break
-        }
-    }
-
-    Component {
-        id: itemComponent
-        Rectangle {
-            height: 32
-            width: parent ? parent.width : 260
-            radius: Theme.radiusMedium
-            color: itemMa.containsMouse
-                ? Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.1)
-                : "transparent"
-            Behavior on color {
-                ColorAnimation { duration: 100; easing.type: Theme.animEasingEnter; easing.bezierCurve: Theme.animBezierCurve }
-            }
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: 12
-                anchors.rightMargin: 12
-                spacing: 8
-                Loader {
-                    Layout.preferredWidth: 16
-                    Layout.preferredHeight: 16
-                    Layout.alignment: Qt.AlignVCenter
-                    active: !!(itemData && itemData.icon)
-                    source: (itemData && itemData.icon) ? "../icons/Icon" + itemData.icon + ".qml" : ""
-                    onLoaded: {
-                        item.size = 16
-                        item.color = Qt.binding(() => itemData && itemData.destructive ? Theme.error : Theme.muted)
-                    }
-                }
-                Text {
-                    text: itemData ? itemData.text : ""
-                    font.pointSize: Theme.fontNormal
-                    color: itemData && itemData.destructive ? Theme.error : Theme.text
-                    Layout.fillWidth: true
-                    verticalAlignment: Text.AlignVCenter
-                }
-                Text {
-                    text: itemData ? (itemData.shortcut || "") : ""
-                    font.pointSize: Theme.fontSmall
-                    color: Theme.muted
-                    visible: text !== ""
-                    verticalAlignment: Text.AlignVCenter
-                }
-            }
-            MouseArea {
-                id: itemMa
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onEntered: root.closeSubmenu(true)
-                onClicked: {
-                    if (itemData && itemData.action)
-                        root.executeAction(itemData.action, itemData.desktopFile || "", itemData.mimeType || "")
-                }
-            }
-        }
-    }
-
-    // ── Side submenu trigger row ───────────────────────────────────────────
-    Component {
-        id: submenuTriggerComponent
-        Rectangle {
-            id: submenuTrigger
-            height: 32
-            width: parent ? parent.width : 260
-            radius: Theme.radiusMedium
-            readonly property bool isActive: root.submenuVisible && root.activeSubmenuKey === root.submenuKeyForItem(itemData)
-            color: (submenuMa.containsMouse || isActive)
-                ? Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.1)
-                : "transparent"
-            Behavior on color {
-                ColorAnimation { duration: 100; easing.type: Theme.animEasingEnter; easing.bezierCurve: Theme.animBezierCurve }
-            }
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: 12
-                anchors.rightMargin: 12
-                spacing: 8
-                Loader {
-                    Layout.preferredWidth: 16
-                    Layout.preferredHeight: 16
-                    Layout.alignment: Qt.AlignVCenter
-                    active: !!(itemData && itemData.icon)
-                    source: (itemData && itemData.icon) ? "../icons/Icon" + itemData.icon + ".qml" : ""
-                    onLoaded: {
-                        item.size = 16
-                        item.color = Qt.binding(() => submenuTrigger.isActive ? Theme.text : Theme.muted)
-                    }
-                }
-                Text {
-                    text: itemData ? itemData.text : ""
-                    font.pointSize: Theme.fontNormal
-                    color: Theme.text
-                    Layout.fillWidth: true
-                    verticalAlignment: Text.AlignVCenter
-                }
-                Text {
-                    text: itemData ? (itemData.shortcut || "") : ""
-                    font.pointSize: Theme.fontSmall
-                    color: Theme.muted
-                    visible: text !== ""
-                    verticalAlignment: Text.AlignVCenter
-                }
-                IconChevronRight {
-                    size: 14
-                    color: submenuTrigger.isActive ? Theme.text : Theme.muted
-                    Layout.alignment: Qt.AlignVCenter
-                }
-            }
-            MouseArea {
-                id: submenuMa
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onEntered: root.openSubmenu(itemData, submenuTrigger)
-                onClicked: root.openSubmenu(itemData, submenuTrigger)
-            }
-        }
-    }
-
-    Component {
-        id: submenuItemComponent
-        Rectangle {
-            width: parent ? parent.width : 260
-            height: 30
-            radius: Theme.radiusMedium
-            opacity: 1
-            color: subItemMa.containsMouse
-                ? Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.1)
-                : "transparent"
-            Behavior on color {
-                ColorAnimation { duration: 100; easing.type: Theme.animEasingEnter; easing.bezierCurve: Theme.animBezierCurve }
-            }
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: 24
-                anchors.rightMargin: 12
-                spacing: 8
-                Image {
-                    source: subItemData && subItemData.iconName
-                        ? ("image://icon/" + subItemData.iconName + "?theme=" + config.iconTheme + "&builtin=" + (config.builtinIcons ? "1" : "0"))
-                        : ""
-                    sourceSize: Qt.size(18, 18)
-                    Layout.preferredWidth: visible ? 18 : 0
-                    Layout.preferredHeight: 18
-                    Layout.alignment: Qt.AlignVCenter
-                    visible: !!(subItemData && subItemData.iconName) && status === Image.Ready
-                }
-                Loader {
-                    Layout.preferredWidth: active ? 14 : 0
-                    Layout.preferredHeight: 14
-                    Layout.alignment: Qt.AlignVCenter
-                    active: !!(subItemData && subItemData.icon)
-                    source: (subItemData && subItemData.icon) ? "../icons/Icon" + subItemData.icon + ".qml" : ""
-                    onLoaded: {
-                        item.size = 14
-                        item.color = Qt.binding(() => Theme.muted)
-                    }
-                }
-                Text {
-                    text: subItemData ? subItemData.text : ""
-                    font.pointSize: Theme.fontSmall
-                    color: Theme.text
-                    Layout.fillWidth: true
-                    verticalAlignment: Text.AlignVCenter
-                }
-                Text {
-                    text: subItemData ? (subItemData.shortcut || "") : ""
-                    font.pixelSize: 11
-                    color: Theme.muted
-                    visible: text !== ""
-                    verticalAlignment: Text.AlignVCenter
-                }
-                IconCheck {
-                    visible: subItemData ? !!subItemData.checked : false
-                    size: 14
-                    color: Theme.accent
-                    Layout.alignment: Qt.AlignVCenter
-                }
-            }
-            MouseArea {
-                id: subItemMa
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    if (subItemData && subItemData.action)
-                        root.executeAction(subItemData.action, subItemData.desktopFile || "", subItemData.mimeType || "")
-                }
-            }
-        }
-    }
-
-    Component {
-        id: submenuSeparatorComponent
-        Item {
-            height: 9
-            width: parent ? parent.width : 260
-            Rectangle {
-                anchors.centerIn: parent
-                width: parent.width - 32
-                height: 1
-                color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.06)
-            }
-        }
-    }
-
-    Component {
-        id: separatorComponent
-        Item {
-            height: 9
-            width: parent ? parent.width : 260
-            Rectangle {
-                anchors.centerIn: parent
-                width: parent.width - 16
-                height: 1
-                color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.06)
-            }
         }
     }
 }
