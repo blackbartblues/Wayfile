@@ -11,11 +11,20 @@ Window {
     color: "transparent"
 
     width: dialogWidth
-    height: pageContainer.implicitHeight
+    height: dialogHeight
     minimumWidth: dialogWidth
-    minimumHeight: height
+    // Fixed height regardless of the active tab. A content-driven height made
+    // the Wayland surface fight the compositor — it would not shrink for a
+    // short tab, leaving a transparent strip below the painted content. A
+    // constant size sidesteps that entirely: short tabs simply leave empty
+    // space and the background always fills the window. min == max pins it so
+    // neither the compositor nor the user resizes it; clamped to the parent so
+    // it never overflows a small display.
+    minimumHeight: dialogHeight
+    maximumHeight: dialogHeight
 
     readonly property int dialogWidth: Math.min(920, (transientParent ? transientParent.width : 920) - 32)
+    readonly property int dialogHeight: Math.min(640, (transientParent ? transientParent.height - 80 : 640))
     readonly property int dialogRadius: draftRadiusLarge + 6
 
     function syncHyprlandRounding() {
@@ -1159,10 +1168,6 @@ Window {
     Item {
         id: pageContainer
         anchors.fill: parent
-
-        property real pageContentHeight: pageLoader.item ? pageLoader.item.implicitHeight : 0
-        implicitHeight: Math.max(460, Math.min(pageContentHeight + 120, 640,
-            (root.transientParent ? root.transientParent.height : 768) - 140))
 
         Rectangle {
             anchors.fill: parent
