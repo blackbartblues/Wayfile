@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QProcess>
 #include <QByteArray>
+#include <QHash>
 #include <QStringList>
 #include <QVariantList>
 #include <QVariantMap>
@@ -74,7 +75,12 @@ public:
     Q_INVOKABLE void compressFiles(const QStringList &paths, const QString &format);
     Q_INVOKABLE void extractArchive(const QString &archivePath, const QString &destination);
     Q_INVOKABLE static bool isArchive(const QString &path);
+    // Synchronous variant: kept for tests and fast non-GUI paths. Blocks the
+    // calling thread up to 5s while it lists the archive's table of contents.
     Q_INVOKABLE QString archiveRootFolder(const QString &archivePath);
+    // Async variant for the GUI thread: spawns the listing process without
+    // blocking and reports the common root folder via archiveRootFolderReady.
+    Q_INVOKABLE void requestArchiveRootFolder(const QString &archivePath);
     Q_INVOKABLE void setWallpaper(const QString &path);
     Q_INVOKABLE void setHyprlandRounding(const QString &windowTitle, int radius);
     Q_INVOKABLE void setHyprlandBorder(const QString &windowTitle, int size);
@@ -90,6 +96,7 @@ signals:
     void activeTransfersChanged();
     void pathsChanged(const QStringList &paths);
     void operationFinished(bool success, const QString &error);
+    void archiveRootFolderReady(const QString &archivePath, const QString &rootFolder);
 
 private:
     struct ActiveTransfer {
@@ -132,4 +139,7 @@ private:
     QList<ActiveTransfer> m_activeTransfers;
     int m_nextTransferId = 1;
     QStringList m_pendingChangedPaths;
+    // In-flight async archive-root listings, keyed by archive path. Lets a new
+    // request supersede a stale one and lets the destructor stop them cleanly.
+    QHash<QString, QProcess *> m_archiveRootProcs;
 };

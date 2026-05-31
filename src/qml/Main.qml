@@ -1765,16 +1765,39 @@ ApplicationWindow {
             root.navigatePaneTo(pane, filePath)
         } else if (fileOps.isArchive(filePath)) {
             var dir = filePath.substring(0, filePath.lastIndexOf("/"))
-            var rootFolder = fileOps.archiveRootFolder(filePath)
-            fileOps.extractArchive(filePath, dir)
-            // Named one-shot rather than arguments.callee (see above).
-            var onArchiveExtracted = function(success) {
+            // The root-folder listing and the extraction both run async now, so
+            // neither blocks the GUI thread on activation. Navigate into the
+            // extracted root only once BOTH have reported — otherwise a quick
+            // extraction could finish before the listing and drop us at the
+            // parent dir instead of inside the archive's root folder.
+            var nav = { root: "", rootResolved: false, extractDone: false, success: false }
+            // Declared together up front so each closure can reference the
+            // others without tripping QML's use-before-declaration warning.
+            var finishArchive, onArchiveRoot, onArchiveExtracted
+            finishArchive = function() {
+                if (!nav.rootResolved || !nav.extractDone)
+                    return
+                fileOps.archiveRootFolderReady.disconnect(onArchiveRoot)
                 fileOps.operationFinished.disconnect(onArchiveExtracted)
-                if (success) {
-                    root.navigatePaneTo(pane, rootFolder ? dir + "/" + rootFolder : dir)
-                }
+                if (nav.success)
+                    root.navigatePaneTo(pane, nav.root ? dir + "/" + nav.root : dir)
             }
+            onArchiveRoot = function(archivePath, rootFolder) {
+                if (archivePath !== filePath)
+                    return
+                nav.root = rootFolder
+                nav.rootResolved = true
+                finishArchive()
+            }
+            onArchiveExtracted = function(success) {
+                nav.extractDone = true
+                nav.success = success
+                finishArchive()
+            }
+            fileOps.archiveRootFolderReady.connect(onArchiveRoot)
             fileOps.operationFinished.connect(onArchiveExtracted)
+            fileOps.requestArchiveRootFolder(filePath)
+            fileOps.extractArchive(filePath, dir)
         } else {
             fileOps.openFile(filePath)
             recentFiles.addRecent(filePath)

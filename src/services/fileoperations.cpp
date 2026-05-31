@@ -60,6 +60,17 @@ FileOperations::~FileOperations()
         }
     }
     m_activeTransfers.clear();
+
+    // Stop any in-flight async archive-root listings: their finished/error
+    // lambdas capture `this`, so they must not outlive this object.
+    const QList<QProcess *> archiveProcs = m_archiveRootProcs.values();
+    m_archiveRootProcs.clear();
+    for (QProcess *proc : archiveProcs) {
+        proc->disconnect(this);
+        proc->kill();
+        proc->waitForFinished(100);
+        delete proc;
+    }
 }
 
 bool FileOperations::busy() const { return m_busy; }

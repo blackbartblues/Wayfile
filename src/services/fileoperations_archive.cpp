@@ -5,6 +5,7 @@
 #include <QFileInfo>
 #include <QProcess>
 #include <QStandardPaths>
+#include <QTimer>
 
 // Archive compression / extraction cluster, split from fileoperations.cpp.
 // All helpers here are used only by the archive methods, so they stay local to
@@ -398,6 +399,67 @@ QString FileOperations::archiveRootFolder(const QString &archivePath)
         return {};
 
     return commonArchiveRootFolder(entries);
+}
+
+void FileOperations::requestArchiveRootFolder(const QString &archivePath)
+{
+    QString program;
+    QStringList args;
+    // No listing command for this archive kind: report "no common root" so the
+    // caller's loading state resolves instead of waiting forever.
+    if (!archiveListCommand(archivePath, &program, &args)) {
+        emit archiveRootFolderReady(archivePath, QString());
+        return;
+    }
+
+    // Supersede any in-flight listing for the same archive (dedup): the latest
+    // request wins, the previous one is detached and torn down.
+    if (QProcess *stale = m_archiveRootProcs.take(archivePath)) {
+        stale->disconnect(this);
+        stale->kill();
+        stale->deleteLater();
+    }
+
+    auto *proc = new QProcess(this);
+    m_archiveRootProcs.insert(archivePath, proc);
+
+    connect(proc, &QProcess::finished, this,
+            [this, proc, archivePath, program](int code, QProcess::ExitStatus status) {
+                // Drop stale: a newer request replaced us in the guard map.
+                if (m_archiveRootProcs.value(archivePath) != proc) {
+                    proc->deleteLater();
+                    return;
+                }
+                m_archiveRootProcs.remove(archivePath);
+                QString root;
+                if (status == QProcess::NormalExit && code == 0) {
+                    const QString output = QString::fromUtf8(proc->readAllStandardOutput());
+                    const QStringList entries = archiveEntriesFromOutput(program, output);
+                    if (!entries.isEmpty())
+                        root = commonArchiveRootFolder(entries);
+                }
+                emit archiveRootFolderReady(archivePath, root);
+                proc->deleteLater();
+            });
+    connect(proc, &QProcess::errorOccurred, this,
+            [this, proc, archivePath](QProcess::ProcessError) {
+                if (m_archiveRootProcs.value(archivePath) != proc) {
+                    proc->deleteLater();
+                    return;
+                }
+                m_archiveRootProcs.remove(archivePath);
+                emit archiveRootFolderReady(archivePath, QString());
+                proc->deleteLater();
+            });
+
+    // Watchdog mirrors the sync method's 5s cap: kill a hung listing so it
+    // cannot leak. The kill triggers finished/errorOccurred, which emits.
+    QTimer::singleShot(5000, proc, [this, proc, archivePath]() {
+        if (m_archiveRootProcs.value(archivePath) == proc && proc->state() != QProcess::NotRunning)
+            proc->kill();
+    });
+
+    proc->start(program, args);
 }
 
 bool FileOperations::isArchive(const QString &path)
