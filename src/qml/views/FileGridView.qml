@@ -43,6 +43,33 @@ GridView {
     function focusPath(path, reveal) { selectionController.focusPath(path, reveal) }
     function selectAll() { selectionController.selectAll() }
 
+    // Ctrl+scroll zoom. Changing columnCount resizes every cell, which moves
+    // every delegate. We suppress the position-animating transitions, change
+    // the column count, then forceLayout() so delegates land directly on their
+    // new cells instead of animating (and overlapping) into stale positions.
+    // The reset timer is (re)started on every step so a burst of rapid zooms
+    // coalesces into a single re-enable once the user stops.
+    function applyZoom(step) {
+        var next = Math.max(minColumns, Math.min(maxColumns, columnCount + step))
+        if (next === columnCount)
+            return
+        zoomRelayoutActive = true
+        columnCount = next
+        // Snap the (now resized) cells into place immediately, with transitions
+        // disabled, so nothing is left mid-animation at the wrong coordinates.
+        forceLayout()
+        zoomResetTimer.restart()
+    }
+
+    Timer {
+        id: zoomResetTimer
+        // Outlast the displaced animation; floor keeps it sane when animations
+        // are disabled (animDurationSlow == 0) so a zoom burst still coalesces.
+        interval: Math.max(120, Theme.animDurationSlow + 40)
+        repeat: false
+        onTriggered: root.zoomRelayoutActive = false
+    }
+
     clip: true
     reuseItems: true
     // cacheBuffer deliberately modest — delegate reuse via reuseItems is the
@@ -77,7 +104,15 @@ GridView {
             easing.type: Theme.animEasingEnter; easing.bezierCurve: Theme.animBezierCurve
         }
     }
+    // While a Ctrl+scroll zoom relayout is in flight, the cellWidth/cellHeight
+    // change moves every delegate to a new cell. Letting the add / displaced
+    // transitions animate those moves means rapid consecutive zoom steps stack
+    // overlapping animations and leave delegates parked at stale, intermediate
+    // coordinates (the "scramble"). Disable the animating transitions during
+    // the relayout so delegates snap straight to their correct cells.
+    property bool zoomRelayoutActive: false
     add: Transition {
+        enabled: !root.zoomRelayoutActive
         ParallelAnimation {
             NumberAnimation {
                 properties: "opacity"
@@ -96,6 +131,7 @@ GridView {
         }
     }
     addDisplaced: Transition {
+        enabled: !root.zoomRelayoutActive
         NumberAnimation {
             properties: "x,y"
             duration: Theme.animDurationSlow
@@ -119,6 +155,7 @@ GridView {
         }
     }
     removeDisplaced: Transition {
+        enabled: !root.zoomRelayoutActive
         NumberAnimation {
             properties: "x,y"
             duration: Theme.animDurationSlow
@@ -418,27 +455,39 @@ GridView {
             }
         }
 
-        // Git status overlay badge
-        Loader {
+        // Git status overlay badge — backing disc guarantees the small icon
+        // stays legible over any file icon, thumbnail, or theme background.
+        Rectangle {
             id: gitBadge
-            active: delegateItem.gitStatus !== ""
+            visible: delegateItem.gitStatus !== ""
             anchors.right: (iconImg.visible ? iconImg : thumbImg).right
             anchors.bottom: (iconImg.visible ? iconImg : thumbImg).bottom
             anchors.rightMargin: -2
             anchors.bottomMargin: -2
-            width: 12
-            height: 12
-            sourceComponent: {
-                switch (delegateItem.gitStatusIcon) {
-                    case "git-modified":   return gitModifiedIcon
-                    case "git-staged":     return gitStagedIcon
-                    case "git-untracked":  return gitUntrackedIcon
-                    case "git-deleted":    return gitDeletedIcon
-                    case "git-renamed":    return gitRenamedIcon
-                    case "git-conflicted": return gitConflictedIcon
-                    case "git-ignored":    return gitIgnoredIcon
-                    case "git-dirty":      return gitDirtyIcon
-                    default: return null
+            width: 16
+            height: 16
+            radius: 8
+            z: 4
+            color: Qt.rgba(Theme.mantle.r, Theme.mantle.g, Theme.mantle.b, 0.92)
+            border.width: 1
+            border.color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.18)
+
+            Loader {
+                anchors.centerIn: parent
+                width: 12
+                height: 12
+                sourceComponent: {
+                    switch (delegateItem.gitStatusIcon) {
+                        case "git-modified":   return gitModifiedIcon
+                        case "git-staged":     return gitStagedIcon
+                        case "git-untracked":  return gitUntrackedIcon
+                        case "git-deleted":    return gitDeletedIcon
+                        case "git-renamed":    return gitRenamedIcon
+                        case "git-conflicted": return gitConflictedIcon
+                        case "git-ignored":    return gitIgnoredIcon
+                        case "git-dirty":      return gitDirtyIcon
+                        default: return null
+                    }
                 }
             }
         }
@@ -649,7 +698,7 @@ GridView {
                     return
                 }
                 var step = delta < 0 ? -1 : 1
-                root.columnCount = Math.max(root.minColumns, Math.min(root.maxColumns, root.columnCount + step))
+                root.applyZoom(step)
                 wheel.accepted = true
             } else {
                 wheel.accepted = false
