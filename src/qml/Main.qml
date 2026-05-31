@@ -1541,8 +1541,10 @@ ApplicationWindow {
         id: appChooserDialog
         fileModel: root.paneBaseModel(root.activePaneIndex)
         onUsedAndClosed: {
-            if (propertiesDialog.visible && propertiesDialog.props.mimeType)
-                propertiesDialog.apps = propertiesDialog.fileModelRef.availableApps(propertiesDialog.props.mimeType)
+            if (propertiesDialog.visible && propertiesDialog.props.mimeType) {
+                propertiesDialog._appsMime = propertiesDialog.props.mimeType
+                propertiesDialog.fileModelRef.requestAvailableApps(propertiesDialog.props.mimeType)
+            }
         }
     }
 

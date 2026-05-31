@@ -5,9 +5,11 @@
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
+#include <QProcess>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QStringList>
+#include <QTimer>
 #include <QVariant>
 
 using namespace FsmHelpers;
@@ -52,18 +54,14 @@ static QString readDesktopField(const QString &desktopPath, const QString &field
     return desktop.value(field).toString();
 }
 
-QVariantList FileSystemModel::availableApps(const QString &mimeType) const
+// Parse `gio mime <type>` output into the app list. Shared by the sync and the
+// async entry points so both produce byte-identical results — the only
+// difference between them is how the process is run (blocking vs. non-blocking).
+static QVariantList parseAvailableApps(const QString &output)
 {
     QVariantList apps;
-    if (mimeType.isEmpty())
-        return apps;
 
-    // Inside a Flatpak this transparently runs `flatpak-spawn --host gio
-    // mime <type>` so we see the host's MIME associations and host apps.
-    QString output = runHostTool(QStringLiteral("gio"),
-                                 {QStringLiteral("mime"), mimeType});
-
-    // Parse "gio mime" output — registered apps appear after "Registered applications:"
+    // Registered apps appear after "Registered applications:".
     bool inRegistered = false;
     auto lines = output.split('\n');
     QSet<QString> seen;
@@ -120,6 +118,83 @@ QVariantList FileSystemModel::availableApps(const QString &mimeType) const
     }
 
     return apps;
+}
+
+QVariantList FileSystemModel::availableApps(const QString &mimeType) const
+{
+    if (mimeType.isEmpty())
+        return {};
+
+    // Inside a Flatpak this transparently runs `flatpak-spawn --host gio
+    // mime <type>` so we see the host's MIME associations and host apps.
+    const QString output = runHostTool(QStringLiteral("gio"),
+                                       {QStringLiteral("mime"), mimeType});
+    return parseAvailableApps(output);
+}
+
+void FileSystemModel::requestAvailableApps(const QString &mimeType)
+{
+    if (mimeType.isEmpty()) {
+        emit availableAppsReady(mimeType, QVariantList());
+        return;
+    }
+
+    // Supersede any in-flight probe for the same MIME type (dedup).
+    if (QProcess *stale = m_appsProcs.take(mimeType)) {
+        stale->disconnect(this);
+        stale->kill();
+        stale->deleteLater();
+    }
+
+    auto *proc = new QProcess(this);
+    m_appsProcs.insert(mimeType, proc);
+
+    connect(proc, &QProcess::finished, this,
+            [this, proc, mimeType](int, QProcess::ExitStatus) {
+                if (m_appsProcs.value(mimeType) != proc) {
+                    proc->deleteLater();
+                    return;
+                }
+                m_appsProcs.remove(mimeType);
+                // Match the sync path, which reads stdout regardless of exit
+                // code (runHostTool ignores it): `gio mime` prints its result
+                // on stdout even when it returns non-zero.
+                const QString output = QString::fromUtf8(proc->readAllStandardOutput());
+                emit availableAppsReady(mimeType, parseAvailableApps(output));
+                proc->deleteLater();
+            });
+    connect(proc, &QProcess::errorOccurred, this,
+            [this, proc, mimeType](QProcess::ProcessError) {
+                if (m_appsProcs.value(mimeType) != proc) {
+                    proc->deleteLater();
+                    return;
+                }
+                m_appsProcs.remove(mimeType);
+                emit availableAppsReady(mimeType, QVariantList());
+                proc->deleteLater();
+            });
+
+    // Watchdog mirrors runHostTool's default 3s cap: kill a hung probe so it
+    // cannot leak. The kill triggers finished/errorOccurred, which emits.
+    QTimer::singleShot(3000, proc, [this, proc, mimeType]() {
+        if (m_appsProcs.value(mimeType) == proc && proc->state() != QProcess::NotRunning)
+            proc->kill();
+    });
+
+    startHostToolProcess(proc, QStringLiteral("gio"),
+                         {QStringLiteral("mime"), mimeType});
+}
+
+void FileSystemModel::cancelAppsProbes()
+{
+    const QList<QProcess *> procs = m_appsProcs.values();
+    m_appsProcs.clear();
+    for (QProcess *proc : procs) {
+        proc->disconnect(this);
+        proc->kill();
+        proc->waitForFinished(100);
+        delete proc;
+    }
 }
 
 QString FileSystemModel::defaultApp(const QString &mimeType) const

@@ -67,6 +67,11 @@ Item {
     property Item blurSource: null
     property var fileModel: null
 
+    // Cache of Open-With app lists keyed by MIME type, filled async via
+    // availableAppsReady. buildModel() reads this so the menu's model binding
+    // re-evaluates (no `gio mime` block at menu-open) once a probe lands.
+    property var _appsByMime: ({})
+
     // Pending popup coordinates — repositioned after layout completes
     property real _pendingX: 0
     property real _pendingY: 0
@@ -112,8 +117,31 @@ Item {
         return items
     }
 
+    // Kick off the async Open-With probe for the current target so the submenu
+    // can populate without blocking the menu on `gio mime`. The result lands
+    // via the Connections below and re-triggers the model binding.
+    function _prewarmOpenWith() {
+        if (isEmptySpace || targetIsDir || !fileModel || targetPath === "")
+            return
+        var mime = fileModel.fileProperties(targetPath)["mimeType"] || ""
+        if (mime === "" || root._appsByMime[mime] !== undefined)
+            return
+        fileModel.requestAvailableApps(mime)
+    }
+
+    Connections {
+        target: root.fileModel
+        enabled: root.fileModel !== null
+        function onAvailableAppsReady(mimeType, apps) {
+            var cache = root._appsByMime
+            cache[mimeType] = apps
+            root._appsByMime = cache // reassign so buildModel's binding re-evaluates
+        }
+    }
+
     function popup(x, y) {
         closeSubmenu(true)
+        _prewarmOpenWith()
         _pendingX = x
         _pendingY = y
         _pendingPopup = true
@@ -605,8 +633,11 @@ Item {
                 var props = fileModel.fileProperties(targetPath)
                 var mime = props["mimeType"] || ""
                 if (mime !== "") {
-                    var apps = fileModel.availableApps(mime)
-                    if (apps.length > 0)
+                    // Use the async-filled cache; on a cache miss show the
+                    // generic "Open With\u2026" chooser entry until the probe lands
+                    // (kicked off in popup()), then the binding re-evaluates.
+                    var apps = root._appsByMime[mime]
+                    if (apps !== undefined && apps.length > 0)
                         items.push({ text: "Open With", shortcut: "", action: "openwith_toggle", isSubmenu: true, icon: "ExternalLink", submenuItems: openWithSubmenuItems(apps, mime) })
                     else
                         items.push({ text: "Open With\u2026", shortcut: "", action: "chooseapp_direct", icon: "ExternalLink", mimeType: mime })

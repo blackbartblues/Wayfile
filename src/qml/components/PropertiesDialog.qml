@@ -102,6 +102,9 @@ Window {
     property var _metadataKeys: []
     property string _metadataHint: ""
     property string _metadataPath: ""
+    // MIME type whose Open-With app list we last requested. Guards the async
+    // availableAppsReady result so a stale probe can't overwrite the current.
+    property string _appsMime: ""
 
     function showProperties(path) {
         fileModelRef = host.paneBaseModel(host.activePaneIndex) || fsModel
@@ -109,10 +112,12 @@ Window {
         currentTab = 0
         propsTabs.currentIndex = 0
         refreshFolderDiskUsage()
-        if (!props.isDir && props.mimeType)
-            apps = fileModelRef.availableApps(props.mimeType)
-        else
-            apps = []
+        // Open-With list is fetched async (gio mime can block for seconds);
+        // show empty until availableAppsReady lands for this MIME type.
+        apps = []
+        _appsMime = (!props.isDir && props.mimeType) ? props.mimeType : ""
+        if (_appsMime !== "")
+            fileModelRef.requestAvailableApps(_appsMime)
 
         // Extract rich metadata. exiftool/ffprobe/pdfinfo can block for
         // seconds; extract asynchronously and populate the metadata section
@@ -144,6 +149,17 @@ Window {
     onClosing: {
         cancelFolderDiskUsageRequest()
         propertiesDialog.closed()
+    }
+
+    // Async Open-With result. Guard on _appsMime so a slow `gio mime` for a
+    // MIME type the dialog no longer shows doesn't overwrite the current list.
+    Connections {
+        target: propertiesDialog.fileModelRef
+        function onAvailableAppsReady(mimeType, apps) {
+            if (mimeType !== propertiesDialog._appsMime)
+                return
+            propertiesDialog.apps = apps
+        }
     }
 
     // Async metadata result. Guard on _metadataPath so a slow extraction for
@@ -451,7 +467,8 @@ Window {
                                         onClicked: {
                                             if (!modelData.isDefault) {
                                                 propertiesDialog.fileModelRef.setDefaultApp(propertiesDialog.props.mimeType, modelData.desktopFile)
-                                                propertiesDialog.apps = propertiesDialog.fileModelRef.availableApps(propertiesDialog.props.mimeType)
+                                                propertiesDialog._appsMime = propertiesDialog.props.mimeType
+                                                propertiesDialog.fileModelRef.requestAvailableApps(propertiesDialog.props.mimeType)
                                             }
                                         }
                                     }

@@ -5,6 +5,7 @@
 #include <QFileInfo>
 #include <QFutureWatcher>
 #include <QDir>
+#include <QHash>
 #include <QList>
 #include <QProcess>
 #include <QString>
@@ -66,6 +67,10 @@ public:
     Q_INVOKABLE QVariantMap fileProperties(const QString &path) const;
     Q_INVOKABLE QVariantMap folderItemCounts(const QStringList &paths) const;
     Q_INVOKABLE QVariantList availableApps(const QString &mimeType) const;
+    // Async variant for the GUI thread: spawns `gio mime` without blocking and
+    // reports the parsed app list via availableAppsReady. Keeps availableApps
+    // (sync) for tests and any non-GUI caller.
+    Q_INVOKABLE void requestAvailableApps(const QString &mimeType);
     Q_INVOKABLE QString defaultApp(const QString &mimeType) const;
     Q_INVOKABLE void setDefaultApp(const QString &mimeType, const QString &desktopFile);
     Q_INVOKABLE QVariantList allInstalledApps() const;
@@ -86,6 +91,7 @@ signals:
     void showHiddenChanged();
     void countsChanged();
     void watchedDirectoryChanged(const QString &path);
+    void availableAppsReady(const QString &mimeType, const QVariantList &apps);
 
 private:
     // Lazy per-row display cache. QMimeDatabase / QLocale / permission-string
@@ -137,6 +143,8 @@ private:
     bool applyLocalDiff(const QList<Entry> &newEntries);
     bool isTrashRoot() const;
     bool isRemoteRoot() const;
+    // Stop in-flight async `gio mime` probes (see requestAvailableApps).
+    void cancelAppsProbes();
     QVariantMap remoteFileProperties(const QString &path) const;
     QVariantMap trashFileProperties(const QString &path) const;
 
@@ -148,6 +156,9 @@ private:
     int m_fileCount = 0;
     int m_folderCount = 0;
     GitStatusService *m_gitService = nullptr;
+    // In-flight async `gio mime` probes, keyed by MIME type. Lets a repeated
+    // request dedup and lets the destructor stop them before teardown.
+    QHash<QString, QProcess *> m_appsProcs;
     QProcess *m_remoteReloadProcess = nullptr;
     int m_remoteReloadGeneration = 0;
     QFutureWatcher<LocalReloadResult> *m_localReloadWatcher = nullptr;
