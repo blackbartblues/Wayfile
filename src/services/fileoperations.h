@@ -24,6 +24,9 @@ class FileOperations : public QObject
     Q_PROPERTY(QString currentFile READ currentFile NOTIFY currentFileChanged)
     Q_PROPERTY(QVariantList activeTransfers READ activeTransfers NOTIFY activeTransfersChanged)
     Q_PROPERTY(QStringList pendingTargetPaths READ pendingTargetPaths NOTIFY activeTransfersChanged)
+    // Cached: whether the system clipboard holds an image. Refreshed async via
+    // refreshClipboardImageAvailable() so the paste UI never blocks on wl-paste.
+    Q_PROPERTY(bool hasClipboardImage READ hasClipboardImage NOTIFY clipboardImageAvailableChanged)
 
 public:
     explicit FileOperations(QObject *parent = nullptr);
@@ -68,7 +71,13 @@ public:
     Q_INVOKABLE QVariantList breadcrumbSegments(const QString &path) const;
     Q_INVOKABLE void emptyTrash();
     Q_INVOKABLE void openFileWith(const QString &path, const QString &desktopFile);
-    Q_INVOKABLE bool hasClipboardImage() const;
+    // Property getter — returns the cached flag (see refreshClipboardImageAvailable).
+    bool hasClipboardImage() const;
+    // Re-probe the clipboard for an image without blocking: instant Qt check
+    // first, else an async `wl-paste --list-types`. Updates the cached flag and
+    // emits clipboardImageAvailableChanged when it changes. Call before showing
+    // paste UI (context menu, Ctrl+V) so the cached value is current.
+    Q_INVOKABLE void refreshClipboardImageAvailable();
     Q_INVOKABLE QString pasteClipboardImage(const QString &destinationDir);
     Q_INVOKABLE void copyPathToClipboard(const QString &path);
     Q_INVOKABLE void openInTerminal(const QString &dirPath);
@@ -97,6 +106,7 @@ signals:
     void pathsChanged(const QStringList &paths);
     void operationFinished(bool success, const QString &error);
     void archiveRootFolderReady(const QString &archivePath, const QString &rootFolder);
+    void clipboardImageAvailableChanged();
 
 private:
     struct ActiveTransfer {
@@ -119,7 +129,13 @@ private:
     void setPendingChangedPaths(const QStringList &paths);
     void emitPendingChangedPaths();
     void emitChangedPaths(const QStringList &paths);
-    QByteArray clipboardImageData() const;
+    void setClipboardImageAvailable(bool available);
+    // Two-step async fallback for pasteClipboardImage when Qt can't read the
+    // clipboard image directly: `wl-paste --list-types` then `--type <image>`,
+    // writing the result and reporting via operationFinished.
+    void startExternalClipboardImagePaste(const QString &outputPath);
+    void fetchAndWriteClipboardImage(const QString &wlPastePath, const QString &imageType,
+                                     const QString &outputPath);
     QString uniqueImagePastePath(const QString &destinationDir) const;
     void startGioTransfer(const QVariantList &operations, bool moveOperation);
     using ProgressReporter = std::function<void(int current, int total, const QString &fileName)>;
@@ -142,4 +158,8 @@ private:
     // In-flight async archive-root listings, keyed by archive path. Lets a new
     // request supersede a stale one and lets the destructor stop them cleanly.
     QHash<QString, QProcess *> m_archiveRootProcs;
+    // Cached clipboard-image flag + the in-flight async probe (single slot: a
+    // newer probe supersedes the previous one). See refreshClipboardImageAvailable.
+    bool m_hasClipboardImage = false;
+    QProcess *m_clipboardProbeProcess = nullptr;
 };

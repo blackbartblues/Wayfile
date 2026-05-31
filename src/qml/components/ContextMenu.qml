@@ -142,6 +142,11 @@ Item {
     function popup(x, y) {
         closeSubmenu(true)
         _prewarmOpenWith()
+        // Refresh the cached clipboard-image flag (async) so the "Paste Image"
+        // entry reflects the current clipboard; the model binding re-evaluates
+        // via fileOps.hasClipboardImage when the probe lands.
+        if (fileOps)
+            fileOps.refreshClipboardImageAvailable()
         _pendingX = x
         _pendingY = y
         _pendingPopup = true
@@ -714,7 +719,7 @@ Item {
                 items.push({ text: "New Folder...", shortcut: config.shortcutMap["new_folder"] || "", action: "newfolder", icon: "Folder" })
                 items.push({ text: "New File...", shortcut: config.shortcutMap["new_file"] || "", action: "newfile", icon: "FileText" })
                 items.push({ separator: true })
-                if (clipboard.hasContent || (!remoteContext && fileOps.hasClipboardImage())) {
+                if (clipboard.hasContent || (!remoteContext && fileOps.hasClipboardImage)) {
                     items.push({
                         text: clipboard.hasContent ? "Paste" : "Paste Image",
                         shortcut: "Ctrl+V",

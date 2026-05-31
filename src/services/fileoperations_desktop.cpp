@@ -12,6 +12,7 @@
 #include <QPixmap>
 #include <QProcess>
 #include <QStandardPaths>
+#include <QTimer>
 #include <QUrl>
 #include <QUuid>
 
@@ -203,11 +204,84 @@ void FileOperations::openFileWith(const QString &path, const QString &desktopFil
 
 bool FileOperations::hasClipboardImage() const
 {
-    const QClipboard *clipboard = QGuiApplication::clipboard();
-    if (!clipboardImage(clipboard).isNull())
-        return true;
+    return m_hasClipboardImage;
+}
 
-    return !clipboardImageData().isEmpty();
+void FileOperations::setClipboardImageAvailable(bool available)
+{
+    if (m_hasClipboardImage == available)
+        return;
+    m_hasClipboardImage = available;
+    emit clipboardImageAvailableChanged();
+}
+
+void FileOperations::refreshClipboardImageAvailable()
+{
+    // Instant Qt path: if Qt can already read a clipboard image, we're done.
+    const QClipboard *clipboard = QGuiApplication::clipboard();
+    if (!clipboardImage(clipboard).isNull()) {
+        setClipboardImageAvailable(true);
+        return;
+    }
+
+    const QString wlPastePath = QStandardPaths::findExecutable(QStringLiteral("wl-paste"));
+    if (wlPastePath.isEmpty()) {
+        setClipboardImageAvailable(false);
+        return;
+    }
+
+    // Supersede any in-flight probe: only the latest result matters.
+    if (m_clipboardProbeProcess) {
+        m_clipboardProbeProcess->disconnect(this);
+        m_clipboardProbeProcess->kill();
+        m_clipboardProbeProcess->deleteLater();
+        m_clipboardProbeProcess = nullptr;
+    }
+
+    auto *proc = new QProcess(this);
+    m_clipboardProbeProcess = proc;
+
+    // Only `--list-types` is needed for the boolean — never the (slow) `--type`
+    // fetch. The pointer guard drops a superseded/double-fired result.
+    connect(proc, &QProcess::finished, this,
+            [this, proc](int code, QProcess::ExitStatus status) {
+                if (m_clipboardProbeProcess != proc) {
+                    proc->deleteLater();
+                    return;
+                }
+                m_clipboardProbeProcess = nullptr;
+                bool hasImage = false;
+                if (status == QProcess::NormalExit && code == 0) {
+                    const QStringList types = QString::fromUtf8(proc->readAllStandardOutput())
+                                                  .split('\n', Qt::SkipEmptyParts);
+                    for (const QString &type : types) {
+                        if (type.startsWith(QStringLiteral("image/"))) {
+                            hasImage = true;
+                            break;
+                        }
+                    }
+                }
+                setClipboardImageAvailable(hasImage);
+                proc->deleteLater();
+            });
+    connect(proc, &QProcess::errorOccurred, this,
+            [this, proc](QProcess::ProcessError) {
+                if (m_clipboardProbeProcess != proc) {
+                    proc->deleteLater();
+                    return;
+                }
+                m_clipboardProbeProcess = nullptr;
+                setClipboardImageAvailable(false);
+                proc->deleteLater();
+            });
+
+    // Watchdog mirrors the old 1s list-types cap.
+    QTimer::singleShot(1000, proc, [proc]() {
+        if (proc->state() != QProcess::NotRunning)
+            proc->kill();
+    });
+
+    proc->start(wlPastePath, {QStringLiteral("--list-types")});
 }
 
 QString FileOperations::pasteClipboardImage(const QString &destinationDir)
@@ -232,34 +306,106 @@ QString FileOperations::pasteClipboardImage(const QString &destinationDir)
         return outputPath;
     }
 
-    const QByteArray rawImage = clipboardImageData();
-    if (rawImage.isEmpty()) {
+    // Qt couldn't read the image directly (e.g. an external app's clipboard).
+    // Fall back to wl-paste, async, so the paste action never blocks the GUI.
+    // The result is delivered via operationFinished; the return is empty (the
+    // QML caller ignores it and listens for operationFinished).
+    startExternalClipboardImagePaste(outputPath);
+    return {};
+}
+
+void FileOperations::startExternalClipboardImagePaste(const QString &outputPath)
+{
+    const QString wlPastePath = QStandardPaths::findExecutable(QStringLiteral("wl-paste"));
+    if (wlPastePath.isEmpty()) {
         emit operationFinished(false, "Clipboard does not contain an image");
-        return {};
+        return;
     }
 
-    QFile file(outputPath);
-    if (!file.open(QIODevice::WriteOnly)) {
-        emit operationFinished(false, "Failed to write clipboard image");
-        return {};
-    }
-    if (file.write(rawImage) != rawImage.size()) {
-        file.close();
-        file.remove();
-        emit operationFinished(false, "Failed to write clipboard image");
-        return {};
-    }
-    if (!file.flush()) {
-        file.close();
-        file.remove();
-        emit operationFinished(false, "Failed to write clipboard image");
-        return {};
-    }
-    file.close();
+    auto *listProc = new QProcess(this);
+    connect(listProc, &QProcess::finished, this,
+            [this, listProc, wlPastePath, outputPath](int code, QProcess::ExitStatus status) {
+                listProc->deleteLater();
+                if (status != QProcess::NormalExit || code != 0) {
+                    emit operationFinished(false, "Clipboard does not contain an image");
+                    return;
+                }
+                const QStringList types = QString::fromUtf8(listProc->readAllStandardOutput())
+                                              .split('\n', Qt::SkipEmptyParts);
+                QString imageType;
+                if (types.contains(QStringLiteral("image/png"))) {
+                    imageType = QStringLiteral("image/png");
+                } else {
+                    for (const QString &type : types) {
+                        if (type.startsWith(QStringLiteral("image/"))) {
+                            imageType = type;
+                            break;
+                        }
+                    }
+                }
+                if (imageType.isEmpty()) {
+                    emit operationFinished(false, "Clipboard does not contain an image");
+                    return;
+                }
+                fetchAndWriteClipboardImage(wlPastePath, imageType, outputPath);
+            });
+    connect(listProc, &QProcess::errorOccurred, this,
+            [this, listProc](QProcess::ProcessError err) {
+                // A started-then-killed process still fires finished; only act
+                // on can't-start here so the error is reported exactly once.
+                if (err != QProcess::FailedToStart)
+                    return;
+                listProc->deleteLater();
+                emit operationFinished(false, "Clipboard does not contain an image");
+            });
+    QTimer::singleShot(1000, listProc, [listProc]() {
+        if (listProc->state() != QProcess::NotRunning)
+            listProc->kill();
+    });
+    listProc->start(wlPastePath, {QStringLiteral("--list-types")});
+}
 
-    emitChangedPaths({outputPath});
-    emit operationFinished(true, QString());
-    return outputPath;
+void FileOperations::fetchAndWriteClipboardImage(const QString &wlPastePath, const QString &imageType,
+                                                 const QString &outputPath)
+{
+    auto *imgProc = new QProcess(this);
+    connect(imgProc, &QProcess::finished, this,
+            [this, imgProc, outputPath](int code, QProcess::ExitStatus status) {
+                imgProc->deleteLater();
+                if (status != QProcess::NormalExit || code != 0) {
+                    emit operationFinished(false, "Clipboard does not contain an image");
+                    return;
+                }
+                const QByteArray rawImage = imgProc->readAllStandardOutput();
+                if (rawImage.isEmpty()) {
+                    emit operationFinished(false, "Clipboard does not contain an image");
+                    return;
+                }
+                QFile file(outputPath);
+                if (!file.open(QIODevice::WriteOnly)
+                    || file.write(rawImage) != rawImage.size()
+                    || !file.flush()) {
+                    file.close();
+                    file.remove();
+                    emit operationFinished(false, "Failed to write clipboard image");
+                    return;
+                }
+                file.close();
+                emitChangedPaths({outputPath});
+                emit operationFinished(true, QString());
+            });
+    connect(imgProc, &QProcess::errorOccurred, this,
+            [this, imgProc](QProcess::ProcessError err) {
+                if (err != QProcess::FailedToStart)
+                    return;
+                imgProc->deleteLater();
+                emit operationFinished(false, "Clipboard does not contain an image");
+            });
+    QTimer::singleShot(3000, imgProc, [imgProc]() {
+        if (imgProc->state() != QProcess::NotRunning)
+            imgProc->kill();
+    });
+    imgProc->start(wlPastePath, {QStringLiteral("--no-newline"), QStringLiteral("--type"), imageType});
 }
 
 void FileOperations::copyPathToClipboard(const QString &path)
@@ -304,42 +450,6 @@ QString FileOperations::uniqueImagePastePath(const QString &destinationDir) cons
     }
 
     return {};
-}
-
-QByteArray FileOperations::clipboardImageData() const
-{
-    const QString wlPastePath = QStandardPaths::findExecutable("wl-paste");
-    if (wlPastePath.isEmpty())
-        return {};
-
-    QProcess listProcess;
-    listProcess.start(wlPastePath, {"--list-types"});
-    if (!listProcess.waitForFinished(1000) || listProcess.exitCode() != 0)
-        return {};
-
-    const QStringList types = QString::fromUtf8(listProcess.readAllStandardOutput())
-                                  .split('\n', Qt::SkipEmptyParts);
-    QString imageType;
-    if (types.contains("image/png"))
-        imageType = "image/png";
-    else {
-        for (const QString &type : types) {
-            if (type.startsWith("image/")) {
-                imageType = type;
-                break;
-            }
-        }
-    }
-
-    if (imageType.isEmpty())
-        return {};
-
-    QProcess imageProcess;
-    imageProcess.start(wlPastePath, {"--no-newline", "--type", imageType});
-    if (!imageProcess.waitForFinished(3000) || imageProcess.exitCode() != 0)
-        return {};
-
-    return imageProcess.readAllStandardOutput();
 }
 
 void FileOperations::setWallpaper(const QString &path)

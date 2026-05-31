@@ -1833,7 +1833,7 @@ ApplicationWindow {
         if (fileOps.isRemotePath(destPath))
             return
 
-        if (fileOps.hasClipboardImage())
+        if (fileOps.hasClipboardImage)
             fileOps.pasteClipboardImage(destPath)
     }
 

@@ -1,8 +1,10 @@
 #include "services/fileoperations.h"
 #include "services/fileoperations_helpers.h"
 #include "services/giotransferworker.h"
+#include <QClipboard>
 #include <QDir>
 #include <QFileInfo>
+#include <QGuiApplication>
 #include <QStandardPaths>
 #include <QThread>
 #include <QUuid>
@@ -36,6 +38,15 @@ QStringList uniqueLocations(const QStringList &paths)
 FileOperations::FileOperations(QObject *parent)
     : QObject(parent)
 {
+    // Keep the cached clipboard-image flag current: re-probe whenever the
+    // clipboard changes. On Wayland this fires on focus-in, so by the time the
+    // user opens a menu or presses Ctrl+V the flag is usually already fresh;
+    // the paste UI also refreshes on demand. The probe is async, so nothing
+    // blocks on wl-paste.
+    if (QClipboard *clipboard = QGuiApplication::clipboard())
+        connect(clipboard, &QClipboard::dataChanged, this,
+                &FileOperations::refreshClipboardImageAvailable);
+    refreshClipboardImageAvailable();
 }
 
 FileOperations::~FileOperations()
@@ -70,6 +81,15 @@ FileOperations::~FileOperations()
         proc->kill();
         proc->waitForFinished(100);
         delete proc;
+    }
+
+    // Same for the in-flight clipboard-image probe.
+    if (m_clipboardProbeProcess) {
+        m_clipboardProbeProcess->disconnect(this);
+        m_clipboardProbeProcess->kill();
+        m_clipboardProbeProcess->waitForFinished(100);
+        delete m_clipboardProbeProcess;
+        m_clipboardProbeProcess = nullptr;
     }
 }
 

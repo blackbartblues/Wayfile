@@ -161,7 +161,10 @@ Item {
     Shortcut {
         sequence: config.shortcutMap["paste"]
         onActivated: {
-            if (!clipboard.hasContent && !fileOps.hasClipboardImage()) return
+            // Re-probe the clipboard for an image (async, non-blocking) so the
+            // cached flag is current for subsequent presses.
+            fileOps.refreshClipboardImageAvailable()
+            if (!clipboard.hasContent && !fileOps.hasClipboardImage) return
             if (host.paneIsRecents(host.activePaneIndex)) return
             var dest = host.panePath(host.activePaneIndex)
             if (dest === "") return
