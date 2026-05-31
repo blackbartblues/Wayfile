@@ -26,6 +26,12 @@ Item {
     Accessible.role: Accessible.Dialog
     Accessible.name: "File properties"
 
+    // Self-handle Escape: the global Escape shortcut intentionally stays
+    // disabled while a modal dialog is open (see AppShortcuts.qml), so the
+    // dialog must close itself. Matches the QuickPreview overlay convention.
+    focus: visible
+    Keys.onEscapePressed: (event) => { close(); event.accepted = true }
+
     property var host: null
     signal chooseAppRequested(string path, string mimeType)
 
@@ -82,6 +88,9 @@ Item {
             metadataExtractor.requestExtract(path)
 
         visible = true
+        // Grab focus so Keys.onEscapePressed fires (deferred until after the
+        // item is shown). Matches QuickPreview's forceActiveFocus-on-open.
+        Qt.callLater(function() { propertiesDialog.forceActiveFocus() })
         propsBox.opacity = 0
         propsBox.scale = 0.88
         propsBox.yOffset = -8
@@ -166,6 +175,13 @@ Item {
 
         // Access dropdown options
         property var accessOptions: ["None", "Read only", "Read & Write", "Read, Write & Execute"]
+
+        // Click-catcher: swallow clicks on the dialog body so they don't fall
+        // through to the full-screen dismiss backdrop behind it. Declared first
+        // (lowest in propsBox's stack) so interactive children above still get
+        // their clicks; only empty-area clicks land here. Fixes the dialog
+        // closing when you click inside it.
+        MouseArea { anchors.fill: parent }
 
         Rectangle {
             anchors.fill: parent
