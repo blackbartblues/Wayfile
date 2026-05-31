@@ -46,8 +46,12 @@ ApplicationWindow {
     property var transferReservedTargets: ({})
     property bool paneFocusScheduled: false
     readonly property string unifiedTrashPath: "trash:///"
-    readonly property bool isTrashView: fileOps.isTrashPath(panePath(activePaneIndex))
-    readonly property bool isRemoteView: fileOps.isRemotePath(panePath(activePaneIndex))
+    // Bind to the activePanePath reactive mirror, not panePath(activePaneIndex)
+    // directly: panePath() reads the untracked Q_INVOKABLE paneCurrentPath(),
+    // so a raw binding never re-fires on in-pane navigation and these flags
+    // freeze (toolbar keeps showing trash/remote chrome after navigating away).
+    readonly property bool isTrashView: fileOps.isTrashPath(activePanePath)
+    readonly property bool isRemoteView: fileOps.isRemotePath(activePanePath)
 
     // ── Click-anywhere-clears: any plain LMB press anywhere in the window
     // collapses a >1 tab selection down to just the active tab.  Sits on
@@ -1916,7 +1920,13 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 window: root
                 activeTab: tabModel.activeTab
-                navigationPath: panePath(activePaneIndex)
+                // #9: bind to the activePanePath reactive mirror. panePath()
+                // reads the untracked Q_INVOKABLE paneCurrentPath() (whose value
+                // is always non-empty, so the tracked currentPath fallback branch
+                // is never taken), so a raw panePath(activePaneIndex) binding only
+                // re-fires on tab/pane switches — never on in-pane navigation —
+                // which froze the breadcrumb on a stale path.
+                navigationPath: activePanePath
                 canGoBack: activePaneCanGoBack()
                 canGoForward: activePaneCanGoForward()
                 mergeWillUnmerge: root.mergeButtonWillUnmerge()
