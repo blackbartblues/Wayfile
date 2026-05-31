@@ -204,6 +204,10 @@ list(APPEND heimdall_qml_module_args
         qml/components/KeyboardShortcutsDialog.qml
         qml/components/MissingDependenciesDialog.qml
         qml/components/SettingsPanel.qml
+        qml/components/SettingsSectionLook.qml
+        qml/components/SettingsSectionLayout.qml
+        qml/components/SettingsSectionMotion.qml
+        qml/components/SettingsSectionTools.qml
         qml/components/SettingDescription.qml
 )
 
