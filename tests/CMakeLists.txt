@@ -25,6 +25,16 @@ target_include_directories(tst_configmanager PRIVATE
 target_link_libraries(tst_configmanager PRIVATE Qt6::Test Qt6::Core Qt6::Gui)
 add_test(NAME tst_configmanager COMMAND tst_configmanager)
 
+add_executable(tst_configmanager_roundtrip tst_configmanager_roundtrip.cpp
+    ${CMAKE_SOURCE_DIR}/src/services/configmanager.cpp
+)
+target_include_directories(tst_configmanager_roundtrip PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/third_party
+)
+target_link_libraries(tst_configmanager_roundtrip PRIVATE Qt6::Test Qt6::Core Qt6::Gui)
+add_test(NAME tst_configmanager_roundtrip COMMAND tst_configmanager_roundtrip)
+
 add_executable(tst_themeloader tst_themeloader.cpp
     ${CMAKE_SOURCE_DIR}/src/services/themeloader.cpp
 )
