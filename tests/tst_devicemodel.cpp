@@ -9,14 +9,16 @@ class TestDeviceModel : public QObject
 private slots:
     void testInitialRefresh()
     {
-        DeviceModel model;
+        // Synchronous refresh so the model is populated without an event loop.
+        DeviceModel model(nullptr, /*deferInitialRefresh*/ false, /*synchronousRefresh*/ true);
         // Constructor calls refresh(); root "/" must always be present
         QVERIFY(model.rowCount() >= 1);
     }
 
     void testModelConsistency()
     {
-        DeviceModel model;
+        // Synchronous refresh so the model is populated without an event loop.
+        DeviceModel model(nullptr, /*deferInitialRefresh*/ false, /*synchronousRefresh*/ true);
         // QAbstractItemModelTester exercises all model invariants
         QAbstractItemModelTester tester(&model, QAbstractItemModelTester::FailureReportingMode::Fatal);
         Q_UNUSED(tester)
@@ -24,7 +26,8 @@ private slots:
 
     void testRoleNames()
     {
-        DeviceModel model;
+        // Synchronous refresh so the model is populated without an event loop.
+        DeviceModel model(nullptr, /*deferInitialRefresh*/ false, /*synchronousRefresh*/ true);
         const QHash<int, QByteArray> roles = model.roleNames();
 
         QCOMPARE(roles.value(DeviceModel::DeviceNameRole),   QByteArray("deviceName"));
@@ -42,7 +45,8 @@ private slots:
 
     void testRootDevicePresent()
     {
-        DeviceModel model;
+        // Synchronous refresh so the model is populated without an event loop.
+        DeviceModel model(nullptr, /*deferInitialRefresh*/ false, /*synchronousRefresh*/ true);
 
         int rootRow = -1;
         for (int i = 0; i < model.rowCount(); ++i) {
@@ -69,7 +73,8 @@ private slots:
 
     void testNoVirtualFilesystems()
     {
-        DeviceModel model;
+        // Synchronous refresh so the model is populated without an event loop.
+        DeviceModel model(nullptr, /*deferInitialRefresh*/ false, /*synchronousRefresh*/ true);
 
         const QStringList virtualPrefixes = { "/proc", "/sys", "/dev" };
 
@@ -87,7 +92,8 @@ private slots:
 
     void testDeviceNamesNotEmpty()
     {
-        DeviceModel model;
+        // Synchronous refresh so the model is populated without an event loop.
+        DeviceModel model(nullptr, /*deferInitialRefresh*/ false, /*synchronousRefresh*/ true);
 
         for (int i = 0; i < model.rowCount(); ++i) {
             QModelIndex idx = model.index(i);
@@ -99,7 +105,8 @@ private slots:
 
     void testFreeSpaceLessOrEqualTotal()
     {
-        DeviceModel model;
+        // Synchronous refresh so the model is populated without an event loop.
+        DeviceModel model(nullptr, /*deferInitialRefresh*/ false, /*synchronousRefresh*/ true);
 
         for (int i = 0; i < model.rowCount(); ++i) {
             QModelIndex idx = model.index(i);
@@ -113,14 +120,16 @@ private slots:
 
     void testInvalidIndex()
     {
-        DeviceModel model;
+        // Synchronous refresh so the model is populated without an event loop.
+        DeviceModel model(nullptr, /*deferInitialRefresh*/ false, /*synchronousRefresh*/ true);
         QVariant result = model.data(QModelIndex(), DeviceModel::DeviceNameRole);
         QVERIFY(!result.isValid());
     }
 
     void testOutOfBoundsIndex()
     {
-        DeviceModel model;
+        // Synchronous refresh so the model is populated without an event loop.
+        DeviceModel model(nullptr, /*deferInitialRefresh*/ false, /*synchronousRefresh*/ true);
         QModelIndex idx = model.index(9999);
         QVariant result = model.data(idx, DeviceModel::DeviceNameRole);
         QVERIFY(!result.isValid());
@@ -128,7 +137,8 @@ private slots:
 
     void testRefreshIdempotent()
     {
-        DeviceModel model;
+        // Synchronous refresh so the model is populated without an event loop.
+        DeviceModel model(nullptr, /*deferInitialRefresh*/ false, /*synchronousRefresh*/ true);
         int countBefore = model.rowCount();
 
         model.refresh();
@@ -139,7 +149,8 @@ private slots:
 
     void testMountOutOfBounds()
     {
-        DeviceModel model;
+        // Synchronous refresh so the model is populated without an event loop.
+        DeviceModel model(nullptr, /*deferInitialRefresh*/ false, /*synchronousRefresh*/ true);
         // These must not crash
         model.mount(-1);
         model.mount(9999);
@@ -149,7 +160,8 @@ private slots:
 
     void testUsagePercentBounds()
     {
-        DeviceModel model;
+        // Synchronous refresh so the model is populated without an event loop.
+        DeviceModel model(nullptr, /*deferInitialRefresh*/ false, /*synchronousRefresh*/ true);
 
         for (int i = 0; i < model.rowCount(); ++i) {
             QModelIndex idx = model.index(i);
@@ -163,7 +175,8 @@ private slots:
 
     void testBackendRoleValues()
     {
-        DeviceModel model;
+        // Synchronous refresh so the model is populated without an event loop.
+        DeviceModel model(nullptr, /*deferInitialRefresh*/ false, /*synchronousRefresh*/ true);
 
         for (int i = 0; i < model.rowCount(); ++i) {
             QModelIndex idx = model.index(i);

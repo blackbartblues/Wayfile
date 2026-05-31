@@ -34,8 +34,9 @@ static const QStringList kVirtualTypes = {
     "bpf", "autofs", "ramfs", "efivarfs",
 };
 
-DeviceModel::DeviceModel(QObject *parent, bool deferInitialRefresh)
+DeviceModel::DeviceModel(QObject *parent, bool deferInitialRefresh, bool synchronousRefresh)
     : QAbstractListModel(parent)
+    , m_synchronousRefresh(synchronousRefresh)
 {
     m_refreshTimer.setSingleShot(true);
     m_refreshTimer.setInterval(600);
@@ -415,8 +416,6 @@ void DeviceModel::scheduleRefresh()
 void DeviceModel::refresh()
 {
     m_refreshTimer.stop();
-    beginResetModel();
-    clearDevices();
 
     // Ask UDisks2 for everything it knows about. Returns a{oa{sa{sv}}}:
     //   { object_path → { interface_name → { property_name → value } } }
@@ -426,7 +425,34 @@ void DeviceModel::refresh()
         QStringLiteral("org.freedesktop.DBus.ObjectManager"),
         QStringLiteral("GetManagedObjects"));
 
-    const QDBusMessage reply = QDBusConnection::systemBus().call(call, QDBus::Block, 3000);
+    // Test hook: block inline so tests observe a populated model without
+    // spinning an event loop. Production takes the async path below so a slow
+    // or unreachable UDisks2 cannot freeze the GUI thread (up to 3s) on every
+    // device hotplug, mount, or unmount — the model keeps showing the previous
+    // device list until the reply arrives.
+    if (m_synchronousRefresh) {
+        applyManagedObjects(QDBusConnection::systemBus().call(call, QDBus::Block, 3000));
+        return;
+    }
+
+    const quint64 generation = ++m_refreshGeneration;
+    QDBusPendingCall pending = QDBusConnection::systemBus().asyncCall(call, 3000);
+    auto *watcher = new QDBusPendingCallWatcher(pending, this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this,
+            [this, generation](QDBusPendingCallWatcher *self) {
+        self->deleteLater();
+        // Discard a stale reply if a newer refresh() already superseded it.
+        if (generation != m_refreshGeneration)
+            return;
+        applyManagedObjects(self->reply());
+    });
+}
+
+void DeviceModel::applyManagedObjects(const QDBusMessage &reply)
+{
+    beginResetModel();
+    clearDevices();
+
     QHash<QString, DriveInfo> drives;
     QHash<QString, BlockInfo> blocks;
 

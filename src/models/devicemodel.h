@@ -8,6 +8,8 @@ typedef struct _GMount GMount;
 typedef struct _GVolume GVolume;
 typedef struct _GVolumeMonitor GVolumeMonitor;
 
+class QDBusMessage;
+
 enum class DeviceBackend {
     UDisks2,
     Gio,
@@ -46,7 +48,8 @@ public:
         BackendRole,
     };
 
-    explicit DeviceModel(QObject *parent = nullptr, bool deferInitialRefresh = false);
+    explicit DeviceModel(QObject *parent = nullptr, bool deferInitialRefresh = false,
+                         bool synchronousRefresh = false);
     ~DeviceModel() override;
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
@@ -70,7 +73,18 @@ private:
     void setupUDisks2();
     static bool isVirtual(const QString &fsType);
 
+    // Rebuild m_devices from a UDisks2 GetManagedObjects reply (+ Gio
+    // enumeration) and reset the model. Shared by the synchronous (test) and
+    // asynchronous (production) refresh paths.
+    void applyManagedObjects(const QDBusMessage &reply);
+
     QList<DeviceEntry> m_devices;
     GVolumeMonitor *m_volumeMonitor = nullptr;
     QTimer m_refreshTimer;
+    // Bumped on every refresh(); the async reply handler discards its result
+    // if a newer refresh has since superseded it.
+    quint64 m_refreshGeneration = 0;
+    // Test-only: run refresh() inline (blocking DBus) so tests observe a
+    // populated model without spinning an event loop.
+    bool m_synchronousRefresh = false;
 };
