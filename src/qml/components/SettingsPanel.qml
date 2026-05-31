@@ -468,6 +468,10 @@ Window {
                 }
             }
 
+            SettingDescription {
+                text: "Switch between the dark and light Catppuccin theme palette."
+            }
+
             Q.Separator { Layout.bottomMargin: 8 }
 
             Text {
@@ -489,6 +493,10 @@ Window {
                 }
             }
 
+            SettingDescription {
+                text: "Color palette used across the whole interface."
+            }
+
             Q.Dropdown {
                 Layout.fillWidth: true
                 label: "Font"
@@ -498,6 +506,10 @@ Window {
                     root.draftFontFamily = value === root.systemFontLabel ? "" : value
                     root.applySettingsNow()
                 }
+            }
+
+            SettingDescription {
+                text: "Font family for all interface text; System Default follows your desktop."
             }
 
             Q.Dropdown {
@@ -511,6 +523,10 @@ Window {
                 }
             }
 
+            SettingDescription {
+                text: "Icon theme used for files, folders, and apps in the file list."
+            }
+
             Q.Toggle {
                 Layout.fillWidth: true
                 label: "Use built-in icons as fallback"
@@ -519,6 +535,10 @@ Window {
                     root.draftBuiltinIcons = value
                     root.applySettingsNow()
                 }
+            }
+
+            SettingDescription {
+                text: "Fall back to Heimdall's bundled icons when the icon pack has no match."
             }
 
             Text {
@@ -540,6 +560,10 @@ Window {
                 }
             }
 
+            SettingDescription {
+                text: "Let panels and surfaces blend with the wallpaper instead of using a solid fill."
+            }
+
             Q.Slider {
                 Layout.fillWidth: true
                 label: "Transparency"
@@ -553,6 +577,11 @@ Window {
                     root.draftTransparencyLevel = value / 100
                     root.queueSettingsApply()
                 }
+            }
+
+            SettingDescription {
+                enabled: root.draftTransparencyEnabled
+                text: "How opaque the transparent surfaces are; lower values show more of the background."
             }
 
             Q.Slider {
@@ -573,6 +602,10 @@ Window {
                 }
             }
 
+            SettingDescription {
+                text: "Corner rounding for small elements like buttons, chips, and inputs."
+            }
+
             Q.Slider {
                 Layout.fillWidth: true
                 label: "Medium radius"
@@ -589,6 +622,10 @@ Window {
                 }
             }
 
+            SettingDescription {
+                text: "Corner rounding for medium surfaces such as cards and menus."
+            }
+
             Q.Slider {
                 Layout.fillWidth: true
                 label: "Large radius"
@@ -601,6 +638,10 @@ Window {
                     root.draftRadiusLarge = Math.round(value)
                     root.queueSettingsApply()
                 }
+            }
+
+            SettingDescription {
+                text: "Corner rounding for large surfaces like dialogs and the main window."
             }
         }
     }
@@ -629,6 +670,10 @@ Window {
                 }
             }
 
+            SettingDescription {
+                text: "Reveal dotfiles and hidden entries in the file list."
+            }
+
             Q.Dropdown {
                 Layout.fillWidth: true
                 label: "Default view for new tabs"
@@ -638,6 +683,10 @@ Window {
                     root.draftDefaultView = root.viewModeValues[index]
                     root.applySettingsNow()
                 }
+            }
+
+            SettingDescription {
+                text: "Layout newly opened tabs start in: grid, Miller columns, or detailed list."
             }
 
             Q.Dropdown {
@@ -651,6 +700,10 @@ Window {
                 }
             }
 
+            SettingDescription {
+                text: "Which column newly opened tabs sort by: name, size, date modified, or type."
+            }
+
             Q.Toggle {
                 Layout.fillWidth: true
                 label: "Sort ascending by default"
@@ -659,6 +712,10 @@ Window {
                     root.draftSortAscending = value
                     root.applySettingsNow()
                 }
+            }
+
+            SettingDescription {
+                text: "Sort new tabs in ascending order (A→Z, smallest first); off sorts descending."
             }
 
             Q.Toggle {
@@ -671,6 +728,10 @@ Window {
                 }
             }
 
+            SettingDescription {
+                text: "Show the sidebar with pinned folders, devices, and quick locations."
+            }
+
             Q.Toggle {
                 Layout.fillWidth: true
                 label: "Sidebar on right"
@@ -680,6 +741,11 @@ Window {
                     root.draftSidebarPosition = value ? "right" : "left"
                     root.applySettingsNow()
                 }
+            }
+
+            SettingDescription {
+                enabled: root.draftSidebarVisible
+                text: "Place the sidebar on the right edge of the window instead of the left."
             }
 
             Q.Slider {
@@ -697,6 +763,11 @@ Window {
                 }
             }
 
+            SettingDescription {
+                enabled: root.draftSidebarVisible
+                text: "Default width of the sidebar in pixels."
+            }
+
             Q.Slider {
                 Layout.fillWidth: true
                 label: "Scroll speed"
@@ -709,6 +780,10 @@ Window {
                     root.draftScrollSpeed = value
                     root.queueSettingsApply()
                 }
+            }
+
+            SettingDescription {
+                text: "How far the file view scrolls per mouse-wheel notch; higher is faster."
             }
 
             Text {
@@ -730,6 +805,10 @@ Window {
                 }
             }
 
+            SettingDescription {
+                text: "Draw minimize, maximize, and close buttons in the window's title area."
+            }
+
             Q.Toggle {
                 Layout.fillWidth: true
                 label: "Buttons on left"
@@ -745,6 +824,11 @@ Window {
                 }
             }
 
+            SettingDescription {
+                enabled: root.draftShowWindowControls
+                text: "Group the window buttons on the left side instead of the right."
+            }
+
             Q.Checkbox {
                 label: "Close button"
                 enabled: root.draftShowWindowControls
@@ -752,6 +836,11 @@ Window {
                 onToggled: (value) => {
                     root.rebuildButtonLayout(root._layoutParts.side, value, root._layoutParts.hasMinimize, root._layoutParts.hasMaximize)
                 }
+            }
+
+            SettingDescription {
+                enabled: root.draftShowWindowControls
+                text: "Include the close button in the window controls."
             }
 
             Q.Checkbox {
@@ -763,6 +852,11 @@ Window {
                 }
             }
 
+            SettingDescription {
+                enabled: root.draftShowWindowControls
+                text: "Include the minimize button in the window controls."
+            }
+
             Q.Checkbox {
                 label: "Maximize button"
                 enabled: root.draftShowWindowControls
@@ -770,6 +864,11 @@ Window {
                 onToggled: (value) => {
                     root.rebuildButtonLayout(root._layoutParts.side, root._layoutParts.hasClose, root._layoutParts.hasMinimize, value)
                 }
+            }
+
+            SettingDescription {
+                enabled: root.draftShowWindowControls
+                text: "Include the maximize button in the window controls."
             }
 
             Rectangle {
@@ -846,6 +945,10 @@ Window {
                 }
             }
 
+            SettingDescription {
+                text: "Enable interface animations; turn off for instant, motion-free transitions."
+            }
+
             Q.Separator { Layout.bottomMargin: 8 }
 
             Text {
@@ -871,6 +974,11 @@ Window {
                 }
             }
 
+            SettingDescription {
+                enabled: root.draftAnimationsEnabled
+                text: "Duration in milliseconds for quick animations like hovers and toggles."
+            }
+
             Q.Slider {
                 Layout.fillWidth: true
                 label: "Normal"
@@ -886,6 +994,11 @@ Window {
                 }
             }
 
+            SettingDescription {
+                enabled: root.draftAnimationsEnabled
+                text: "Duration in milliseconds for standard animations like panel transitions."
+            }
+
             Q.Slider {
                 Layout.fillWidth: true
                 label: "Slow"
@@ -899,6 +1012,11 @@ Window {
                     root.draftAnimDurationSlow = Math.round(value)
                     root.queueSettingsApply()
                 }
+            }
+
+            SettingDescription {
+                enabled: root.draftAnimationsEnabled
+                text: "Duration in milliseconds for slow, emphasis animations."
             }
 
             Text {
@@ -922,6 +1040,11 @@ Window {
                 }
             }
 
+            SettingDescription {
+                enabled: root.draftAnimationsEnabled
+                text: "Easing curve used when elements appear or expand into view."
+            }
+
             Q.Dropdown {
                 Layout.fillWidth: true
                 label: "Exit"
@@ -934,6 +1057,11 @@ Window {
                 }
             }
 
+            SettingDescription {
+                enabled: root.draftAnimationsEnabled
+                text: "Easing curve used when elements disappear or collapse out of view."
+            }
+
             Q.Dropdown {
                 Layout.fillWidth: true
                 label: "Transition"
@@ -944,6 +1072,11 @@ Window {
                     root.draftAnimCurveTransition = value
                     root.applySettingsNow()
                 }
+            }
+
+            SettingDescription {
+                enabled: root.draftAnimationsEnabled
+                text: "Easing curve used for in-place changes like value and position updates."
             }
         }
     }
@@ -981,6 +1114,10 @@ Window {
                 }
             }
 
+            SettingDescription {
+                text: "View the keyboard shortcut reference, or mount an SMB, SFTP, or other network share."
+            }
+
             // Heimdall: dependency check moved off the startup auto-popup
             // path and into a manual trigger here. Click only when you want
             // to see what extra tools the file manager can use.
@@ -994,6 +1131,10 @@ Window {
                     variant: "ghost"
                     onClicked: root.openDependencyCheck()
                 }
+            }
+
+            SettingDescription {
+                text: "Scan for optional CLI tools (rsync, gio, wl-copy) and report which features they unlock."
             }
 
             Text {

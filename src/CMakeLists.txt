@@ -187,6 +187,7 @@ list(APPEND heimdall_qml_module_args
         qml/components/KeyboardShortcutsDialog.qml
         qml/components/MissingDependenciesDialog.qml
         qml/components/SettingsPanel.qml
+        qml/components/SettingDescription.qml
 )
 
 qt_add_qml_module(heimdall ${heimdall_qml_module_args})
