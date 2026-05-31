@@ -66,6 +66,20 @@ private:
         return {};
     }
 
+    // gio's trash index can lag a moment behind `gio trash`, so a single lookup
+    // right after trashing sometimes misses. Retry briefly so the async trash
+    // tests reliably run instead of skipping on a transient empty result.
+    static QString awaitTrashEntryUri(const QString &originalPath)
+    {
+        QString uri;
+        for (int i = 0; i < 20 && uri.isEmpty(); ++i) {
+            uri = findTrashEntryUri(originalPath);
+            if (uri.isEmpty())
+                QTest::qWait(100);
+        }
+        return uri;
+    }
+
 private slots:
     void testLoadTextPreview()
     {
@@ -201,6 +215,150 @@ private slots:
         const QString cachedPath = service.localPreviewPath(trashUri);
         QVERIFY(!cachedPath.isEmpty());
         QVERIFY(QFileInfo::exists(cachedPath));
+
+        QProcess removeProc;
+        removeProc.start("gio", {"remove", "-f", trashUri});
+        removeProc.waitForFinished(5000);
+        QDir(dirPath).removeRecursively();
+    }
+
+    void testRequestTrashTextAsync()
+    {
+        if (QStandardPaths::findExecutable("gio").isEmpty())
+            QSKIP("gio not found in PATH");
+
+        const QString uniqueId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        const QString dirPath = QDir::homePath() + "/.cache/heimdall-test-preview-service-" + uniqueId;
+        QDir().mkpath(dirPath);
+
+        const QString filePath = dirPath + "/async-preview.txt";
+        QFile file(filePath);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write("async trash preview text");
+        file.close();
+
+        QProcess trashProc;
+        trashProc.start("gio", {"trash", filePath});
+        if (!trashProc.waitForFinished(5000) || trashProc.exitCode() != 0)
+            QSKIP("gio trash failed in this environment");
+
+        const QString trashUri = awaitTrashEntryUri(filePath);
+        if (trashUri.isEmpty())
+            QSKIP("Could not find trashed file URI");
+
+        PreviewService service;
+        QSignalSpy spy(&service, &PreviewService::previewReady);
+        service.requestTrashText(trashUri, 1024, 20);
+
+        QVERIFY(spy.wait(10000));
+        QCOMPARE(spy.count(), 1);
+
+        const QList<QVariant> args = spy.takeFirst();
+        QCOMPARE(args.at(0).toString(), QStringLiteral("text")); // kind
+        QCOMPARE(args.at(1).toString(), trashUri);               // path
+        const QVariantMap result = args.at(2).toMap();
+        QCOMPARE(result.value("error").toString(), QString());
+        QCOMPARE(result.value("isBinary").toBool(), false);
+        QVERIFY(result.value("content").toString().contains("async trash preview text"));
+
+        // Async result must match the sync plain loader's shape/content so QML
+        // bindings (content/truncated/isBinary) behave identically.
+        const QVariantMap sync = service.loadTextPlain(trashUri, 1024, 20);
+        QCOMPARE(result.value("content").toString(), sync.value("content").toString());
+        QCOMPARE(result.value("truncated").toBool(), sync.value("truncated").toBool());
+        QCOMPARE(result.value("isBinary").toBool(), sync.value("isBinary").toBool());
+
+        QProcess removeProc;
+        removeProc.start("gio", {"remove", "-f", trashUri});
+        removeProc.waitForFinished(5000);
+        QDir(dirPath).removeRecursively();
+    }
+
+    void testDuplicateTrashTextRequestDeduped()
+    {
+        if (QStandardPaths::findExecutable("gio").isEmpty())
+            QSKIP("gio not found in PATH");
+
+        const QString uniqueId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        const QString dirPath = QDir::homePath() + "/.cache/heimdall-test-preview-service-" + uniqueId;
+        QDir().mkpath(dirPath);
+
+        const QString filePath = dirPath + "/dup-preview.txt";
+        QFile file(filePath);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write("dup trash preview text");
+        file.close();
+
+        QProcess trashProc;
+        trashProc.start("gio", {"trash", filePath});
+        if (!trashProc.waitForFinished(5000) || trashProc.exitCode() != 0)
+            QSKIP("gio trash failed in this environment");
+
+        const QString trashUri = awaitTrashEntryUri(filePath);
+        if (trashUri.isEmpty())
+            QSKIP("Could not find trashed file URI");
+
+        PreviewService service;
+        QSignalSpy spy(&service, &PreviewService::previewReady);
+        // Two requests for the SAME path before the event loop spins: the second
+        // must dedup onto the first's in-flight gio cat, so exactly one emit.
+        service.requestTrashText(trashUri, 1024, 20);
+        service.requestTrashText(trashUri, 1024, 20);
+
+        QVERIFY(spy.wait(10000));
+        QTest::qWait(200); // give any erroneous second emission time to arrive
+        QCOMPARE(spy.count(), 1);
+
+        QProcess removeProc;
+        removeProc.start("gio", {"remove", "-f", trashUri});
+        removeProc.waitForFinished(5000);
+        QDir(dirPath).removeRecursively();
+    }
+
+    void testRequestDirectoryPreviewAsync()
+    {
+        if (QStandardPaths::findExecutable("gio").isEmpty())
+            QSKIP("gio not found in PATH");
+
+        const QString uniqueId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        const QString dirPath = QDir::homePath() + "/.cache/heimdall-test-preview-service-" + uniqueId;
+        QDir().mkpath(dirPath);
+
+        const QString innerDir = dirPath + "/trashed-folder";
+        QDir().mkpath(innerDir);
+        for (const QString &name : {QStringLiteral("one.txt"), QStringLiteral("two.txt")}) {
+            QFile f(innerDir + "/" + name);
+            QVERIFY(f.open(QIODevice::WriteOnly));
+            f.write("x");
+            f.close();
+        }
+
+        QProcess trashProc;
+        trashProc.start("gio", {"trash", innerDir});
+        if (!trashProc.waitForFinished(5000) || trashProc.exitCode() != 0)
+            QSKIP("gio trash failed in this environment");
+
+        const QString trashUri = awaitTrashEntryUri(innerDir);
+        if (trashUri.isEmpty())
+            QSKIP("Could not find trashed folder URI");
+
+        PreviewService service;
+        QSignalSpy spy(&service, &PreviewService::previewReady);
+        service.requestDirectoryPreview(trashUri, 40);
+
+        QVERIFY(spy.wait(10000));
+        QCOMPARE(spy.count(), 1);
+
+        const QList<QVariant> args = spy.takeFirst();
+        QCOMPARE(args.at(0).toString(), QStringLiteral("directory")); // kind
+        QCOMPARE(args.at(1).toString(), trashUri);                    // path
+        const QVariantMap result = args.at(2).toMap();
+        QCOMPARE(result.value("error").toString(), QString());
+        const QStringList entries = result.value("entries").toStringList();
+        const QString joined = entries.join('\n');
+        QVERIFY(joined.contains("one.txt"));
+        QVERIFY(joined.contains("two.txt"));
+        QCOMPARE(result.value("count").toInt(), entries.size());
 
         QProcess removeProc;
         removeProc.start("gio", {"remove", "-f", trashUri});

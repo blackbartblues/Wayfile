@@ -213,11 +213,18 @@ Item {
         }
 
         if (isText) {
-            // Render plain text instantly, then highlight asynchronously so a
-            // slow/hung bat can't block the GUI. The highlighted result arrives
-            // via onPreviewReady and just fades in over identical content.
-            textPreview = previewService.loadTextPlain(filePath)
-            previewService.requestTextHighlight(filePath)
+            if (isTrashUri) {
+                // Reading a trash entry goes through `gio cat`, which blocks, so
+                // load it async and show a placeholder until previewReady("text").
+                textPreview = ({ content: "", truncated: false, isBinary: false, error: "", loading: true })
+                previewService.requestTrashText(filePath)
+            } else {
+                // Render plain text instantly, then highlight asynchronously so a
+                // slow/hung bat can't block the GUI. The highlighted result arrives
+                // via onPreviewReady and just fades in over identical content.
+                textPreview = previewService.loadTextPlain(filePath)
+                previewService.requestTextHighlight(filePath)
+            }
         } else {
             textPreview = ({ content: "", truncated: false, isBinary: false, error: "" })
         }
@@ -236,9 +243,17 @@ Item {
         else
             fontPreview = ({ family: "", styleName: "", weight: 400, italic: false, valid: false, error: "" })
 
-        if (isDir)
-            directoryPreview = previewService.loadDirectoryPreview(filePath)
-        else if (isArchive) {
+        if (isDir) {
+            if (isTrashUri) {
+                // Listing a trash folder goes through `gio list`, which blocks,
+                // so load it async and show a placeholder until
+                // previewReady("directory").
+                directoryPreview = ({ entries: [], truncated: false, error: "", count: 0, loading: true })
+                previewService.requestDirectoryPreview(filePath)
+            } else {
+                directoryPreview = previewService.loadDirectoryPreview(filePath)
+            }
+        } else if (isArchive) {
             // Listing a large archive (unzip/tar/7z) can block for seconds, so
             // load it asynchronously and show a placeholder until previewReady.
             directoryPreview = ({ entries: [], truncated: false, error: "", count: 0, loading: true })
@@ -283,7 +298,7 @@ Item {
     Connections {
         target: previewService
         function onPreviewReady(kind, path, result) {
-            if (kind === "archive" && path === state.filePath)
+            if ((kind === "archive" || kind === "directory") && path === state.filePath)
                 state.directoryPreview = result
             else if (kind === "pdf" && path === state.filePath) {
                 state.pdfPreview = result

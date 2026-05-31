@@ -15,6 +15,8 @@
 #include <QTimer>
 #include <QUrl>
 
+#include <memory>
+
 namespace {
 
 QString encodedUri(const QString &path)
@@ -301,6 +303,7 @@ PreviewService::~PreviewService()
     stopAll(m_archiveProcs);
     stopAll(m_pdfProcs);
     stopAll(m_textProcs);
+    stopAll(m_dirProcs);
 }
 
 void PreviewService::armProcessTimeout(QProcess *proc, int ms)
@@ -330,23 +333,8 @@ void PreviewService::refreshSupport()
     emit supportChanged();
 }
 
-QVariantMap PreviewService::loadTextPlain(const QString &path, int maxBytes, int maxLines) const
+QVariantMap PreviewService::buildTextPlainResult(const QByteArray &data, bool truncated, int maxLines)
 {
-    QVariantMap result;
-    bool truncated = false;
-    QString error;
-    const QByteArray data = readPathBytes(path, maxBytes, &truncated, &error);
-
-    if (!error.isEmpty()) {
-        result["content"] = QString();
-        result["html"] = QString();
-        result["truncated"] = false;
-        result["isBinary"] = false;
-        result["usesBat"] = false;
-        result["error"] = error;
-        return result;
-    }
-
     const bool binary = looksBinary(data);
     QString text;
     if (!binary)
@@ -358,8 +346,8 @@ QVariantMap PreviewService::loadTextPlain(const QString &path, int maxBytes, int
         truncated = true;
     }
 
-    const QString plainText = lines.join('\n');
-    result["content"] = plainText;
+    QVariantMap result;
+    result["content"] = lines.join('\n');
     result["html"] = QString();
     result["truncated"] = truncated;
     result["isBinary"] = binary;
@@ -367,6 +355,26 @@ QVariantMap PreviewService::loadTextPlain(const QString &path, int maxBytes, int
     result["error"] = QString();
     result["lineCount"] = lines.size();
     return result;
+}
+
+QVariantMap PreviewService::loadTextPlain(const QString &path, int maxBytes, int maxLines) const
+{
+    bool truncated = false;
+    QString error;
+    const QByteArray data = readPathBytes(path, maxBytes, &truncated, &error);
+
+    if (!error.isEmpty()) {
+        QVariantMap result;
+        result["content"] = QString();
+        result["html"] = QString();
+        result["truncated"] = false;
+        result["isBinary"] = false;
+        result["usesBat"] = false;
+        result["error"] = error;
+        return result;
+    }
+
+    return buildTextPlainResult(data, truncated, maxLines);
 }
 
 QVariantMap PreviewService::loadTextPreview(const QString &path, int maxBytes, int maxLines) const
@@ -640,6 +648,141 @@ void PreviewService::requestArchivePreview(const QString &path, int maxEntries)
 
     armProcessTimeout(proc, 10000);
     proc->start(program, args);
+}
+
+void PreviewService::requestTrashText(const QString &path, int maxBytes, int maxLines)
+{
+    // A read for this exact path is already running (shares m_textProcs with
+    // the bat highlighter — a path is either trash or not, never both, so they
+    // never collide). Its previewReady reaches every consumer guarding on path.
+    if (m_textProcs.contains(path))
+        return;
+
+    auto *proc = new QProcess(this);
+    m_textProcs.insert(path, proc);
+
+    // Accumulate stdout, capping memory the way the sync readPathBytes does:
+    // kill `gio cat` once we have one byte past maxBytes (then truncate).
+    const qint64 readLimit = qMax<qint64>(1, maxBytes) + 1;
+    auto buffer = std::make_shared<QByteArray>();
+    connect(proc, &QProcess::readyReadStandardOutput, proc, [proc, buffer, readLimit]() {
+        *buffer += proc->readAllStandardOutput();
+        if (buffer->size() >= readLimit && proc->state() != QProcess::NotRunning)
+            proc->kill();
+    });
+
+    connect(proc, &QProcess::finished, this,
+            [this, proc, path, buffer, maxBytes, maxLines](int, QProcess::ExitStatus status) {
+                if (m_textProcs.value(path) != proc) {
+                    proc->deleteLater();
+                    return;
+                }
+                m_textProcs.remove(path);
+                *buffer += proc->readAllStandardOutput();
+
+                QByteArray data = *buffer;
+                bool truncated = false;
+                if (data.size() > maxBytes) {
+                    truncated = true;
+                    data.truncate(maxBytes);
+                }
+
+                QVariantMap result;
+                // Killing at the read limit yields CrashExit with data present;
+                // only an abnormal exit with NO data is a real read failure
+                // (mirrors readPathBytes).
+                if (status != QProcess::NormalExit && data.isEmpty()) {
+                    result["content"] = QString();
+                    result["html"] = QString();
+                    result["truncated"] = false;
+                    result["isBinary"] = false;
+                    result["usesBat"] = false;
+                    result["error"] = QStringLiteral("Failed to read preview data");
+                } else {
+                    result = buildTextPlainResult(data, truncated, maxLines);
+                }
+                emit previewReady(QStringLiteral("text"), path, result);
+                proc->deleteLater();
+            });
+    connect(proc, &QProcess::errorOccurred, this,
+            [this, proc, path](QProcess::ProcessError err) {
+                // A process that started and then died still fires finished;
+                // only handle the can't-start case here to avoid double-emit.
+                if (err != QProcess::FailedToStart)
+                    return;
+                if (m_textProcs.value(path) != proc) {
+                    proc->deleteLater();
+                    return;
+                }
+                m_textProcs.remove(path);
+                QVariantMap result;
+                result["content"] = QString();
+                result["html"] = QString();
+                result["truncated"] = false;
+                result["isBinary"] = false;
+                result["usesBat"] = false;
+                result["error"] = QStringLiteral("Failed to start preview reader");
+                emit previewReady(QStringLiteral("text"), path, result);
+                proc->deleteLater();
+            });
+
+    armProcessTimeout(proc, 5000);
+    startGioCat(*proc, encodedUri(path));
+}
+
+void PreviewService::requestDirectoryPreview(const QString &path, int maxEntries)
+{
+    if (m_dirProcs.contains(path))
+        return;
+
+    auto *proc = new QProcess(this);
+    m_dirProcs.insert(path, proc);
+
+    connect(proc, &QProcess::finished, this,
+            [this, proc, path, maxEntries](int code, QProcess::ExitStatus status) {
+                if (m_dirProcs.value(path) != proc) {
+                    proc->deleteLater();
+                    return;
+                }
+                m_dirProcs.remove(path);
+                QVariantMap result;
+                if (status != QProcess::NormalExit || code != 0) {
+                    result["entries"] = QStringList();
+                    result["truncated"] = false;
+                    result["error"] = QString::fromUtf8(proc->readAllStandardError()).trimmed();
+                    result["count"] = 0;
+                } else {
+                    const QStringList allEntries =
+                        QString::fromUtf8(proc->readAllStandardOutput()).split('\n', Qt::SkipEmptyParts);
+                    const bool truncated = maxEntries > 0 && allEntries.size() > maxEntries;
+                    const QStringList entries = maxEntries > 0 ? allEntries.mid(0, maxEntries) : allEntries;
+                    result["entries"] = entries;
+                    result["truncated"] = truncated;
+                    result["error"] = QString();
+                    result["count"] = entries.size();
+                }
+                emit previewReady(QStringLiteral("directory"), path, result);
+                proc->deleteLater();
+            });
+    connect(proc, &QProcess::errorOccurred, this,
+            [this, proc, path](QProcess::ProcessError) {
+                if (m_dirProcs.value(path) != proc) {
+                    proc->deleteLater();
+                    return;
+                }
+                m_dirProcs.remove(path);
+                QVariantMap result;
+                result["entries"] = QStringList();
+                result["truncated"] = false;
+                result["error"] = QStringLiteral("Could not list folder contents");
+                result["count"] = 0;
+                emit previewReady(QStringLiteral("directory"), path, result);
+                proc->deleteLater();
+            });
+
+    armProcessTimeout(proc, 5000);
+    // Matches the sync listDirectoryEntries trash branch: plain `gio list -h`.
+    proc->start(QStringLiteral("gio"), {QStringLiteral("list"), QStringLiteral("-h"), encodedUri(path)});
 }
 
 QString PreviewService::localPreviewPath(const QString &path) const

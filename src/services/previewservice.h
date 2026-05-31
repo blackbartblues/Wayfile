@@ -47,6 +47,14 @@ public:
     // bat not installed) it emits the plain result once without spawning bat.
     Q_INVOKABLE void requestTextHighlight(const QString &path, int maxBytes = 131072,
                                           int maxLines = 400);
+    // Async trash:// loaders. Reading/listing a trash entry goes through
+    // `gio cat` / `gio list`, which block the GUI thread; these spawn the
+    // process without blocking and emit previewReady("text" / "directory",
+    // path, result) with the same shape loadTextPlain / loadDirectoryPreview
+    // return. Non-trash paths keep using the instant sync loaders.
+    Q_INVOKABLE void requestTrashText(const QString &path, int maxBytes = 131072,
+                                      int maxLines = 400);
+    Q_INVOKABLE void requestDirectoryPreview(const QString &path, int maxEntries = 40);
     Q_INVOKABLE QVariantMap loadFontPreview(const QString &path);
     Q_INVOKABLE QString localPreviewPath(const QString &path) const;
 
@@ -58,9 +66,9 @@ public slots:
 
 signals:
     void supportChanged();
-    // kind is "archive", "pdf", or "text" (more kinds as other loaders go
-    // async). path is the file the result is for; result has the same shape the
-    // matching sync load* method returns.
+    // kind is "archive", "pdf", "text", or "directory" (more kinds as other
+    // loaders go async). path is the file the result is for; result has the
+    // same shape the matching sync load* method returns.
     void previewReady(const QString &kind, const QString &path, const QVariantMap &result);
 
 private:
@@ -81,6 +89,10 @@ private:
     // localPath/pageCount/error result map. localPath is set only on success;
     // error is "Unable to read PDF page count" when the Pages line is absent.
     static QVariantMap parsePdfInfo(const QString &output, const QString &localPath);
+    // Shared by loadTextPlain and the async requestTrashText path: turn raw
+    // bytes (already byte-capped) into the text result map (binary detection,
+    // decode, line cap). Keeps the two paths byte-identical.
+    static QVariantMap buildTextPlainResult(const QByteArray &data, bool truncated, int maxLines);
     // Watchdog for an in-flight async QProcess: if it hasn't finished within
     // `ms`, kill it so its finished/errorOccurred handler runs (emitting an
     // error/fallback result and freeing its per-path dedup slot). Restores the
@@ -110,4 +122,7 @@ private:
     // the global QuickPreview), so a single slot would let one consumer cancel
     // another's bat and leave its preview un-highlighted.
     QHash<QString, QProcess *> m_textProcs;
+    // In-flight async `gio list` calls for trash directories, keyed by path.
+    // Same per-path keying / dedup rationale as the others.
+    QHash<QString, QProcess *> m_dirProcs;
 };
