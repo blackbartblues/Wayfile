@@ -123,17 +123,43 @@ Item {
         onFeatureHintRequested: (message) => sidebarPane.toast.show(message, "info")
     }
 
+    // Drag-to-resize handle on the sidebar's INNER edge (the one facing the
+    // content): the right edge when the sidebar is on the left, the left edge
+    // when it is on the right. The row's LayoutMirroring no longer cascades
+    // into the sidebar (childrenInherit:false), so the edge is selected
+    // explicitly by sidebarPosition rather than relying on inherited mirroring.
+    //
+    // Deltas are measured in coordSpace (mainContent), which is NOT mirrored,
+    // so its X always increases left→right. For a right-positioned sidebar the
+    // inner edge faces left, so a leftward drag (decreasing X) must grow the
+    // sidebar — hence the delta negation keyed on sidebarPosition.
     MouseArea {
         id: sidebarResizeHandle
+        readonly property bool sidebarOnRight: config.sidebarPosition === "right"
         anchors.top: parent.top
         anchors.bottom: parent.bottom
-        anchors.right: config.sidebarPosition === "right" ? undefined : parent.right
-        anchors.left: config.sidebarPosition === "right" ? parent.left : undefined
+        anchors.right: sidebarOnRight ? undefined : parent.right
+        anchors.left: sidebarOnRight ? parent.left : undefined
         width: 10
         hoverEnabled: true
         enabled: host ? host.sidebarVisible : false
+        acceptedButtons: Qt.LeftButton
         cursorShape: Qt.SizeHorCursor
+        preventStealing: true
         z: 10
+
+        // Subtle accent line on hover/drag so the resize edge is discoverable.
+        Rectangle {
+            // Accent sits on the same inner edge as the handle.
+            anchors.right: sidebarResizeHandle.sidebarOnRight ? undefined : parent.right
+            anchors.left: sidebarResizeHandle.sidebarOnRight ? parent.left : undefined
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            width: 2
+            visible: sidebarResizeHandle.containsMouse || sidebarResizeHandle.pressed
+            color: Theme.accent
+            opacity: sidebarResizeHandle.pressed ? 0.8 : 0.4
+        }
 
         onPressed: (mouse) => {
             host.sidebarResizeActive = true
@@ -161,7 +187,5 @@ Item {
             host.sidebarResizeActive = false
             config.saveSidebarWidth(host.sidebarWidth)
         }
-
-        preventStealing: true
     }
 }

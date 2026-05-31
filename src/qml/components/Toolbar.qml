@@ -300,6 +300,29 @@ Rectangle {
                     }
                 }
 
+                // Persistent sidebar toggle — always visible so a collapsed
+                // sidebar can be reopened with the mouse (the in-sidebar
+                // collapse button disappears with the sidebar). Mirrors the
+                // toggle_sidebar keyboard shortcut.
+                HoverRect {
+                    id: sidebarToggleBtn
+                    width: Theme.controlSize; height: Theme.controlSize
+                    visible: !root.searchMode && root.window !== null
+                    onClicked: {
+                        if (root.window)
+                            root.window.sidebarVisible = !root.window.sidebarVisible
+                    }
+                    IconPanelLeft {
+                        anchors.centerIn: parent
+                        size: 18
+                        color: (root.window && root.window.sidebarVisible) ? Theme.accent : Theme.text
+                    }
+                    Q.Tooltip {
+                        text: (root.window && root.window.sidebarVisible) ? "Hide sidebar" : "Show sidebar"
+                        visible: sidebarToggleBtn.hovered
+                    }
+                }
+
                 HoverRect {
                     width: Theme.controlSize; height: Theme.controlSize
                     visible: !root.searchMode && !root.isTrashView && !root.isRemoteView

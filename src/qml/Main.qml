@@ -1817,8 +1817,6 @@ ApplicationWindow {
         id: mainContent
         anchors.fill: parent
         spacing: 0
-        LayoutMirroring.enabled: config.sidebarPosition === "right"
-        LayoutMirroring.childrenInherit: false
 
         TabBar {
             id: tabBar
@@ -1845,6 +1843,13 @@ ApplicationWindow {
             Layout.fillWidth: true
             Layout.fillHeight: true
             spacing: 0
+            // Sidebar "right" reverses ONLY this row's direct child order
+            // (SidebarPane vs the content Item) so the sidebar renders against
+            // the window's right edge. childrenInherit is FALSE so the mirroring
+            // does NOT cascade into the children's internals — the toolbar,
+            // breadcrumb, buttons and file views are never RTL-reversed.
+            LayoutMirroring.enabled: config.sidebarPosition === "right"
+            LayoutMirroring.childrenInherit: false
 
         // Sidebar (full height, animated)
         SidebarPane {
@@ -1859,6 +1864,9 @@ ApplicationWindow {
         Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                // The parent RowLayout reverses child order (childrenInherit:false)
+                // so this Item lands on the correct side without inheriting any
+                // mirroring — nothing to reset here.
 
                 Rectangle {
                     visible: root.sidebarVisible
