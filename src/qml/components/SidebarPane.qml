@@ -1,0 +1,167 @@
+import QtQuick
+import QtQuick.Layouts
+import Heimdall
+
+// Sidebar region: the animated layout host, the Sidebar widget, and the
+// drag-to-resize handle. The sidebar's shared state (visible / width / resize)
+// lives on the host (Main.qml) because the toolbar and global shortcuts read
+// it; this component reads and writes it through `host`.
+//
+// The sidebar context menu stays at the host's root level (it is a full-screen
+// overlay Item with z: 9999, not a popup, so it must not live inside this
+// clipped host) and is passed back in via `sidebarContextMenu`.
+Item {
+    id: sidebarPane
+
+    // Main.qml root — shared sidebar state + navigation functions.
+    property var host: null
+    // A stable ancestor used as the coordinate space for resize deltas: the
+    // host's own width changes mid-drag, so deltas must be measured against a
+    // fixed parent (mainContent), not against this item.
+    property var coordSpace: null
+    // Root-level singletons/overlays owned by Main.qml, injected by id.
+    property var sidebarContextMenu: null
+    property var sidebarTooltipLayer: null
+    property var toast: null
+
+    Layout.preferredWidth: host ? (host.sidebarVisible ? host.sidebarWidth : 0) : 0
+    Layout.fillHeight: true
+    clip: true
+
+    Behavior on Layout.preferredWidth {
+        enabled: host ? !host.sidebarResizeActive : true
+        NumberAnimation { duration: Theme.animDuration; easing.type: Theme.animEasingTransition; easing.bezierCurve: Theme.animBezierCurve }
+    }
+
+    function sidebarMenuItems(item) {
+        if (!item)
+            return []
+
+        if (item.kind === "quickAccess") {
+            if (item.isRecents)
+                return [
+                    { text: "Open", shortcut: "", action: "open" }
+                ]
+
+            if (fileOps.isTrashPath(item.path))
+                return [
+                    { text: "Open", shortcut: "Return", action: "open" },
+                    { text: "Open in New Tab", shortcut: "", action: "opennewtab" },
+                    { text: "Open in Split View", shortcut: "", action: "split_open", icon: "SquareSplitHorizontal" },
+                    { separator: true },
+                    { text: "Empty Trash", shortcut: "", action: "emptytrash", destructive: true }
+                ]
+
+            return [
+                { text: "Open", shortcut: "Return", action: "open" },
+                { text: "Open in New Tab", shortcut: "", action: "opennewtab" },
+                { text: "Open in Split View", shortcut: "", action: "split_open", icon: "SquareSplitHorizontal" },
+                { separator: true },
+                { text: "Open in Terminal", shortcut: "", action: "terminal" },
+                { text: "Properties", shortcut: "", action: "properties" }
+            ]
+        }
+
+        if (item.kind === "bookmark") {
+            return [
+                { text: "Open", shortcut: "Return", action: "open" },
+                { text: "Open in New Tab", shortcut: "", action: "opennewtab" },
+                { text: "Open in Split View", shortcut: "", action: "split_open", icon: "SquareSplitHorizontal" },
+                { separator: true },
+                { text: "Open in Terminal", shortcut: "", action: "terminal" },
+                { text: "Properties", shortcut: "", action: "properties" },
+                { separator: true },
+                { text: "Remove from Bookmarks", shortcut: "", action: "removebookmark", destructive: true }
+            ]
+        }
+
+        if (item.kind === "device") {
+            if (!item.mounted)
+                return [
+                    { text: "Mount", shortcut: "", action: "mountdevice" }
+                ]
+
+            return [
+                { text: "Open", shortcut: "Return", action: "open" },
+                { text: "Open in New Tab", shortcut: "", action: "opennewtab" },
+                { text: "Open in Split View", shortcut: "", action: "split_open", icon: "SquareSplitHorizontal" },
+                { separator: true },
+                { text: "Open in Terminal", shortcut: "", action: "terminal" },
+                { text: "Properties", shortcut: "", action: "properties" },
+                { separator: true },
+                { text: "Unmount", shortcut: "", action: "unmountdevice" }
+            ]
+        }
+
+        return []
+    }
+
+    Sidebar {
+        width: host ? host.sidebarWidth : 0
+        height: parent.height
+        tooltipLayer: sidebarPane.sidebarTooltipLayer
+        currentPath: host ? host.activePanePath : ""
+        trashPath: host ? host.unifiedTrashPath : ""
+        isRecentsView: host ? host.isRecentsView : false
+        onBookmarkClicked: (path) => {
+            host.navigateActivePaneTo(path)
+        }
+        onSidebarContextMenuRequested: (item, position) => {
+            sidebarPane.sidebarContextMenu.sidebarItem = item
+            sidebarPane.sidebarContextMenu.contextData = item
+            sidebarPane.sidebarContextMenu.customItems = sidebarPane.sidebarMenuItems(item)
+            sidebarPane.sidebarContextMenu.targetPath = item.path || ""
+            sidebarPane.sidebarContextMenu.targetIsDir = !!item.path
+            sidebarPane.sidebarContextMenu.isEmptySpace = false
+            sidebarPane.sidebarContextMenu.selectedPaths = item.path ? [item.path] : []
+            sidebarPane.sidebarContextMenu.popup(position.x, position.y)
+        }
+        onRecentsClicked: {
+            host.setPaneRecents(host.activePaneIndex, true)
+        }
+        onCollapseClicked: host.sidebarVisible = !host.sidebarVisible
+        onFeatureHintRequested: (message) => sidebarPane.toast.show(message, "info")
+    }
+
+    MouseArea {
+        id: sidebarResizeHandle
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.right: config.sidebarPosition === "right" ? undefined : parent.right
+        anchors.left: config.sidebarPosition === "right" ? parent.left : undefined
+        width: 10
+        hoverEnabled: true
+        enabled: host ? host.sidebarVisible : false
+        cursorShape: Qt.SizeHorCursor
+        z: 10
+
+        onPressed: (mouse) => {
+            host.sidebarResizeActive = true
+            host.sidebarResizeStartGlobalX = sidebarResizeHandle.mapToItem(sidebarPane.coordSpace, mouse.x, mouse.y).x
+            host.sidebarResizeStartWidth = host.sidebarWidth
+            mouse.accepted = true
+        }
+
+        onPositionChanged: (mouse) => {
+            if (!pressed)
+                return
+            var globalX = sidebarResizeHandle.mapToItem(sidebarPane.coordSpace, mouse.x, mouse.y).x
+            var delta = globalX - host.sidebarResizeStartGlobalX
+            if (config.sidebarPosition === "right") delta = -delta
+            host.sidebarWidth = host.clampedSidebarWidth(host.sidebarResizeStartWidth + delta)
+            mouse.accepted = true
+        }
+
+        onReleased: {
+            host.sidebarResizeActive = false
+            config.saveSidebarWidth(host.sidebarWidth)
+        }
+
+        onCanceled: {
+            host.sidebarResizeActive = false
+            config.saveSidebarWidth(host.sidebarWidth)
+        }
+
+        preventStealing: true
+    }
+}

@@ -1756,69 +1756,6 @@ ApplicationWindow {
         newFileDialog: newFileDialog
     }
 
-    function sidebarMenuItems(item) {
-        if (!item)
-            return []
-
-        if (item.kind === "quickAccess") {
-            if (item.isRecents)
-                return [
-                    { text: "Open", shortcut: "", action: "open" }
-                ]
-
-            if (fileOps.isTrashPath(item.path))
-                return [
-                    { text: "Open", shortcut: "Return", action: "open" },
-                    { text: "Open in New Tab", shortcut: "", action: "opennewtab" },
-                    { text: "Open in Split View", shortcut: "", action: "split_open", icon: "SquareSplitHorizontal" },
-                    { separator: true },
-                    { text: "Empty Trash", shortcut: "", action: "emptytrash", destructive: true }
-                ]
-
-            return [
-                { text: "Open", shortcut: "Return", action: "open" },
-                { text: "Open in New Tab", shortcut: "", action: "opennewtab" },
-                { text: "Open in Split View", shortcut: "", action: "split_open", icon: "SquareSplitHorizontal" },
-                { separator: true },
-                { text: "Open in Terminal", shortcut: "", action: "terminal" },
-                { text: "Properties", shortcut: "", action: "properties" }
-            ]
-        }
-
-        if (item.kind === "bookmark") {
-            return [
-                { text: "Open", shortcut: "Return", action: "open" },
-                { text: "Open in New Tab", shortcut: "", action: "opennewtab" },
-                { text: "Open in Split View", shortcut: "", action: "split_open", icon: "SquareSplitHorizontal" },
-                { separator: true },
-                { text: "Open in Terminal", shortcut: "", action: "terminal" },
-                { text: "Properties", shortcut: "", action: "properties" },
-                { separator: true },
-                { text: "Remove from Bookmarks", shortcut: "", action: "removebookmark", destructive: true }
-            ]
-        }
-
-        if (item.kind === "device") {
-            if (!item.mounted)
-                return [
-                    { text: "Mount", shortcut: "", action: "mountdevice" }
-                ]
-
-            return [
-                { text: "Open", shortcut: "Return", action: "open" },
-                { text: "Open in New Tab", shortcut: "", action: "opennewtab" },
-                { text: "Open in Split View", shortcut: "", action: "split_open", icon: "SquareSplitHorizontal" },
-                { separator: true },
-                { text: "Open in Terminal", shortcut: "", action: "terminal" },
-                { text: "Properties", shortcut: "", action: "properties" },
-                { separator: true },
-                { text: "Unmount", shortcut: "", action: "unmountdevice" }
-            ]
-        }
-
-        return []
-    }
-
     function handlePaneFileActivated(pane, filePath, isDirectory) {
         root.setActivePane(pane)
 
@@ -1910,85 +1847,12 @@ ApplicationWindow {
             spacing: 0
 
         // Sidebar (full height, animated)
-        Item {
-                id: sidebarHost
-                Layout.preferredWidth: root.sidebarVisible ? root.sidebarWidth : 0
-                Layout.fillHeight: true
-                clip: true
-
-                Behavior on Layout.preferredWidth {
-                    enabled: !root.sidebarResizeActive
-                    NumberAnimation { duration: Theme.animDuration; easing.type: Theme.animEasingTransition; easing.bezierCurve: Theme.animBezierCurve }
-                }
-
-                Sidebar {
-                    width: root.sidebarWidth
-                    height: parent.height
-                    tooltipLayer: sidebarTooltipLayer
-                    currentPath: root.activePanePath
-                    trashPath: root.unifiedTrashPath
-                    isRecentsView: root.isRecentsView
-                    onBookmarkClicked: (path) => {
-                        root.navigateActivePaneTo(path)
-                    }
-                    onSidebarContextMenuRequested: (item, position) => {
-                        sidebarContextMenu.sidebarItem = item
-                        sidebarContextMenu.contextData = item
-                        sidebarContextMenu.customItems = root.sidebarMenuItems(item)
-                        sidebarContextMenu.targetPath = item.path || ""
-                        sidebarContextMenu.targetIsDir = !!item.path
-                        sidebarContextMenu.isEmptySpace = false
-                        sidebarContextMenu.selectedPaths = item.path ? [item.path] : []
-                        sidebarContextMenu.popup(position.x, position.y)
-                    }
-                    onRecentsClicked: {
-                        root.setPaneRecents(root.activePaneIndex, true)
-                    }
-                    onCollapseClicked: root.sidebarVisible = !root.sidebarVisible
-                    onFeatureHintRequested: (message) => toast.show(message, "info")
-                }
-
-                MouseArea {
-                    id: sidebarResizeHandle
-                    anchors.top: parent.top
-                    anchors.bottom: parent.bottom
-                    anchors.right: config.sidebarPosition === "right" ? undefined : parent.right
-                    anchors.left: config.sidebarPosition === "right" ? parent.left : undefined
-                    width: 10
-                    hoverEnabled: true
-                    enabled: root.sidebarVisible
-                    cursorShape: Qt.SizeHorCursor
-                    z: 10
-
-                    onPressed: (mouse) => {
-                        root.sidebarResizeActive = true
-                        root.sidebarResizeStartGlobalX = sidebarResizeHandle.mapToItem(mainContent, mouse.x, mouse.y).x
-                        root.sidebarResizeStartWidth = root.sidebarWidth
-                        mouse.accepted = true
-                    }
-
-                    onPositionChanged: (mouse) => {
-                        if (!pressed)
-                            return
-                        var globalX = sidebarResizeHandle.mapToItem(mainContent, mouse.x, mouse.y).x
-                        var delta = globalX - root.sidebarResizeStartGlobalX
-                        if (config.sidebarPosition === "right") delta = -delta
-                        root.sidebarWidth = root.clampedSidebarWidth(root.sidebarResizeStartWidth + delta)
-                        mouse.accepted = true
-                    }
-
-                    onReleased: {
-                        root.sidebarResizeActive = false
-                        config.saveSidebarWidth(root.sidebarWidth)
-                    }
-
-                    onCanceled: {
-                        root.sidebarResizeActive = false
-                        config.saveSidebarWidth(root.sidebarWidth)
-                    }
-
-                    preventStealing: true
-                }
+        SidebarPane {
+            host: root
+            coordSpace: mainContent
+            sidebarContextMenu: sidebarContextMenu
+            sidebarTooltipLayer: sidebarTooltipLayer
+            toast: toast
         }
 
         // Right panel: toolbar + content
