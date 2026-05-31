@@ -22,6 +22,8 @@ set(HEIMDALL_SOURCES
     models/filesystemmodel_properties.cpp
     models/filesystemmodel_reload.cpp
     models/devicemodel.cpp
+    models/devicemodel_enumerate.cpp
+    models/devicemodel_mount.cpp
     models/recentfilesmodel.cpp
     models/searchresultsmodel.cpp
     models/searchproxymodel.cpp

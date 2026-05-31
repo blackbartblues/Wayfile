@@ -138,6 +138,8 @@ add_test(NAME tst_gitstatusservice COMMAND tst_gitstatusservice)
 
 add_executable(tst_devicemodel tst_devicemodel.cpp
     ${CMAKE_SOURCE_DIR}/src/models/devicemodel.cpp
+    ${CMAKE_SOURCE_DIR}/src/models/devicemodel_enumerate.cpp
+    ${CMAKE_SOURCE_DIR}/src/models/devicemodel_mount.cpp
 )
 target_include_directories(tst_devicemodel PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(tst_devicemodel PRIVATE Qt6::Test Qt6::Core Qt6::DBus PkgConfig::GIO)
