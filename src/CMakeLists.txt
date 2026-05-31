@@ -119,6 +119,7 @@ list(APPEND heimdall_qml_module_args
         qml/views/FileViewContainer.qml
         qml/views/FileGridView.qml
         qml/views/FileDetailedView.qml
+        qml/views/FileDetailedRow.qml
         qml/views/FileMillerView.qml
         qml/views/KineticWheelScroller.qml
         qml/components/ContextMenu.qml
