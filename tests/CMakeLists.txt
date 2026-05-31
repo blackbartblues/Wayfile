@@ -1,5 +1,20 @@
 # Tests will be added as backend classes are implemented
 
+# FileOperations is split across several translation units (one class, one
+# header). Test targets that link FileOperations must compile all of them; keep
+# this list in sync with the services/fileoperations*.cpp entries in
+# src/CMakeLists.txt HEIMDALL_SOURCES.
+set(FILEOPERATIONS_SRCS
+    ${CMAKE_SOURCE_DIR}/src/services/fileoperations.cpp
+    ${CMAKE_SOURCE_DIR}/src/services/fileoperations_helpers.cpp
+    ${CMAKE_SOURCE_DIR}/src/services/fileoperations_archive.cpp
+    ${CMAKE_SOURCE_DIR}/src/services/fileoperations_trash.cpp
+    ${CMAKE_SOURCE_DIR}/src/services/fileoperations_rename.cpp
+    ${CMAKE_SOURCE_DIR}/src/services/fileoperations_transfer.cpp
+    ${CMAKE_SOURCE_DIR}/src/services/fileoperations_desktop.cpp
+    ${CMAKE_SOURCE_DIR}/src/services/giotransferworker.cpp
+)
+
 add_executable(tst_configmanager tst_configmanager.cpp
     ${CMAKE_SOURCE_DIR}/src/services/configmanager.cpp
 )
@@ -46,8 +61,7 @@ target_link_libraries(tst_bookmarkmodel PRIVATE Qt6::Test Qt6::Core)
 add_test(NAME tst_bookmarkmodel COMMAND tst_bookmarkmodel)
 
 add_executable(tst_fileoperations tst_fileoperations.cpp
-    ${CMAKE_SOURCE_DIR}/src/services/fileoperations.cpp
-    ${CMAKE_SOURCE_DIR}/src/services/giotransferworker.cpp
+    ${FILEOPERATIONS_SRCS}
 )
 target_include_directories(tst_fileoperations PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(tst_fileoperations PRIVATE Qt6::Test Qt6::Core Qt6::Gui PkgConfig::GIO)
@@ -60,8 +74,7 @@ set_tests_properties(tst_fileoperations PROPERTIES
 
 add_executable(tst_undomanager tst_undomanager.cpp
     ${CMAKE_SOURCE_DIR}/src/services/undomanager.cpp
-    ${CMAKE_SOURCE_DIR}/src/services/fileoperations.cpp
-    ${CMAKE_SOURCE_DIR}/src/services/giotransferworker.cpp
+    ${FILEOPERATIONS_SRCS}
 )
 target_include_directories(tst_undomanager PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(tst_undomanager PRIVATE Qt6::Test Qt6::Core Qt6::Gui PkgConfig::GIO)

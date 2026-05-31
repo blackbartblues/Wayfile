@@ -4,6 +4,12 @@ set(HEIMDALL_SOURCES
     services/themeloader.cpp
     services/clipboardmanager.cpp
     services/fileoperations.cpp
+    services/fileoperations_helpers.cpp
+    services/fileoperations_archive.cpp
+    services/fileoperations_trash.cpp
+    services/fileoperations_rename.cpp
+    services/fileoperations_transfer.cpp
+    services/fileoperations_desktop.cpp
     services/giotransferworker.cpp
     services/draghelper.cpp
     models/tabmodel.cpp
@@ -59,6 +65,12 @@ if(HEIMDALL_ENABLE_UNITY_BUILD)
         models/tabmodel.cpp
         models/filesystemmodel.cpp
         services/fileoperations.cpp
+        services/fileoperations_helpers.cpp
+        services/fileoperations_archive.cpp
+        services/fileoperations_trash.cpp
+        services/fileoperations_rename.cpp
+        services/fileoperations_transfer.cpp
+        services/fileoperations_desktop.cpp
         PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
     )
 endif()

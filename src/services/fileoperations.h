@@ -112,7 +112,6 @@ private:
     void setPendingChangedPaths(const QStringList &paths);
     void emitPendingChangedPaths();
     void emitChangedPaths(const QStringList &paths);
-    void runProcess(const QString &program, const QStringList &args);
     QByteArray clipboardImageData() const;
     QString uniqueImagePastePath(const QString &destinationDir) const;
     void startGioTransfer(const QVariantList &operations, bool moveOperation);
@@ -123,7 +122,6 @@ private:
     void emitAggregatedState();
     ActiveTransfer *findTransfer(int id);
 
-    QProcess *m_process = nullptr;
     bool m_busy = false;
     double m_progress = 0.0;
     QString m_statusText;
@@ -133,6 +131,5 @@ private:
     QString m_currentFile;
     QList<ActiveTransfer> m_activeTransfers;
     int m_nextTransferId = 1;
-    QByteArray m_processErrorOutput;
     QStringList m_pendingChangedPaths;
 };
