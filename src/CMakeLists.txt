@@ -11,6 +11,7 @@ set(HEIMDALL_SOURCES
     services/fileoperations_transfer.cpp
     services/fileoperations_desktop.cpp
     services/giotransferworker.cpp
+    services/giotransferworker_recursive.cpp
     services/draghelper.cpp
     models/tabmodel.cpp
     models/tablistmodel.cpp

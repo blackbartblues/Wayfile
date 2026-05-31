@@ -13,6 +13,7 @@ set(FILEOPERATIONS_SRCS
     ${CMAKE_SOURCE_DIR}/src/services/fileoperations_transfer.cpp
     ${CMAKE_SOURCE_DIR}/src/services/fileoperations_desktop.cpp
     ${CMAKE_SOURCE_DIR}/src/services/giotransferworker.cpp
+    ${CMAKE_SOURCE_DIR}/src/services/giotransferworker_recursive.cpp
 )
 
 add_executable(tst_configmanager tst_configmanager.cpp
@@ -201,6 +202,7 @@ add_test(NAME tst_searchservice COMMAND tst_searchservice)
 
 add_executable(tst_giotransferworker tst_giotransferworker.cpp
     ${CMAKE_SOURCE_DIR}/src/services/giotransferworker.cpp
+    ${CMAKE_SOURCE_DIR}/src/services/giotransferworker_recursive.cpp
 )
 target_include_directories(tst_giotransferworker PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(tst_giotransferworker PRIVATE Qt6::Test Qt6::Core PkgConfig::GIO)
