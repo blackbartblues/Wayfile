@@ -1550,11 +1550,13 @@ ApplicationWindow {
     Components.PropertiesDialog {
         id: propertiesDialog
         host: root
+        transientParent: root
         onChooseAppRequested: (path, mimeType) => {
             appChooserDialog.filePath = path
             appChooserDialog.mimeType = mimeType
             appChooserDialog.open()
         }
+        onClosed: root.scheduleActivePaneFocus()
     }
 
     TransferConflictDialog {

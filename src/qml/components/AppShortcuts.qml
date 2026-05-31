@@ -323,6 +323,7 @@ Item {
                  || (appShortcuts.sidebarContextMenu && appShortcuts.sidebarContextMenu.visible)
                  || (host && host.searchMode
                      && !(appShortcuts.quickPreview && appShortcuts.quickPreview.active)
+                     && !(appShortcuts.propertiesDialog && appShortcuts.propertiesDialog.visible)
                      && !(appShortcuts.bulkRenameDialog && appShortcuts.bulkRenameDialog.visible)
                      && !(appShortcuts.settingsPanel && appShortcuts.settingsPanel.visible)
                      && !(appShortcuts.shortcutsDialog && appShortcuts.shortcutsDialog.visible)
