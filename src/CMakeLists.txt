@@ -30,6 +30,8 @@ set(HEIMDALL_SOURCES
     services/searchservice.cpp
     services/undomanager.cpp
     services/previewservice.cpp
+    services/previewservice_text.cpp
+    services/previewservice_binary.cpp
     services/diskusageservice.cpp
     services/remoteaccessservice.cpp
     services/runtimefeaturesservice.cpp
