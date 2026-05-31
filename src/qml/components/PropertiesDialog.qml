@@ -105,28 +105,32 @@ Window {
     // MIME type whose Open-With app list we last requested. Guards the async
     // availableAppsReady result so a stale probe can't overwrite the current.
     property string _appsMime: ""
+    // Path whose properties we last requested. Guards the async
+    // remotePropertiesReady result (remote cache-miss resolves later).
+    property string _propsPath: ""
 
     function showProperties(path) {
         fileModelRef = host.paneBaseModel(host.activePaneIndex) || fsModel
-        props = fileModelRef.fileProperties(path)
+        _propsPath = path
+        props = ({})
         currentTab = 0
         propsTabs.currentIndex = 0
-        refreshFolderDiskUsage()
         // Open-With list is fetched async (gio mime can block for seconds);
-        // show empty until availableAppsReady lands for this MIME type.
+        // stays empty until availableAppsReady lands (kicked off once props
+        // resolve, in onRemotePropertiesReady below).
         apps = []
-        _appsMime = (!props.isDir && props.mimeType) ? props.mimeType : ""
-        if (_appsMime !== "")
-            fileModelRef.requestAvailableApps(_appsMime)
+        _appsMime = ""
 
-        // Extract rich metadata. exiftool/ffprobe/pdfinfo can block for
-        // seconds; extract asynchronously and populate the metadata section
-        // on metadataReady.
+        // Properties resolve async too: only a remote cache-miss actually
+        // defers — local, trash and remote-cache-hit emit synchronously inside
+        // requestFileProperties, filling props before the first frame.
+        // onRemotePropertiesReady does the props-dependent setup.
         _metadataPath = path
         _metadataKeys = []
-        _metadataHint = fileOps.isRemotePath(path) ? "" : metadataExtractor.missingDepsHint(props.mimeType || "")
+        _metadataHint = ""
         if (!fileOps.isRemotePath(path))
             metadataExtractor.requestExtract(path)
+        fileModelRef.requestFileProperties(path)
 
         // Center over the parent window, then show (mirrors SettingsPanel).
         if (transientParent) {
@@ -151,10 +155,22 @@ Window {
         propertiesDialog.closed()
     }
 
-    // Async Open-With result. Guard on _appsMime so a slow `gio mime` for a
-    // MIME type the dialog no longer shows doesn't overwrite the current list.
+    // Async property + Open-With results from the file model. Each guards on
+    // the path/MIME we last requested so a slow probe for something the dialog
+    // no longer shows can't overwrite the current view.
     Connections {
         target: propertiesDialog.fileModelRef
+        function onRemotePropertiesReady(path, result) {
+            if (path !== propertiesDialog._propsPath)
+                return
+            propertiesDialog.props = result
+            propertiesDialog.refreshFolderDiskUsage()
+            propertiesDialog._appsMime = (!result.isDir && result.mimeType) ? result.mimeType : ""
+            if (propertiesDialog._appsMime !== "")
+                propertiesDialog.fileModelRef.requestAvailableApps(propertiesDialog._appsMime)
+            propertiesDialog._metadataHint = fileOps.isRemotePath(path)
+                ? "" : metadataExtractor.missingDepsHint(result.mimeType || "")
+        }
         function onAvailableAppsReady(mimeType, apps) {
             if (mimeType !== propertiesDialog._appsMime)
                 return

@@ -37,6 +37,7 @@ FileSystemModel::~FileSystemModel()
     cancelRemoteReload();
     cancelLocalReload();
     cancelAppsProbes();
+    cancelRemotePropsProbes();
 }
 
 void FileSystemModel::setGitStatusService(GitStatusService *service)

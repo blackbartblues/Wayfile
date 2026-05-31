@@ -65,6 +65,11 @@ public:
     Q_INVOKABLE void sortByColumn(const QString &column, bool ascending);
     Q_INVOKABLE void refresh();
     Q_INVOKABLE QVariantMap fileProperties(const QString &path) const;
+    // Async variant for the GUI thread. Local/trash/remote-cache-hit resolve
+    // synchronously (no process) and emit remotePropertiesReady immediately;
+    // only a remote cache-miss spawns `gio info` async instead of blocking up
+    // to 8s. Keeps fileProperties (sync) for tests and fast callers.
+    Q_INVOKABLE void requestFileProperties(const QString &path);
     Q_INVOKABLE QVariantMap folderItemCounts(const QStringList &paths) const;
     Q_INVOKABLE QVariantList availableApps(const QString &mimeType) const;
     // Async variant for the GUI thread: spawns `gio mime` without blocking and
@@ -92,6 +97,7 @@ signals:
     void countsChanged();
     void watchedDirectoryChanged(const QString &path);
     void availableAppsReady(const QString &mimeType, const QVariantList &apps);
+    void remotePropertiesReady(const QString &path, const QVariantMap &props);
 
 private:
     // Lazy per-row display cache. QMimeDatabase / QLocale / permission-string
@@ -145,6 +151,8 @@ private:
     bool isRemoteRoot() const;
     // Stop in-flight async `gio mime` probes (see requestAvailableApps).
     void cancelAppsProbes();
+    // Stop in-flight async `gio info` probes (see requestFileProperties).
+    void cancelRemotePropsProbes();
     QVariantMap remoteFileProperties(const QString &path) const;
     QVariantMap trashFileProperties(const QString &path) const;
 
@@ -159,6 +167,9 @@ private:
     // In-flight async `gio mime` probes, keyed by MIME type. Lets a repeated
     // request dedup and lets the destructor stop them before teardown.
     QHash<QString, QProcess *> m_appsProcs;
+    // In-flight async `gio info` probes, keyed by the caller's path (see
+    // requestFileProperties). Same dedup + teardown role as m_appsProcs.
+    QHash<QString, QProcess *> m_remotePropsProcs;
     QProcess *m_remoteReloadProcess = nullptr;
     int m_remoteReloadGeneration = 0;
     QFutureWatcher<LocalReloadResult> *m_localReloadWatcher = nullptr;

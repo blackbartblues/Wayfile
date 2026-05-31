@@ -8,13 +8,98 @@
 #include <QFileInfo>
 #include <QLocale>
 #include <QMimeDatabase>
+#include <QProcess>
 #include <QStandardPaths>
 #include <QStorageInfo>
+#include <QTimer>
 #include <QUrl>
 #include <QStringList>
 #include <QVariant>
 
 using namespace FsmHelpers;
+
+namespace {
+
+// `gio info` argument list for a remote location. Shared by the sync and async
+// property fetchers so both request the same attribute set.
+QStringList gioInfoArgs(const QString &normalizedPath)
+{
+    return {
+        QStringLiteral("info"),
+        QStringLiteral("-a"),
+        QStringLiteral("standard::name,standard::display-name,standard::content-type,standard::size,standard::is-symlink,standard::symlink-target,time::created,time::modified,time::access,owner::user,owner::group,unix::mode,access::can-read,access::can-write,access::can-execute"),
+        gioLocationArg(normalizedPath)
+    };
+}
+
+// Parse `gio info` output into the properties map. Shared by sync
+// remoteFileProperties and the async requestFileProperties path so both produce
+// byte-identical results — only how the process runs (blocking vs. not) differs.
+QVariantMap parseRemoteGioInfo(const QString &normalizedPath, const QString &output)
+{
+    QVariantMap props;
+    QHash<QString, QString> fields;
+    bool inAttributes = false;
+    for (const QString &line : output.split('\n', Qt::SkipEmptyParts)) {
+        const QString trimmed = line.trimmed();
+        if (trimmed == QStringLiteral("attributes:")) {
+            inAttributes = true;
+            continue;
+        }
+
+        const int separator = trimmed.indexOf(':');
+        if (separator < 0)
+            continue;
+
+        const QString key = trimmed.left(separator).trimmed();
+        const QString value = trimmed.mid(separator + 1).trimmed();
+        if (inAttributes)
+            fields.insert(key, value);
+        else
+            fields.insert(key, value);
+    }
+
+    const QString typeText = fields.value(QStringLiteral("type")).toLower();
+    const bool isDir = typeText.contains(QStringLiteral("directory"));
+    const QString displayName = fields.value(QStringLiteral("display name"), locationFileName(normalizedPath));
+    const QString mimeType = fields.value(QStringLiteral("standard::content-type"));
+    const qint64 size = fields.value(QStringLiteral("standard::size")).toLongLong();
+    const int unixMode = fields.value(QStringLiteral("unix::mode")).toInt();
+
+    props["name"] = displayName;
+    props["path"] = normalizedPath;
+    props["parentDir"] = parentLocation(normalizedPath);
+    props["isDir"] = isDir;
+    props["isSymlink"] = fields.value(QStringLiteral("standard::is-symlink")) == QStringLiteral("TRUE");
+    props["symlinkTarget"] = fields.value(QStringLiteral("standard::symlink-target"));
+    props["iconName"] = iconNameForEntry(displayName, isDir, mimeType);
+    props["mimeType"] = mimeType;
+    props["mimeDescription"] = mimeType.isEmpty() ? QString() : mimeDb().mimeTypeForName(mimeType).comment();
+    props["created"] = QLocale().toString(dateTimeFromSeconds(fields.value(QStringLiteral("time::created"))), QLocale::LongFormat);
+    props["modified"] = QLocale().toString(dateTimeFromSeconds(fields.value(QStringLiteral("time::modified"))), QLocale::LongFormat);
+    props["accessed"] = QLocale().toString(dateTimeFromSeconds(fields.value(QStringLiteral("time::access"))), QLocale::LongFormat);
+    props["owner"] = fields.value(QStringLiteral("owner::user"));
+    props["group"] = fields.value(QStringLiteral("owner::group"));
+    props["permissions"] = permissionsStringFromMode(unixMode);
+    props["ownerAccess"] = accessIndexFromMode(unixMode, 0400, 0200, 0100);
+    props["groupAccess"] = accessIndexFromMode(unixMode, 0040, 0020, 0010);
+    props["otherAccess"] = accessIndexFromMode(unixMode, 0004, 0002, 0001);
+    props["isExecutable"] = bool(unixMode & 0100) || fields.value(QStringLiteral("access::can-execute")) == QStringLiteral("TRUE");
+    props["canEditPermissions"] = false;
+
+    if (isDir) {
+        props["contentText"] = QString();
+        props["sizeText"] = QString();
+        props["size"] = qint64(-1);
+    } else {
+        props["size"] = size;
+        props["sizeText"] = formattedSize(size, true);
+    }
+
+    return props;
+}
+
+} // namespace
 
 QVariantMap FileSystemModel::folderItemCounts(const QStringList &paths) const
 {
@@ -151,79 +236,89 @@ QVariantMap FileSystemModel::remoteFileProperties(const QString &path) const
             return buildRemotePropertiesFromEntry(entry);
     }
 
-    QVariantMap props;
     QProcess proc;
-    proc.start(QStringLiteral("gio"), {
-        QStringLiteral("info"),
-        QStringLiteral("-a"),
-        QStringLiteral("standard::name,standard::display-name,standard::content-type,standard::size,standard::is-symlink,standard::symlink-target,time::created,time::modified,time::access,owner::user,owner::group,unix::mode,access::can-read,access::can-write,access::can-execute"),
-        gioLocationArg(normalizedPath)
+    proc.start(QStringLiteral("gio"), gioInfoArgs(normalizedPath));
+
+    if (!proc.waitForFinished(8000) || proc.exitCode() != 0)
+        return buildFallbackRemoteProperties(normalizedPath);
+
+    return parseRemoteGioInfo(normalizedPath, QString::fromUtf8(proc.readAllStandardOutput()));
+}
+
+void FileSystemModel::requestFileProperties(const QString &path)
+{
+    const QString normalizedPath = normalizeLocation(path);
+
+    // Fast paths with no blocking process — emit synchronously so local,
+    // trash, and remote-cache-hit properties fill before the first frame
+    // (matching the old sync behavior). The caller's original path is echoed
+    // back as the identity token so a QML guard on the requested path matches.
+    if (!isRemoteUri(normalizedPath)) {
+        emit remotePropertiesReady(path, fileProperties(path));
+        return;
+    }
+    for (const auto &entry : m_remoteEntries) {
+        if (entry.value(QStringLiteral("filePath")).toString() == normalizedPath) {
+            emit remotePropertiesReady(path, buildRemotePropertiesFromEntry(entry));
+            return;
+        }
+    }
+
+    // Remote cache-miss: the only path that would otherwise block the GUI
+    // thread on `gio info` (up to 8s). Spawn it without blocking.
+    if (QProcess *stale = m_remotePropsProcs.take(path)) {
+        stale->disconnect(this);
+        stale->kill();
+        stale->deleteLater();
+    }
+
+    auto *proc = new QProcess(this);
+    m_remotePropsProcs.insert(path, proc);
+
+    connect(proc, &QProcess::finished, this,
+            [this, proc, path, normalizedPath](int code, QProcess::ExitStatus status) {
+                if (m_remotePropsProcs.value(path) != proc) {
+                    proc->deleteLater();
+                    return;
+                }
+                m_remotePropsProcs.remove(path);
+                const QVariantMap props = (status == QProcess::NormalExit && code == 0)
+                    ? parseRemoteGioInfo(normalizedPath, QString::fromUtf8(proc->readAllStandardOutput()))
+                    : buildFallbackRemoteProperties(normalizedPath);
+                emit remotePropertiesReady(path, props);
+                proc->deleteLater();
+            });
+    connect(proc, &QProcess::errorOccurred, this,
+            [this, proc, path, normalizedPath](QProcess::ProcessError) {
+                if (m_remotePropsProcs.value(path) != proc) {
+                    proc->deleteLater();
+                    return;
+                }
+                m_remotePropsProcs.remove(path);
+                emit remotePropertiesReady(path, buildFallbackRemoteProperties(normalizedPath));
+                proc->deleteLater();
+            });
+
+    // Watchdog mirrors the sync method's 8s cap: kill a hung probe so it can't
+    // leak. The kill triggers finished/errorOccurred, which emits the fallback.
+    QTimer::singleShot(8000, proc, [this, proc, path]() {
+        if (m_remotePropsProcs.value(path) == proc && proc->state() != QProcess::NotRunning)
+            proc->kill();
     });
 
-    if (!proc.waitForFinished(8000) || proc.exitCode() != 0) {
-        return buildFallbackRemoteProperties(normalizedPath);
+    proc->start(QStringLiteral("gio"), gioInfoArgs(normalizedPath));
+}
+
+void FileSystemModel::cancelRemotePropsProbes()
+{
+    const QList<QProcess *> procs = m_remotePropsProcs.values();
+    m_remotePropsProcs.clear();
+    for (QProcess *proc : procs) {
+        proc->disconnect(this);
+        proc->kill();
+        proc->waitForFinished(100);
+        delete proc;
     }
-
-    const QString output = QString::fromUtf8(proc.readAllStandardOutput());
-    QHash<QString, QString> fields;
-    bool inAttributes = false;
-    for (const QString &line : output.split('\n', Qt::SkipEmptyParts)) {
-        const QString trimmed = line.trimmed();
-        if (trimmed == QStringLiteral("attributes:")) {
-            inAttributes = true;
-            continue;
-        }
-
-        const int separator = trimmed.indexOf(':');
-        if (separator < 0)
-            continue;
-
-        const QString key = trimmed.left(separator).trimmed();
-        const QString value = trimmed.mid(separator + 1).trimmed();
-        if (inAttributes)
-            fields.insert(key, value);
-        else
-            fields.insert(key, value);
-    }
-
-    const QString typeText = fields.value(QStringLiteral("type")).toLower();
-    const bool isDir = typeText.contains(QStringLiteral("directory"));
-    const QString displayName = fields.value(QStringLiteral("display name"), locationFileName(normalizedPath));
-    const QString mimeType = fields.value(QStringLiteral("standard::content-type"));
-    const qint64 size = fields.value(QStringLiteral("standard::size")).toLongLong();
-    const int unixMode = fields.value(QStringLiteral("unix::mode")).toInt();
-
-    props["name"] = displayName;
-    props["path"] = normalizedPath;
-    props["parentDir"] = parentLocation(normalizedPath);
-    props["isDir"] = isDir;
-    props["isSymlink"] = fields.value(QStringLiteral("standard::is-symlink")) == QStringLiteral("TRUE");
-    props["symlinkTarget"] = fields.value(QStringLiteral("standard::symlink-target"));
-    props["iconName"] = iconNameForEntry(displayName, isDir, mimeType);
-    props["mimeType"] = mimeType;
-    props["mimeDescription"] = mimeType.isEmpty() ? QString() : mimeDb().mimeTypeForName(mimeType).comment();
-    props["created"] = QLocale().toString(dateTimeFromSeconds(fields.value(QStringLiteral("time::created"))), QLocale::LongFormat);
-    props["modified"] = QLocale().toString(dateTimeFromSeconds(fields.value(QStringLiteral("time::modified"))), QLocale::LongFormat);
-    props["accessed"] = QLocale().toString(dateTimeFromSeconds(fields.value(QStringLiteral("time::access"))), QLocale::LongFormat);
-    props["owner"] = fields.value(QStringLiteral("owner::user"));
-    props["group"] = fields.value(QStringLiteral("owner::group"));
-    props["permissions"] = permissionsStringFromMode(unixMode);
-    props["ownerAccess"] = accessIndexFromMode(unixMode, 0400, 0200, 0100);
-    props["groupAccess"] = accessIndexFromMode(unixMode, 0040, 0020, 0010);
-    props["otherAccess"] = accessIndexFromMode(unixMode, 0004, 0002, 0001);
-    props["isExecutable"] = bool(unixMode & 0100) || fields.value(QStringLiteral("access::can-execute")) == QStringLiteral("TRUE");
-    props["canEditPermissions"] = false;
-
-    if (isDir) {
-        props["contentText"] = QString();
-        props["sizeText"] = QString();
-        props["size"] = qint64(-1);
-    } else {
-        props["size"] = size;
-        props["sizeText"] = formattedSize(size, true);
-    }
-
-    return props;
 }
 
 QVariantMap FileSystemModel::trashFileProperties(const QString &path) const
