@@ -27,7 +27,11 @@ QHash<QString, QString> parseGioAttributes(const QString &attributeText)
     return attrs;
 }
 
-QString latestTrashUriForOriginalPath(const QString &originalPath)
+// One `gio list trash:///` returns the entire trash listing, so build a
+// cleaned-orig-path → latest-trash-uri map in a single call. Callers then
+// resolve each path in memory instead of spawning one `gio list` per path
+// (which made undoing a multi-file trash freeze the GUI for N × 5s).
+QHash<QString, QString> latestTrashUrisByOriginalPath()
 {
     QProcess proc;
     proc.start("gio", {
@@ -42,8 +46,8 @@ QString latestTrashUriForOriginalPath(const QString &originalPath)
     if (!proc.waitForFinished(5000) || proc.exitCode() != 0)
         return {};
 
-    QString latestUri;
-    QDateTime latestDeletedAt;
+    QHash<QString, QString> latestUri;
+    QHash<QString, QDateTime> latestDeletedAt;
     const QStringList lines = QString::fromUtf8(proc.readAllStandardOutput()).split('\n', Qt::SkipEmptyParts);
     for (const QString &line : lines) {
         const QStringList fields = line.split('\t');
@@ -52,16 +56,20 @@ QString latestTrashUriForOriginalPath(const QString &originalPath)
 
         const QString uri = fields.at(0).trimmed();
         const auto attrs = parseGioAttributes(fields.mid(3).join(" "));
-        if (QDir::cleanPath(attrs.value("trash::orig-path")) != originalPath)
+        const QString origPath = QDir::cleanPath(attrs.value("trash::orig-path"));
+        if (attrs.value("trash::orig-path").isEmpty())
             continue;
 
         QDateTime deletedAt = QDateTime::fromString(attrs.value("trash::deletion-date"), Qt::ISODate);
         if (!deletedAt.isValid())
             deletedAt = QDateTime::fromString(attrs.value("trash::deletion-date"), Qt::ISODateWithMs);
 
-        if (latestUri.isEmpty() || !latestDeletedAt.isValid() || deletedAt > latestDeletedAt) {
-            latestUri = uri;
-            latestDeletedAt = deletedAt;
+        // Keep the most-recently-deleted entry per original path (same
+        // tie-break as before: a strictly later deletion-date wins).
+        const QDateTime &seen = latestDeletedAt.value(origPath);
+        if (!latestUri.contains(origPath) || !seen.isValid() || deletedAt > seen) {
+            latestUri.insert(origPath, uri);
+            latestDeletedAt.insert(origPath, deletedAt);
         }
     }
 
@@ -375,10 +383,14 @@ void UndoManager::executeRedo(const UndoRecord &rec)
 
 void UndoManager::restoreFromTrash(const QStringList &originalPaths)
 {
-    QStringList restoreTargets;
+    // Resolve every path against a single trash listing (see
+    // latestTrashUrisByOriginalPath) so a multi-file undo costs one `gio list`,
+    // not one per path.
+    const QHash<QString, QString> latestByOrig = latestTrashUrisByOriginalPath();
 
+    QStringList restoreTargets;
     for (const QString &origPath : originalPaths) {
-        const QString trashUri = latestTrashUriForOriginalPath(QDir::cleanPath(origPath));
+        const QString trashUri = latestByOrig.value(QDir::cleanPath(origPath));
         if (!trashUri.isEmpty())
             restoreTargets.append(trashUri);
     }
