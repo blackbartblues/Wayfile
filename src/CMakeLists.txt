@@ -135,6 +135,7 @@ list(APPEND heimdall_qml_module_args
         qml/components/RemoteConnectDialog.qml
         qml/components/PreviewState.qml
         qml/components/QuickPreview.qml
+        qml/components/QuickPreviewPane.qml
         qml/components/Toast.qml
         qml/components/RubberBand.qml
         qml/icons/IconCheck.qml
