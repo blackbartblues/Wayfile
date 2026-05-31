@@ -16,6 +16,7 @@ set(HEIMDALL_SOURCES
     models/tablistmodel.cpp
     models/bookmarkmodel.cpp
     models/filesystemmodel.cpp
+    models/filesystemmodel_helpers.cpp
     models/devicemodel.cpp
     models/recentfilesmodel.cpp
     models/searchresultsmodel.cpp
