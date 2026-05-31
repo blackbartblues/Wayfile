@@ -19,6 +19,7 @@ set(HEIMDALL_SOURCES
     models/filesystemmodel_helpers.cpp
     models/filesystemmodel_apps.cpp
     models/filesystemmodel_properties.cpp
+    models/filesystemmodel_reload.cpp
     models/devicemodel.cpp
     models/recentfilesmodel.cpp
     models/searchresultsmodel.cpp
@@ -69,6 +70,7 @@ if(HEIMDALL_ENABLE_UNITY_BUILD)
         models/filesystemmodel.cpp
         models/filesystemmodel_apps.cpp
         models/filesystemmodel_properties.cpp
+        models/filesystemmodel_reload.cpp
         services/fileoperations.cpp
         services/fileoperations_helpers.cpp
         services/fileoperations_archive.cpp

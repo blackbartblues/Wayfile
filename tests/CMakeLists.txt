@@ -118,6 +118,7 @@ add_executable(tst_filesystemmodel tst_filesystemmodel.cpp
     ${CMAKE_SOURCE_DIR}/src/models/filesystemmodel_helpers.cpp
     ${CMAKE_SOURCE_DIR}/src/models/filesystemmodel_apps.cpp
     ${CMAKE_SOURCE_DIR}/src/models/filesystemmodel_properties.cpp
+    ${CMAKE_SOURCE_DIR}/src/models/filesystemmodel_reload.cpp
     ${CMAKE_SOURCE_DIR}/src/services/gitstatusservice.cpp
 )
 target_include_directories(tst_filesystemmodel PRIVATE
@@ -169,6 +170,7 @@ add_executable(tst_searchproxymodel tst_searchproxymodel.cpp
     ${CMAKE_SOURCE_DIR}/src/models/filesystemmodel_helpers.cpp
     ${CMAKE_SOURCE_DIR}/src/models/filesystemmodel_apps.cpp
     ${CMAKE_SOURCE_DIR}/src/models/filesystemmodel_properties.cpp
+    ${CMAKE_SOURCE_DIR}/src/models/filesystemmodel_reload.cpp
     ${CMAKE_SOURCE_DIR}/src/models/searchresultsmodel.cpp
     ${CMAKE_SOURCE_DIR}/src/services/gitstatusservice.cpp
 )
