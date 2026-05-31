@@ -8,6 +8,7 @@
 #include <QProcess>
 #include <QUuid>
 #include "models/filesystemmodel.h"
+#include "services/gitstatusservice.h"
 #include "testdir.h"
 
 class TestFileSystemModel : public QObject
@@ -1049,7 +1050,69 @@ private slots:
         QCOMPARE(suggestions.size(), 2);
     }
 
+    // GH #1: git status badges. The delegate reads the model's gitStatus role,
+    // which must resolve to a non-empty status for dirty files once the (async)
+    // GitStatusService has run. This drives the full runtime path: setRootPath
+    // -> service rev-parse/status -> statusChanged -> data(GitStatusRole).
+    void testGitStatusRolePopulatesForDirtyRepo()
+    {
+        if (QStandardPaths::findExecutable(QStringLiteral("git")).isEmpty())
+            QSKIP("git not in PATH");
+
+        TestDir repo;
+        const QString root = repo.path();
+        QVERIFY(runGit(root, {QStringLiteral("init"), QStringLiteral("-q")}));
+        runGit(root, {QStringLiteral("config"), QStringLiteral("user.email"), QStringLiteral("t@example.com")});
+        runGit(root, {QStringLiteral("config"), QStringLiteral("user.name"), QStringLiteral("Test")});
+        runGit(root, {QStringLiteral("config"), QStringLiteral("commit.gpgsign"), QStringLiteral("false")});
+
+        repo.createFile(QStringLiteral("tracked.txt"), "v1\n");
+        QVERIFY(runGit(root, {QStringLiteral("add"), QStringLiteral("tracked.txt")}));
+        QVERIFY(runGit(root, {QStringLiteral("commit"), QStringLiteral("-q"), QStringLiteral("-m"), QStringLiteral("base")}));
+        repo.createFile(QStringLiteral("tracked.txt"), "v2\n");      // worktree-modified
+        repo.createFile(QStringLiteral("untracked.txt"), "new\n");   // untracked
+
+        FileSystemModel model;
+        model.setSynchronousReload(true);
+        GitStatusService svc;
+        model.setGitStatusService(&svc);
+        model.setRootPath(root);
+
+        // Rows are listed synchronously; the git roles fill in asynchronously.
+        const int trackedRow = rowForFileName(model, QStringLiteral("tracked.txt"));
+        const int untrackedRow = rowForFileName(model, QStringLiteral("untracked.txt"));
+        QVERIFY(trackedRow >= 0);
+        QVERIFY(untrackedRow >= 0);
+
+        auto gitStatusAt = [&](int row) {
+            return model.data(model.index(row), FileSystemModel::GitStatusRole).toString();
+        };
+
+        QTRY_VERIFY_WITH_TIMEOUT(!gitStatusAt(trackedRow).isEmpty(), 8000);
+        QCOMPARE(gitStatusAt(trackedRow), QStringLiteral("modified"));
+        QCOMPARE(gitStatusAt(untrackedRow), QStringLiteral("untracked"));
+        QCOMPARE(model.data(model.index(trackedRow), FileSystemModel::GitStatusIconRole).toString(),
+                 QStringLiteral("git-modified"));
+    }
+
 private:
+    // Run git synchronously in workdir; returns true on exit code 0.
+    static bool runGit(const QString &workdir, const QStringList &args)
+    {
+        QProcess p;
+        p.setWorkingDirectory(workdir);
+        p.start(QStringLiteral("git"), args);
+        return p.waitForFinished(5000) && p.exitCode() == 0;
+    }
+
+    static int rowForFileName(FileSystemModel &model, const QString &name)
+    {
+        for (int r = 0; r < model.rowCount(); ++r)
+            if (model.data(model.index(r), FileSystemModel::FileNameRole).toString() == name)
+                return r;
+        return -1;
+    }
+
     // Helper to set permissions without a FileSystemModel instance
     void model_setPermissionsHelper(const QString &path, int ownerAccess, int groupAccess, int otherAccess)
     {

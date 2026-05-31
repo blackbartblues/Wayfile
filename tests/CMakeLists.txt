@@ -128,6 +128,13 @@ target_include_directories(tst_filesystemmodel PRIVATE
 target_link_libraries(tst_filesystemmodel PRIVATE Qt6::Test Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Svg Qt6::SvgWidgets Qt6::Concurrent)
 add_test(NAME tst_filesystemmodel COMMAND tst_filesystemmodel)
 
+add_executable(tst_gitstatusservice tst_gitstatusservice.cpp
+    ${CMAKE_SOURCE_DIR}/src/services/gitstatusservice.cpp
+)
+target_include_directories(tst_gitstatusservice PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(tst_gitstatusservice PRIVATE Qt6::Test Qt6::Core)
+add_test(NAME tst_gitstatusservice COMMAND tst_gitstatusservice)
+
 add_executable(tst_devicemodel tst_devicemodel.cpp
     ${CMAKE_SOURCE_DIR}/src/models/devicemodel.cpp
 )
