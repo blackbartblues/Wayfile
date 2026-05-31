@@ -623,6 +623,34 @@ Item {
         }
     }
 
+    // View-mode submenu entry. Shared by the empty-space menu and the
+    // file/folder menu (so View is reachable even in dense Detailed/Miller
+    // views where there's no empty space to right-click).
+    function viewMenuItem() {
+        return { text: "View", shortcut: "", action: "view_toggle", isSubmenu: true, icon: "Eye",
+            submenuItems: [
+                { text: "Grid", shortcut: "Ctrl+1", action: "view_grid", checked: currentViewMode === "grid", icon: "Grid" },
+                { text: "Miller", shortcut: "Ctrl+2", action: "view_miller", checked: currentViewMode === "miller", icon: "Columns" },
+                { text: "Detailed", shortcut: "Ctrl+3", action: "view_detailed", checked: currentViewMode === "detailed", icon: "AlignJustify" }
+            ]
+        }
+    }
+
+    // Sort-by submenu entry. Shared by the empty-space and file/folder menus.
+    function sortMenuItem() {
+        return { text: "Sort By", shortcut: "", action: "sort_toggle", isSubmenu: true, icon: "SlidersH",
+            submenuItems: [
+                { text: "Name", shortcut: "", action: "sort_name", checked: currentSortBy === "name" },
+                { text: "Size", shortcut: "", action: "sort_size", checked: currentSortBy === "size" },
+                { text: "Date Modified", shortcut: "", action: "sort_modified", checked: currentSortBy === "modified" },
+                { text: "Type", shortcut: "", action: "sort_type", checked: currentSortBy === "type" },
+                { separator: true },
+                { text: "Ascending", shortcut: "", action: "sort_asc", checked: currentSortAscending, icon: "ChevronUp" },
+                { text: "Descending", shortcut: "", action: "sort_desc", checked: !currentSortAscending, icon: "ChevronDown" }
+            ]
+        }
+    }
+
     function buildModel() {
         var items = []
         if (hasCustomItems) {
@@ -690,28 +718,15 @@ Item {
                 items.push({ text: "Move to Trash", shortcut: "Delete", action: "trash", icon: "Trash", destructive: true })
             }
             items.push({ separator: true })
+            items.push(viewMenuItem())
+            items.push(sortMenuItem())
+            items.push({ separator: true })
             items.push({ text: "Properties", shortcut: "", action: "properties", icon: "Info" })
         } else {
             items.push({ text: "Select All", shortcut: "Ctrl+A", action: "selectall", icon: "Check" })
             items.push({ separator: true })
-            items.push({ text: "View", shortcut: "", action: "view_toggle", isSubmenu: true, icon: "Eye",
-                submenuItems: [
-                    { text: "Grid", shortcut: "Ctrl+1", action: "view_grid", checked: currentViewMode === "grid", icon: "Grid" },
-                    { text: "Miller", shortcut: "Ctrl+2", action: "view_miller", checked: currentViewMode === "miller", icon: "Columns" },
-                    { text: "Detailed", shortcut: "Ctrl+3", action: "view_detailed", checked: currentViewMode === "detailed", icon: "AlignJustify" }
-                ]
-            })
-            items.push({ text: "Sort By", shortcut: "", action: "sort_toggle", isSubmenu: true, icon: "SlidersH",
-                submenuItems: [
-                    { text: "Name", shortcut: "", action: "sort_name", checked: currentSortBy === "name" },
-                    { text: "Size", shortcut: "", action: "sort_size", checked: currentSortBy === "size" },
-                    { text: "Date Modified", shortcut: "", action: "sort_modified", checked: currentSortBy === "modified" },
-                    { text: "Type", shortcut: "", action: "sort_type", checked: currentSortBy === "type" },
-                    { separator: true },
-                    { text: "Ascending", shortcut: "", action: "sort_asc", checked: currentSortAscending, icon: "ChevronUp" },
-                    { text: "Descending", shortcut: "", action: "sort_desc", checked: !currentSortAscending, icon: "ChevronDown" }
-                ]
-            })
+            items.push(viewMenuItem())
+            items.push(sortMenuItem())
             if (!isTrashView) {
                 items.push({ separator: true })
                 items.push({ text: "New Folder...", shortcut: config.shortcutMap["new_folder"] || "", action: "newfolder", icon: "Folder" })
