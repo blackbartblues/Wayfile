@@ -34,8 +34,8 @@ Item {
     signal subPaneClicked(int tabIndex, int paneIdx)
 
     // Chrome-ish bounds. Tune here if the design canvas tightens these later.
-    readonly property int minTabWidth: 100
-    readonly property int maxTabWidth: 220
+    readonly property int minTabWidth: 88
+    readonly property int maxTabWidth: 180
 
     implicitHeight: Math.round(36 * Theme.uiScale)
 
