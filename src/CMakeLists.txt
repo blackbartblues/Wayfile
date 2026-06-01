@@ -133,6 +133,7 @@ list(APPEND heimdall_qml_module_args
         qml/components/TransferConflictDialog.qml
         qml/components/AppShortcuts.qml
         qml/components/PropertiesDialog.qml
+        qml/components/MainOverlays.qml
         qml/components/BulkRenameDialog.qml
         qml/components/RemoteConnectDialog.qml
         qml/components/PreviewState.qml

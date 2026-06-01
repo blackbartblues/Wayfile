@@ -413,19 +413,19 @@ ApplicationWindow {
     }
 
     function openRemoteConnectDialog() {
-        remoteConnectDialog.resetForm()
-        remoteConnectDialog.open()
+        mainOverlays.remoteConnectDialog.resetForm()
+        mainOverlays.remoteConnectDialog.open()
     }
 
     function openSettingsPanel() {
-        if (settingsPanel.visible)
-            settingsPanel.closePanel()
+        if (mainOverlays.settingsPanel.visible)
+            mainOverlays.settingsPanel.closePanel()
         else
-            settingsPanel.openPanel()
+            mainOverlays.settingsPanel.openPanel()
     }
 
     function openKeyboardShortcutsDialog() {
-        shortcutsDialog.openDialog()
+        mainOverlays.shortcutsDialog.openDialog()
     }
 
     function paneIsRecents(pane) {
@@ -577,16 +577,16 @@ ApplicationWindow {
     function shouldFocusActivePane() {
         return root.active
             && !root.searchMode
-            && !bulkRenameDialog.visible
-            && !remoteConnectDialog.visible
-            && !settingsPanel.visible
-            && !shortcutsDialog.visible
-            && !renameDialog.visible
-            && !newFolderDialog.visible
-            && !newFileDialog.visible
-            && !conflictDialog.visible
-            && !deleteConfirmDialog.visible
-            && !emptyTrashConfirmDialog.visible
+            && !mainOverlays.bulkRenameDialog.visible
+            && !mainOverlays.remoteConnectDialog.visible
+            && !mainOverlays.settingsPanel.visible
+            && !mainOverlays.shortcutsDialog.visible
+            && !mainOverlays.renameDialog.visible
+            && !mainOverlays.newFolderDialog.visible
+            && !mainOverlays.newFileDialog.visible
+            && !mainOverlays.conflictDialog.visible
+            && !mainOverlays.deleteConfirmDialog.visible
+            && !mainOverlays.emptyTrashConfirmDialog.visible
             && !quickPreview.active
     }
 
@@ -776,21 +776,21 @@ ApplicationWindow {
             var moveOperation = transferMoveOperation
             var clearClipboard = transferClearClipboardOnSuccess
             resetTransferConflictState()
-            conflictDialog.close()
+            mainOverlays.conflictDialog.close()
             executeTransferOperation(items, moveOperation, clearClipboard)
             return
         }
 
         transferConflictIndex = index
         var item = transferConflictItems[index]
-        conflictDialog.renameText = fileOps.uniqueNameForDestination(
+        mainOverlays.conflictDialog.renameText = fileOps.uniqueNameForDestination(
             transferDestinationPath,
             item.sourceName,
             reservedTargetNames()
         )
-        conflictDialog.errorText = ""
-        conflictDialog.currentItem = item
-        conflictDialog.open()
+        mainOverlays.conflictDialog.errorText = ""
+        mainOverlays.conflictDialog.currentItem = item
+        mainOverlays.conflictDialog.open()
     }
 
     function beginTransfer(paths, destinationPath, moveOperation, clearClipboardOnSuccess) {
@@ -869,22 +869,22 @@ ApplicationWindow {
         var item = transferConflictItems[transferConflictIndex]
         if (action === "overwrite") {
             if (item.samePath) {
-                conflictDialog.errorText = "Cannot overwrite an item with itself"
+                mainOverlays.conflictDialog.errorText = "Cannot overwrite an item with itself"
                 return
             }
 
             transferReservedTargets[item.targetPath] = true
             transferResolvedItems = transferResolvedItems.concat([{ sourcePath: item.sourcePath, targetPath: item.targetPath, overwrite: true }])
         } else if (action === "rename") {
-            var name = conflictDialog.renameText.trim()
+            var name = mainOverlays.conflictDialog.renameText.trim()
             if (name === "" || name === "." || name === ".." || name.indexOf("/") >= 0) {
-                conflictDialog.errorText = "Enter a valid file name"
+                mainOverlays.conflictDialog.errorText = "Enter a valid file name"
                 return
             }
 
             var targetPath = transferDestinationPath + "/" + name
             if (transferReservedTargets[targetPath] || fileOps.pathExists(targetPath) || targetPath === item.sourcePath) {
-                conflictDialog.errorText = "That name already exists"
+                mainOverlays.conflictDialog.errorText = "That name already exists"
                 return
             }
 
@@ -900,19 +900,19 @@ ApplicationWindow {
 
         transferConflictIndex = nextIndex
         var nextItem = transferConflictItems[nextIndex]
-        conflictDialog.currentItem = nextItem
-        conflictDialog.renameText = fileOps.uniqueNameForDestination(
+        mainOverlays.conflictDialog.currentItem = nextItem
+        mainOverlays.conflictDialog.renameText = fileOps.uniqueNameForDestination(
             transferDestinationPath,
             nextItem.sourceName,
             reservedTargetNames()
         )
-        conflictDialog.errorText = ""
-        conflictDialog.focusRenameField()
+        mainOverlays.conflictDialog.errorText = ""
+        mainOverlays.conflictDialog.focusRenameField()
     }
 
     function cancelTransferConflicts() {
-        if (conflictDialog.visible)
-            conflictDialog.close()
+        if (mainOverlays.conflictDialog.visible)
+            mainOverlays.conflictDialog.close()
         else {
             resetTransferConflictState()
             scheduleActivePaneFocus()
@@ -1206,28 +1206,28 @@ ApplicationWindow {
             return
 
         root.renameTargetPath = path
-        renameDialog.openDialog(path.substring(path.lastIndexOf("/") + 1))
+        mainOverlays.renameDialog.openDialog(path.substring(path.lastIndexOf("/") + 1))
     }
 
     function openBulkRenameDialog(paths) {
         if (!paths || paths.length < 2)
             return
 
-        bulkRenameDialog.openForPaths(paths)
+        mainOverlays.bulkRenameDialog.openForPaths(paths)
     }
 
     function toggleRenameWorkflow(paths) {
-        if (renameDialog.visible) {
-            renameDialog.closeDialog()
+        if (mainOverlays.renameDialog.visible) {
+            mainOverlays.renameDialog.closeDialog()
             return
         }
 
-        if (bulkRenameDialog.visible) {
-            bulkRenameDialog.reject()
+        if (mainOverlays.bulkRenameDialog.visible) {
+            mainOverlays.bulkRenameDialog.reject()
             return
         }
 
-        if (newFolderDialog.visible || newFileDialog.visible)
+        if (mainOverlays.newFolderDialog.visible || mainOverlays.newFileDialog.visible)
             return
 
         openRenameWorkflow(paths)
@@ -1238,16 +1238,16 @@ ApplicationWindow {
             return
 
         root.newItemParentPath = parentPath
-        newFolderDialog.openDialog()
+        mainOverlays.newFolderDialog.openDialog()
     }
 
     function toggleNewFolderDialog(parentPath) {
-        if (newFolderDialog.visible) {
-            newFolderDialog.closeDialog()
+        if (mainOverlays.newFolderDialog.visible) {
+            mainOverlays.newFolderDialog.closeDialog()
             return
         }
 
-        if (renameDialog.visible || bulkRenameDialog.visible || newFileDialog.visible)
+        if (mainOverlays.renameDialog.visible || mainOverlays.bulkRenameDialog.visible || mainOverlays.newFileDialog.visible)
             return
 
         showNewFolderDialog(parentPath)
@@ -1258,16 +1258,16 @@ ApplicationWindow {
             return
 
         root.newItemParentPath = parentPath
-        newFileDialog.openDialog()
+        mainOverlays.newFileDialog.openDialog()
     }
 
     function toggleNewFileDialog(parentPath) {
-        if (newFileDialog.visible) {
-            newFileDialog.closeDialog()
+        if (mainOverlays.newFileDialog.visible) {
+            mainOverlays.newFileDialog.closeDialog()
             return
         }
 
-        if (renameDialog.visible || bulkRenameDialog.visible || newFolderDialog.visible)
+        if (mainOverlays.renameDialog.visible || mainOverlays.bulkRenameDialog.visible || mainOverlays.newFolderDialog.visible)
             return
 
         showNewFileDialog(parentPath)
@@ -1411,339 +1411,33 @@ ApplicationWindow {
                 root.currentSelectedSize = result.sizeText || ""
             }
 
-            if (requestId === propertiesDialog.folderDiskUsageRequestId) {
-                propertiesDialog.folderDiskUsageRequestId = -1
-                propertiesDialog.folderDiskUsagePending = false
-                propertiesDialog.folderDiskUsageText = result.sizeTextVerbose || result.sizeText || ""
+            if (requestId === mainOverlays.propertiesDialog.folderDiskUsageRequestId) {
+                mainOverlays.propertiesDialog.folderDiskUsageRequestId = -1
+                mainOverlays.propertiesDialog.folderDiskUsagePending = false
+                mainOverlays.propertiesDialog.folderDiskUsageText = result.sizeTextVerbose || result.sizeText || ""
             }
         }
     }
 
-    BulkRenameDialog {
-        id: bulkRenameDialog
-        onRenameApplied: (paths) => root.handleBulkRenameApplied(paths)
-    }
-
-    RemoteConnectDialog {
-        id: remoteConnectDialog
-        onConnected: (uri) => root.navigateActivePaneTo(uri)
-    }
-
-    Components.SettingsPanel {
-        id: settingsPanel
-        transientParent: root
-        currentShowHidden: fsModel.showHidden
-        currentSidebarVisible: root.sidebarVisible
-        currentSidebarWidth: root.sidebarWidth
-        onRemoteConnectRequested: root.openRemoteConnectDialog()
-        onKeyboardShortcutsRequested: root.openKeyboardShortcutsDialog()
-        onDependencyCheckRequested: missingDependenciesDialog.openDialog()
-        onClosed: root.scheduleActivePaneFocus()
-    }
-
-    Components.KeyboardShortcutsDialog {
-        id: shortcutsDialog
-        onClosed: root.scheduleActivePaneFocus()
-    }
-
-    Components.MissingDependenciesDialog {
-        id: missingDependenciesDialog
-        onClosed: root.scheduleActivePaneFocus()
-    }
-
-    // (Heimdall: the startup auto-popup was removed. Trigger via Settings ->
-    // "Check Optional Dependencies" instead.)
-
-    // ── Rename dialog ───────────────────────────────────────────────────────
+    // ── Rename / New-item target paths ───────────────────────────────────────
+    // Kept on root (not moved into MainOverlays): the rename / new-folder /
+    // new-file setters below write these, and MainOverlays' dialog handlers read
+    // them back via host.renameTargetPath / host.newItemParentPath.
     property string renameTargetPath: ""
-
-    AnimatedInputDialog {
-        id: renameDialog
-        title: "Rename"
-        placeholder: "Enter new name"
-        confirmText: "Rename"
-        selectAllOnOpen: true
-        onSubmitted: (name) => {
-            if (root.renameTargetPath === "")
-                return
-            var parentDir = fileOps.parentPath(root.renameTargetPath)
-            var targetPath = parentDir + "/" + name
-            if (fileOps.pathExists(targetPath)) {
-                showError("\"" + name + "\" already exists")
-                return
-            }
-            if (fileOps.isRemotePath(root.renameTargetPath)) {
-                var result = fileOps.renameResolvedItems([{ sourcePath: root.renameTargetPath, targetPath: targetPath }])
-                if (!result.success) {
-                    showError(result.error || "Rename failed")
-                    return
-                }
-                root.refreshAllPanes()
-            } else {
-                undoManager.rename(root.renameTargetPath, name)
-            }
-            closeDialog()
-        }
-    }
-
-    // ── New Folder / New File dialogs ───────────────────────────────────────
     property string newItemParentPath: ""
 
-    AnimatedInputDialog {
-        id: newFolderDialog
-        title: "New Folder"
-        placeholder: "Folder name"
-        confirmText: "Create"
-        onSubmitted: (name) => {
-            if (root.newItemParentPath === "")
-                return
-            var createdPath = root.newItemParentPath + "/" + name
-            if (fileOps.pathExists(createdPath)) {
-                showError("\"" + name + "\" already exists")
-                return
-            }
-            if (fileOps.isRemotePath(root.newItemParentPath)) {
-                fileOps.createFolder(root.newItemParentPath, name)
-                root.refreshAllPanes()
-            } else {
-                undoManager.createFolder(root.newItemParentPath, name)
-            }
-            if (fileOps.pathExists(createdPath))
-                root.focusPathInPane(root.activePaneIndex, createdPath, true)
-            closeDialog()
-        }
-    }
-
-    AnimatedInputDialog {
-        id: newFileDialog
-        title: "New File"
-        placeholder: "File name"
-        confirmText: "Create"
-        onSubmitted: (name) => {
-            if (root.newItemParentPath === "")
-                return
-            var createdPath = root.newItemParentPath + "/" + name
-            if (fileOps.pathExists(createdPath)) {
-                showError("\"" + name + "\" already exists")
-                return
-            }
-            if (fileOps.isRemotePath(root.newItemParentPath)) {
-                fileOps.createFile(root.newItemParentPath, name)
-                root.refreshAllPanes()
-            } else {
-                undoManager.createFile(root.newItemParentPath, name)
-            }
-            if (fileOps.pathExists(createdPath))
-                root.focusPathInPane(root.activePaneIndex, createdPath, true)
-            closeDialog()
-        }
-    }
-
-
-    // ── App Chooser dialog ──────────────────────────
-    Components.AppChooserDialog {
-        id: appChooserDialog
-        fileModel: root.paneBaseModel(root.activePaneIndex)
-        onUsedAndClosed: {
-            if (propertiesDialog.visible && propertiesDialog.props.mimeType) {
-                propertiesDialog._appsMime = propertiesDialog.props.mimeType
-                propertiesDialog.fileModelRef.requestAvailableApps(propertiesDialog.props.mimeType)
-            }
-        }
-    }
-
-    // ── Properties dialog ──────────────────────────────────────────────────
-    Components.PropertiesDialog {
-        id: propertiesDialog
+    // ── Modal overlays (dialogs + context menus) ─────────────────────────────
+    MainOverlays {
+        id: mainOverlays
         host: root
-        transientParent: root
-        onChooseAppRequested: (path, mimeType) => {
-            appChooserDialog.filePath = path
-            appChooserDialog.mimeType = mimeType
-            appChooserDialog.open()
-        }
-        onClosed: root.scheduleActivePaneFocus()
-    }
-
-    TransferConflictDialog {
-        id: conflictDialog
-        isMoveOperation: root.transferMoveOperation
-        onResolveRequested: (action) => root.resolveTransferConflict(action)
-        onRejected: {
-            root.resetTransferConflictState()
-            root.scheduleActivePaneFocus()
-        }
-    }
-
-    // ── Permanent Delete Confirmation Dialog ───────────────────────────────
-    ConfirmActionDialog {
-        id: deleteConfirmDialog
-        title: "Permanently Delete?"
-        confirmLabel: "Delete"
-        bodyText: root.deleteConfirmPaths.length === 1
-            ? "\"" + root.deleteConfirmPaths[0].substring(root.deleteConfirmPaths[0].lastIndexOf("/") + 1) + "\" will be permanently deleted. This cannot be undone."
-            : root.deleteConfirmPaths.length + " items will be permanently deleted. This cannot be undone."
-        onConfirmed: fileOps.deleteFiles(root.deleteConfirmPaths)
-    }
-
-    // ── Empty Trash Confirmation Dialog ──────────────────────────────────────
-    ConfirmActionDialog {
-        id: emptyTrashConfirmDialog
-        title: "Empty Trash?"
-        confirmLabel: "Empty Trash"
-        bodyText: "All items in the Trash will be permanently deleted. This cannot be undone."
-        onConfirmed: fileOps.emptyTrash()
-    }
-
-    // ── Context Menu ────────────────────────────────────────────────────────
-    ContextMenu {
-        id: contextMenu
-        blurSource: mainContent
-
-        fileModel: root.paneBaseModel(root.activePaneIndex)
+        blurTarget: mainContent
+        toast: toast
+        sidebarVisible: root.sidebarVisible
+        sidebarWidth: root.sidebarWidth
+        activePaneIndex: root.activePaneIndex
+        transferMoveOperation: root.transferMoveOperation
+        deleteConfirmPaths: root.deleteConfirmPaths
         isTrashView: root.isTrashView
-        currentViewMode: tabModel.activeTab ? tabModel.activeTab.viewMode : "grid"
-        currentSortBy: tabModel.activeTab ? tabModel.activeTab.sortBy : "name"
-        currentSortAscending: tabModel.activeTab ? tabModel.activeTab.sortAscending : true
-
-        onOpenRequested: (path, isDir) => {
-            if (isDir)
-                root.navigateActivePaneTo(path)
-            else
-                fileOps.openFile(path)
-        }
-        onOpenInNewTabRequested: (path) => root.openPathInNewTab(path)
-        onOpenWithRequested: (path, desktopFile) => fileOps.openFileWith(path, desktopFile)
-        onSetDefaultAppRequested: (mimeType, desktopFile) => {
-            root.paneBaseModel(root.activePaneIndex).setDefaultApp(mimeType, desktopFile)
-        }
-        onChooseAppRequested: (path, mimeType) => {
-            appChooserDialog.filePath = path
-            appChooserDialog.mimeType = mimeType
-            appChooserDialog.open()
-        }
-
-        onCutRequested: (paths) => clipboard.cut(paths)
-
-        onCopyRequested: (paths) => clipboard.copy(paths)
-
-        onPasteRequested: (destPath) => {
-            root.pasteIntoDirectory(destPath)
-        }
-
-        onCopyPathRequested: (path) => fileOps.copyPathToClipboard(path)
-
-        onRenameRequested: (path) => root.openRenameDialogForPath(path)
-        onBulkRenameRequested: (paths) => root.openBulkRenameDialog(paths)
-
-        onTrashRequested: (paths) => {
-            var hasRemotePath = false
-            for (var i = 0; i < paths.length; ++i) {
-                if (fileOps.isRemotePath(paths[i])) {
-                    hasRemotePath = true
-                    break
-                }
-            }
-
-            if (hasRemotePath)
-                fileOps.trashFiles(paths)
-            else
-                undoManager.trashFiles(paths)
-        }
-        onRestoreRequested: (paths) => fileOps.restoreFromTrash(paths)
-        onEmptyTrashRequested: emptyTrashConfirmDialog.open()
-
-        onDeleteRequested: (paths) => {
-            deleteConfirmPaths = paths
-            deleteConfirmDialog.open()
-        }
-
-        onOpenInTerminalRequested: (path) => {
-            fileOps.openInTerminal(path)
-        }
-
-        onNewFolderRequested: (parentPath) => {
-            root.showNewFolderDialog(parentPath)
-        }
-
-        onNewFileRequested: (parentPath) => {
-            root.showNewFileDialog(parentPath)
-        }
-
-        onSelectAllRequested: {
-            var view = root.activeFileView()
-            if (view) view.selectAll()
-        }
-
-        onPropertiesRequested: (path) => {
-            propertiesDialog.showProperties(path)
-        }
-
-        onViewModeRequested: (mode) => {
-            if (tabModel.activeTab) tabModel.activeTab.viewMode = mode
-        }
-
-        onSortRequested: (column, ascending) => root.applySortFromUi(column, ascending)
-    }
-
-    ContextMenu {
-        id: sidebarContextMenu
-        menuWidth: 220
-
-        property var sidebarItem: ({})
-
-        onOpenRequested: (path) => {
-            if (sidebarItem.isRecents) {
-                root.setPaneRecents(root.activePaneIndex, true)
-                return
-            }
-
-            root.navigateActivePaneTo(path)
-        }
-
-        onOpenInNewTabRequested: (path) => {
-            if (path)
-                root.openPathInNewTab(path)
-        }
-
-        onPropertiesRequested: (path) => {
-            if (path)
-                propertiesDialog.showProperties(path)
-        }
-
-        onOpenInTerminalRequested: (path) => {
-            if (path)
-                fileOps.openInTerminal(path)
-        }
-
-        // ContextMenu.executeAction routes the "emptytrash" action through the
-        // dedicated emptyTrashRequested() signal (not customActionRequested), so
-        // the sidebar needs this handler — mirroring the main file-view menu.
-        onEmptyTrashRequested: emptyTrashConfirmDialog.open()
-
-        onCustomActionRequested: (action) => {
-            if (action === "removebookmark") {
-                if (sidebarItem.kind === "bookmark" && sidebarItem.index >= 0)
-                    bookmarks.removeBookmark(sidebarItem.index)
-            } else if (action === "mountdevice") {
-                if (sidebarItem.backend === "udisks2" && !runtimeFeatures.udisksctlAvailable) {
-                    toast.show(runtimeFeatures.installHint("deviceMount"), "info")
-                } else if (sidebarItem.kind === "device" && sidebarItem.index >= 0) {
-                    devices.mount(sidebarItem.index)
-                }
-            } else if (action === "unmountdevice") {
-                if (sidebarItem.backend === "udisks2" && !runtimeFeatures.udisksctlAvailable) {
-                    toast.show(runtimeFeatures.installHint("deviceMount"), "info")
-                } else if (sidebarItem.kind === "device" && sidebarItem.index >= 0) {
-                    devices.unmount(sidebarItem.index)
-                }
-            }
-        }
-
-        onVisibleChanged: {
-            if (!visible)
-                sidebarItem = ({})
-        }
     }
 
     // ── Keyboard Shortcuts ───────────────────────────────────────────────────────────────────────────
@@ -1751,17 +1445,17 @@ ApplicationWindow {
         host: root
         toolbar: toolbar
         quickPreview: quickPreview
-        propertiesDialog: propertiesDialog
-        deleteConfirmDialog: deleteConfirmDialog
-        emptyTrashConfirmDialog: emptyTrashConfirmDialog
-        contextMenu: contextMenu
-        sidebarContextMenu: sidebarContextMenu
-        bulkRenameDialog: bulkRenameDialog
-        settingsPanel: settingsPanel
-        shortcutsDialog: shortcutsDialog
-        renameDialog: renameDialog
-        newFolderDialog: newFolderDialog
-        newFileDialog: newFileDialog
+        propertiesDialog: mainOverlays.propertiesDialog
+        deleteConfirmDialog: mainOverlays.deleteConfirmDialog
+        emptyTrashConfirmDialog: mainOverlays.emptyTrashConfirmDialog
+        contextMenu: mainOverlays.contextMenu
+        sidebarContextMenu: mainOverlays.sidebarContextMenu
+        bulkRenameDialog: mainOverlays.bulkRenameDialog
+        settingsPanel: mainOverlays.settingsPanel
+        shortcutsDialog: mainOverlays.shortcutsDialog
+        renameDialog: mainOverlays.renameDialog
+        newFolderDialog: mainOverlays.newFolderDialog
+        newFileDialog: mainOverlays.newFileDialog
     }
 
     function handlePaneFileActivated(pane, filePath, isDirectory) {
@@ -1814,12 +1508,12 @@ ApplicationWindow {
         root.setActivePane(pane)
 
         var currentDir = panePath(pane)
-        contextMenu.targetPath = filePath !== "" ? filePath : currentDir
-        contextMenu.targetIsDir = filePath !== "" ? isDirectory : true
-        contextMenu.isEmptySpace = (filePath === "")
+        mainOverlays.contextMenu.targetPath = filePath !== "" ? filePath : currentDir
+        mainOverlays.contextMenu.targetIsDir = filePath !== "" ? isDirectory : true
+        mainOverlays.contextMenu.isEmptySpace = (filePath === "")
         var sel = getSelectedPaths(pane)
-        contextMenu.selectedPaths = (sel.length > 1) ? sel : (filePath !== "" ? [filePath] : [])
-        contextMenu.popup(position.x, position.y)
+        mainOverlays.contextMenu.selectedPaths = (sel.length > 1) ? sel : (filePath !== "" ? [filePath] : [])
+        mainOverlays.contextMenu.popup(position.x, position.y)
     }
 
     function pasteIntoDirectory(destPath) {
@@ -1886,7 +1580,7 @@ ApplicationWindow {
         SidebarPane {
             host: root
             coordSpace: mainContent
-            sidebarContextMenu: sidebarContextMenu
+            sidebarContextMenu: mainOverlays.sidebarContextMenu
             sidebarTooltipLayer: sidebarTooltipLayer
             toast: toast
         }
@@ -1957,7 +1651,7 @@ ApplicationWindow {
                     if (paths.length > 0)
                         fileOps.restoreFromTrash(paths)
                 }
-                onEmptyTrashRequested: emptyTrashConfirmDialog.open()
+                onEmptyTrashRequested: mainOverlays.emptyTrashConfirmDialog.open()
                 onSplitViewToggled: root.toggleMergeOrUnmerge()
                 onHomeClicked: {
                     root.navigateActivePaneTo(fsModel.homePath())
@@ -2165,16 +1859,16 @@ ApplicationWindow {
         target: fileOps
         function onPathsChanged(paths) {
             diskUsageService.invalidatePaths(paths)
-            if (propertiesDialog.visible && propertiesDialog.props.path)
-                propertiesDialog.refreshFolderDiskUsage()
+            if (mainOverlays.propertiesDialog.visible && mainOverlays.propertiesDialog.props.path)
+                mainOverlays.propertiesDialog.refreshFolderDiskUsage()
         }
 
         function onOperationFinished(success, error) {
             root.refreshAllPanes()
             root.updateSelectionStatus()
-            if (propertiesDialog.visible && propertiesDialog.props.path) {
-                propertiesDialog.props = propertiesDialog.fileModelRef.fileProperties(propertiesDialog.props.path)
-                propertiesDialog.refreshFolderDiskUsage()
+            if (mainOverlays.propertiesDialog.visible && mainOverlays.propertiesDialog.props.path) {
+                mainOverlays.propertiesDialog.props = mainOverlays.propertiesDialog.fileModelRef.fileProperties(mainOverlays.propertiesDialog.props.path)
+                mainOverlays.propertiesDialog.refreshFolderDiskUsage()
             }
             if (success)
                 toast.show("Operation completed successfully", "success")
