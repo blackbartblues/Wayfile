@@ -192,6 +192,7 @@ list(APPEND heimdall_qml_module_args
         qml/icons/IconTerminal.qml
         qml/icons/IconClipboard.qml
         qml/icons/IconEye.qml
+        qml/icons/IconEyeOff.qml
         qml/icons/IconSlidersH.qml
         qml/icons/IconUndo.qml
         qml/icons/IconGitModified.qml

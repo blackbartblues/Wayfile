@@ -317,6 +317,17 @@ int main(int argc, char *argv[])
     FileSystemModel *millerPreviewModel = new FileSystemModel(&app);
     millerPreviewModel->setShowHidden(config->showHidden());
 
+    // Hidden view (#8 pkt5): a dedicated model rooted at Home that lists only
+    // top-level dotfiles/dotfolders. Reusing FileSystemModel gives icons, git
+    // status, previews and sorting for free; the sidebar "Hidden" entry flips
+    // the active pane onto this model the same way "Recents" does. It always
+    // shows hidden entries, so it is intentionally NOT wired to the
+    // config.showHidden toggle below.
+    FileSystemModel *hiddenEntries = new FileSystemModel(&app);
+    hiddenEntries->setShowHidden(true);
+    hiddenEntries->setHiddenOnly(true);
+    hiddenEntries->setRootPath(QDir::homePath());
+
     PreviewService *previewService = new PreviewService(&app);
     MetadataExtractor *metadataExtractor = new MetadataExtractor(&app);
     DiskUsageService *diskUsageService = new DiskUsageService(&app);
@@ -408,6 +419,7 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("millerPreviewModel", millerPreviewModel);
     engine.rootContext()->setContextProperty("devices", devices);
     engine.rootContext()->setContextProperty("recentFiles", recentFiles);
+    engine.rootContext()->setContextProperty("hiddenEntries", hiddenEntries);
     engine.rootContext()->setContextProperty("searchProxy", paneServices[0].searchProxy);
     engine.rootContext()->setContextProperty("searchResults", paneServices[0].searchResults);
     engine.rootContext()->setContextProperty("searchService", paneServices[0].searchService);

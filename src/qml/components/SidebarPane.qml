@@ -38,7 +38,7 @@ Item {
             return []
 
         if (item.kind === "quickAccess") {
-            if (item.isRecents)
+            if (item.isRecents || item.isHidden)
                 return [
                     { text: "Open", shortcut: "", action: "open" }
                 ]
@@ -103,6 +103,7 @@ Item {
         currentPath: host ? host.activePanePath : ""
         trashPath: host ? host.unifiedTrashPath : ""
         isRecentsView: host ? host.isRecentsView : false
+        isHiddenView: host ? host.isHiddenView : false
         onBookmarkClicked: (path) => {
             host.navigateActivePaneTo(path)
         }
@@ -118,6 +119,9 @@ Item {
         }
         onRecentsClicked: {
             host.setPaneRecents(host.activePaneIndex, true)
+        }
+        onHiddenClicked: {
+            host.setPaneHidden(host.activePaneIndex, true)
         }
         onFeatureHintRequested: (message) => sidebarPane.toast.show(message, "info")
     }

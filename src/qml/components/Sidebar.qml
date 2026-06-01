@@ -12,16 +12,19 @@ Rectangle {
     property string currentPath: ""
     property string trashPath: fsModel.homePath() + "/.local/share/Trash/files"
     property bool isRecentsView: false
+    property bool isHiddenView: false
     property Item tooltipLayer: null
     signal bookmarkClicked(string path)
     signal sidebarContextMenuRequested(var item, point position)
     signal recentsClicked()
+    signal hiddenClicked()
     signal featureHintRequested(string message)
 
     color: Theme.mantle
     clip: false
 
     Component { id: iconHome; IconHome { size: 18; color: Theme.subtext } }
+    Component { id: iconEyeOff; IconEyeOff { size: 18; color: Theme.subtext } }
     Component { id: iconClock; IconClock { size: 18; color: Theme.subtext } }
     Component { id: iconTrash; IconTrash { size: 18; color: Theme.subtext } }
     Component { id: iconImage; IconImage { size: 18; color: Theme.subtext } }
@@ -98,6 +101,7 @@ Rectangle {
             Repeater {
                 model: ListModel {
                     ListElement { name: "Home"; iconType: "home" }
+                    ListElement { name: "Hidden"; iconType: "eyeoff" }
                     ListElement { name: "Recents"; iconType: "clock" }
                     ListElement { name: "Trash"; iconType: "trash" }
                     ListElement { name: "Network"; iconType: "globe" }
@@ -111,6 +115,7 @@ Rectangle {
                     readonly property string resolvedPath: {
                         const home = fsModel.homePath()
                         if (model.name === "Home") return home
+                        if (model.name === "Hidden") return ""
                         if (model.name === "Recents") return ""
                         if (model.name === "Trash") return root.trashPath
                         if (model.name === "Network") return "network:///"
@@ -124,10 +129,11 @@ Rectangle {
                     height: 32
                     readonly property bool isActive: {
                         if (model.name === "Recents") return root.isRecentsView
-                        if (model.name === "Trash") return !root.isRecentsView && fileOps.isTrashPath(root.currentPath)
-                        if (model.name === "Network") return !root.isRecentsView && fileOps.isRemotePath(root.currentPath)
+                        if (model.name === "Hidden") return root.isHiddenView
+                        if (model.name === "Trash") return !root.isRecentsView && !root.isHiddenView && fileOps.isTrashPath(root.currentPath)
+                        if (model.name === "Network") return !root.isRecentsView && !root.isHiddenView && fileOps.isRemotePath(root.currentPath)
                         if (resolvedPath === "") return false
-                        return !root.isRecentsView && resolvedPath === root.currentPath
+                        return !root.isRecentsView && !root.isHiddenView && resolvedPath === root.currentPath
                     }
 
                     color: {
@@ -151,6 +157,7 @@ Rectangle {
                             anchors.verticalCenter: parent.verticalCenter
                             sourceComponent: {
                                 if (model.iconType === "home") return iconHome
+                                if (model.iconType === "eyeoff") return iconEyeOff
                                 if (model.iconType === "clock") return iconClock
                                 if (model.iconType === "trash") return iconTrash
                                 if (model.iconType === "monitor") return iconMonitor
@@ -184,13 +191,16 @@ Rectangle {
                                     kind: "quickAccess",
                                     name: model.name,
                                     path: quickAccessDelegate.resolvedPath,
-                                    isRecents: model.name === "Recents"
+                                    isRecents: model.name === "Recents",
+                                    isHidden: model.name === "Hidden"
                                 }, Qt.point(mapped.x, mapped.y))
                                 return
                             }
 
                             if (model.name === "Recents")
                                 root.recentsClicked()
+                            else if (model.name === "Hidden")
+                                root.hiddenClicked()
                             else
                                 root.bookmarkClicked(quickAccessDelegate.resolvedPath)
                         }
@@ -346,7 +356,7 @@ Rectangle {
                         Behavior on opacity { NumberAnimation { duration: 120 } }
 
                         readonly property bool isActive:
-                            !root.isRecentsView && model.path === root.currentPath
+                            !root.isRecentsView && !root.isHiddenView && model.path === root.currentPath
 
                         color: {
                             if (isActive) return Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.18)

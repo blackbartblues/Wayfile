@@ -20,6 +20,7 @@ Rectangle {
     property bool mergeWillUnmerge: false
     property string mergeTooltip: ""
     property bool isRecentsView: false
+    property bool isHiddenView: false
     property bool isTrashView: false
     property bool isRemoteView: false
     property bool searchMode: false
@@ -258,7 +259,7 @@ Rectangle {
                 // Up button
                 HoverRect {
                     width: Theme.controlSize; height: Theme.controlSize
-                    hoverEnabled: !root.isRecentsView
+                    hoverEnabled: !root.isRecentsView && !root.isHiddenView
                     opacity: hoverEnabled ? 1.0 : 0.4
                     onClicked: root.upRequested()
                     IconChevronUp { anchors.centerIn: parent; size: 18; color: Theme.text }
@@ -273,6 +274,7 @@ Rectangle {
                     path: root.navigationPath
                     activeTab: root.activeTab
                     isRecentsView: root.isRecentsView
+                    isHiddenView: root.isHiddenView
                     onNavigateRequested: (targetPath) => root.navigateRequested(targetPath)
                 }
 

@@ -265,7 +265,7 @@ Item {
     Shortcut {
         sequence: config.shortcutMap["new_folder"]
         onActivated: {
-            var dest = host.isRecentsView ? "" : host.panePath(host.activePaneIndex)
+            var dest = (host.isRecentsView || host.isHiddenView) ? "" : host.panePath(host.activePaneIndex)
             host.toggleNewFolderDialog(dest)
         }
     }
@@ -273,7 +273,7 @@ Item {
     Shortcut {
         sequence: config.shortcutMap["new_file"]
         onActivated: {
-            var dest = host.isRecentsView ? "" : host.panePath(host.activePaneIndex)
+            var dest = (host.isRecentsView || host.isHiddenView) ? "" : host.panePath(host.activePaneIndex)
             host.toggleNewFileDialog(dest)
         }
     }

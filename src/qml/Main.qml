@@ -33,9 +33,14 @@ ApplicationWindow {
     // QML bindings that read them re-evaluate; sparse holes read as undefined,
     // which paneIsRecents()/paneSearchMode()/paneFilterPanelOpen() treat as false.
     property var paneRecents: []
+    // Per-pane "Hidden" view flag (#8 pkt5) — mirrors paneRecents. When set,
+    // paneModel(pane) returns the dedicated hiddenEntries model (Home's
+    // top-level dotfiles/dotfolders) instead of the pane's real folder.
+    property var paneHidden: []
     property var paneSearchModes: []
     property var paneFilterPanels: []
     readonly property bool isRecentsView: root.paneIsRecents(activePaneIndex)
+    readonly property bool isHiddenView: root.paneIsHidden(activePaneIndex)
     property var deleteConfirmPaths: []
     property var transferConflictItems: []
     property var transferResolvedItems: []
@@ -84,6 +89,7 @@ ApplicationWindow {
                 // slot, not just 0/1 — a supertab we're leaving may have had
                 // recents or an active search on panes 2/3.
                 root.paneRecents = []
+                root.paneHidden = []
                 for (var p = 0; p < paneServicesProvider.count; ++p)
                     root.clearPaneSearch(p)
                 fsModel.setRootPath(tabModel.activeTab.currentPath)
@@ -120,6 +126,7 @@ ApplicationWindow {
                 fsModel.setRootPath(tabModel.activeTab.currentPath)
                 root.syncMillerParentModel(tabModel.activeTab.currentPath)
                 root.setPaneRecents(0, false)
+                root.setPaneHidden(0, false)
                 root.clearPaneSearch(0)
                 root.scheduleActivePaneFocus()
                 root.refreshActivePanePath()
@@ -134,6 +141,7 @@ ApplicationWindow {
             if (model)
                 model.setRootPath(tabModel.activeTab.paneCurrentPath(idx))
             root.setPaneRecents(idx, false)
+            root.setPaneHidden(idx, false)
             root.clearPaneSearch(idx)
             root.scheduleActivePaneFocus()
             root.refreshActivePanePath()
@@ -386,6 +394,9 @@ ApplicationWindow {
         if (root.paneIsRecents(pane))
             return "Recents"
 
+        if (root.paneIsHidden(pane))
+            return "Hidden"
+
         return root.pathDisplayName(root.panePath(pane))
     }
 
@@ -438,6 +449,18 @@ ApplicationWindow {
         var next = paneRecents.slice()
         next[pane] = enabled
         paneRecents = next
+    }
+
+    function paneIsHidden(pane) {
+        return paneHidden[pane] === true
+    }
+
+    function setPaneHidden(pane, enabled) {
+        if (pane < 0)
+            return
+        var next = paneHidden.slice()
+        next[pane] = enabled
+        paneHidden = next
     }
 
     function searchProxyForPane(pane) {
@@ -495,6 +518,9 @@ ApplicationWindow {
     function paneModel(pane) {
         if (root.paneIsRecents(pane))
             return recentFiles
+
+        if (root.paneIsHidden(pane))
+            return hiddenEntries
 
         if (root.paneSearchMode(pane))
             return searchProxyForPane(pane)
@@ -655,6 +681,7 @@ ApplicationWindow {
             for (var p = 0; p < paneServicesProvider.count; ++p)
                 root.clearPaneSearch(p)
             root.removePaneRecents(idx)
+            root.removePaneHidden(idx)
             // Keep the active marker pointing at the same pane it referenced
             // before the removal collapsed the indices.
             if (root.activePaneIndex === idx)
@@ -677,11 +704,22 @@ ApplicationWindow {
         paneRecents = next
     }
 
+    // Splice the hidden-view flag for the pane being removed (mirrors
+    // removePaneRecents) so flags above idx shift down to match m_panes.
+    function removePaneHidden(idx) {
+        if (idx < 0 || idx >= paneHidden.length)
+            return
+        var next = paneHidden.slice()
+        next.splice(idx, 1)
+        paneHidden = next
+    }
+
     function navigatePaneTo(pane, path) {
         if (!tabModel.activeTab || !path)
             return
 
         root.setPaneRecents(pane, false)
+        root.setPaneHidden(pane, false)
         root.clearPaneSearch(pane)
         // Pane 0 keeps the dedicated navigateTo so the primary currentPath
         // Q_PROPERTY signals fire for the tab bar / sidebar; every other pane
@@ -717,6 +755,7 @@ ApplicationWindow {
             return
 
         root.setPaneRecents(root.activePaneIndex, false)
+        root.setPaneHidden(root.activePaneIndex, false)
         root.createTabWithDefaults()
         if (tabModel.activeTab)
             tabModel.activeTab.navigateTo(path)
@@ -936,7 +975,7 @@ ApplicationWindow {
     }
 
     function goActivePaneUp() {
-        if (!tabModel.activeTab || root.paneIsRecents(activePaneIndex))
+        if (!tabModel.activeTab || root.paneIsRecents(activePaneIndex) || root.paneIsHidden(activePaneIndex))
             return
 
         var currentPath = panePath(activePaneIndex)
@@ -1044,6 +1083,8 @@ ApplicationWindow {
     function activeItemCount() {
         if (root.paneIsRecents(activePaneIndex))
             return recentFiles.count
+        if (root.paneIsHidden(activePaneIndex))
+            return hiddenEntries.fileCount + hiddenEntries.folderCount
         if (root.paneSearchMode(activePaneIndex))
             return searchProxyForPane(activePaneIndex).rowCount()
 
@@ -1052,6 +1093,8 @@ ApplicationWindow {
     }
 
     function activeFolderCount() {
+        if (root.paneIsHidden(activePaneIndex))
+            return hiddenEntries.folderCount
         if (root.paneIsRecents(activePaneIndex) || root.paneSearchMode(activePaneIndex))
             return 0
 
@@ -1161,7 +1204,7 @@ ApplicationWindow {
         if (items.length === 1 && items[0].isDir)
             return items[0].path
 
-        if (!root.paneIsRecents(root.activePaneIndex) && !root.paneSearchMode(root.activePaneIndex))
+        if (!root.paneIsRecents(root.activePaneIndex) && !root.paneIsHidden(root.activePaneIndex) && !root.paneSearchMode(root.activePaneIndex))
             return root.panePath(root.activePaneIndex)
 
         return ""
@@ -1172,7 +1215,7 @@ ApplicationWindow {
         if (items.length === 1)
             return items[0].path
 
-        if (!root.paneIsRecents(root.activePaneIndex) && !root.paneSearchMode(root.activePaneIndex))
+        if (!root.paneIsRecents(root.activePaneIndex) && !root.paneIsHidden(root.activePaneIndex) && !root.paneSearchMode(root.activePaneIndex))
             return root.panePath(root.activePaneIndex)
 
         return ""
@@ -1183,7 +1226,7 @@ ApplicationWindow {
         if (items.length === 1)
             return items[0].isDir ? items[0].path : fileOps.parentPath(items[0].path)
 
-        if (!root.paneIsRecents(root.activePaneIndex) && !root.paneSearchMode(root.activePaneIndex))
+        if (!root.paneIsRecents(root.activePaneIndex) && !root.paneIsHidden(root.activePaneIndex) && !root.paneSearchMode(root.activePaneIndex))
             return root.panePath(root.activePaneIndex)
 
         return ""
@@ -1289,7 +1332,7 @@ ApplicationWindow {
             return
         }
 
-        if (!root.paneIsRecents(root.activePaneIndex) && !root.paneSearchMode(root.activePaneIndex)) {
+        if (!root.paneIsRecents(root.activePaneIndex) && !root.paneIsHidden(root.activePaneIndex) && !root.paneSearchMode(root.activePaneIndex)) {
             var firstPath = paths[0]
             if (root.parentDirForPath(firstPath) === panePath(root.activePaneIndex)) {
                 Qt.callLater(function() {
@@ -1319,6 +1362,7 @@ ApplicationWindow {
         if (fileOps.isRemotePath(panePath(activePaneIndex)))
             return
         setPaneRecents(activePaneIndex, false)
+        setPaneHidden(activePaneIndex, false)
         setPaneSearchMode(activePaneIndex, true)
     }
 
@@ -1586,6 +1630,7 @@ ApplicationWindow {
             mergeWillUnmerge: root.mergeButtonWillUnmerge()
             mergeTooltip: root.mergeButtonTooltip()
             isRecentsView: root.isRecentsView
+            isHiddenView: root.isHiddenView
             isTrashView: root.isTrashView
             isRemoteView: root.isRemoteView
             searchMode: root.searchMode
@@ -1785,7 +1830,7 @@ ApplicationWindow {
                     // Heimdall design-canvas: active-pane absolute path in mono.
                     // Hidden during search (the result-count message replaces it)
                     // and for virtual views (recents) where there's no real path.
-                    activePath: (root.searchMode || root.isRecentsView)
+                    activePath: (root.searchMode || root.isRecentsView || root.isHiddenView)
                         ? ""
                         : root.activePanePath
                     searchStatus: root.searchMode && root.searchServiceForPane(activePaneIndex).isSearching

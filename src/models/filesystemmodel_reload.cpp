@@ -90,7 +90,7 @@ void FileSystemModel::reloadLocal()
 
 FileSystemModel::LocalReloadResult FileSystemModel::scanLocalEntries(
     quint64 generation, const QString &rootPath, bool showHidden,
-    QDir::SortFlags sortFlags)
+    bool hiddenOnly, QDir::SortFlags sortFlags)
 {
     LocalReloadResult result;
     result.generation = generation;
@@ -99,12 +99,16 @@ FileSystemModel::LocalReloadResult FileSystemModel::scanLocalEntries(
 
     QDir dir(rootPath);
     QDir::Filters filters = QDir::AllEntries | QDir::NoDotAndDotDot;
-    if (showHidden)
+    // hiddenOnly forces the Hidden flag on even when showHidden is false: the
+    // dedicated "Hidden" view always scans dotfiles, then keeps only those.
+    if (showHidden || hiddenOnly)
         filters |= QDir::Hidden;
 
     const QFileInfoList infos = dir.entryInfoList(filters, sortFlags);
     result.entries.reserve(infos.size());
     for (const QFileInfo &info : infos) {
+        if (hiddenOnly && !info.fileName().startsWith(QLatin1Char('.')))
+            continue;
         Entry e;
         e.info = info;
         result.entries.append(std::move(e));
@@ -120,7 +124,7 @@ void FileSystemModel::scheduleLocalReload(bool tryDiff)
     if (m_synchronousReload) {
         // Test mode: run scan inline so rowCount is correct before the
         // caller moves on.
-        applyLocalReload(scanLocalEntries(gen, m_rootPath, m_showHidden, m_sortFlags),
+        applyLocalReload(scanLocalEntries(gen, m_rootPath, m_showHidden, m_hiddenOnly, m_sortFlags),
                          tryDiff);
         return;
     }
@@ -135,7 +139,7 @@ void FileSystemModel::scheduleLocalReload(bool tryDiff)
     }
 
     auto future = QtConcurrent::run(&FileSystemModel::scanLocalEntries,
-                                    gen, m_rootPath, m_showHidden, m_sortFlags);
+                                    gen, m_rootPath, m_showHidden, m_hiddenOnly, m_sortFlags);
     m_localReloadWatcher->setFuture(future);
 }
 
@@ -325,7 +329,7 @@ QList<FileSystemModel::Entry> FileSystemModel::currentLocalEntries() const
 
     QDir dir(m_rootPath);
     QDir::Filters filters = QDir::AllEntries | QDir::NoDotAndDotDot;
-    if (m_showHidden)
+    if (m_showHidden || m_hiddenOnly)
         filters |= QDir::Hidden;
 
     // Fast path: only the syscall + QFileInfo construction. Derived fields
@@ -335,6 +339,8 @@ QList<FileSystemModel::Entry> FileSystemModel::currentLocalEntries() const
     QList<Entry> entries;
     entries.reserve(infos.size());
     for (const QFileInfo &info : infos) {
+        if (m_hiddenOnly && !info.fileName().startsWith(QLatin1Char('.')))
+            continue;
         Entry e;
         e.info = info;
         entries.append(std::move(e));

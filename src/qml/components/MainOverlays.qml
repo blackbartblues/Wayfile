@@ -330,6 +330,11 @@ Item {
                 return
             }
 
+            if (sidebarItem.isHidden) {
+                host.setPaneHidden(activePaneIndex, true)
+                return
+            }
+
             host.navigateActivePaneTo(path)
         }
 

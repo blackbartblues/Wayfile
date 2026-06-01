@@ -12,6 +12,7 @@ Item {
     property string path: ""
     property var activeTab: null
     property bool isRecentsView: false
+    property bool isHiddenView: false
 
     signal navigateRequested(string path)
 
@@ -153,6 +154,7 @@ Item {
                 id: segmentsRepeater
                 model: {
                     if (root.isRecentsView) return [{ label: "Recents", fullPath: "" }]
+                    if (root.isHiddenView) return [{ label: "Hidden", fullPath: "" }]
                     if (!root.path || root.path === "/") return []
 
                     var result = fileOps.breadcrumbSegments(root.path)

@@ -59,6 +59,11 @@ public:
 
     Q_INVOKABLE void setRootPath(const QString &path);
     Q_INVOKABLE void setShowHidden(bool show);
+    // Hidden-only filter for the dedicated "Hidden" view (#8 pkt5): when set,
+    // reload lists ONLY entries whose name starts with "." (top-level dotfiles
+    // and dotfolders), regardless of showHidden. Configured once in main.cpp.
+    void setHiddenOnly(bool on);
+    bool hiddenOnly() const { return m_hiddenOnly; }
     Q_INVOKABLE QString filePath(int row) const;
     Q_INVOKABLE bool isDir(int row) const;
     Q_INVOKABLE QString fileName(int row) const;
@@ -143,6 +148,7 @@ private:
     static LocalReloadResult scanLocalEntries(quint64 generation,
                                               const QString &rootPath,
                                               bool showHidden,
+                                              bool hiddenOnly,
                                               QDir::SortFlags sortFlags);
     QList<Entry> currentLocalEntries() const;
     void updateLocalCounts();
@@ -158,6 +164,7 @@ private:
 
     QString m_rootPath;
     bool m_showHidden = false;
+    bool m_hiddenOnly = false;
     QList<Entry> m_entries;
     QList<QVariantMap> m_remoteEntries;
     QList<QVariantMap> m_trashEntries;

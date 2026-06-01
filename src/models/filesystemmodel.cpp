@@ -289,6 +289,15 @@ void FileSystemModel::setShowHidden(bool show)
     emit showHiddenChanged();
 }
 
+void FileSystemModel::setHiddenOnly(bool on)
+{
+    if (m_hiddenOnly == on)
+        return;
+    m_hiddenOnly = on;
+    if (!m_rootPath.isEmpty())
+        reload();
+}
+
 void FileSystemModel::sortByColumn(const QString &column, bool ascending)
 {
     if (m_sortColumn == column && m_sortAscending == ascending)

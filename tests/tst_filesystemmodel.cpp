@@ -217,6 +217,46 @@ private slots:
         QCOMPARE(spy.count(), 1);
     }
 
+    // 7b. Hidden-only filter (#8 pkt5 "Hidden view"): the dedicated model lists
+    // ONLY dotfiles/dotfolders, excluding every visible entry. setHiddenOnly
+    // implies hidden entries are scanned even when showHidden was never set.
+    void testHiddenOnlyListsOnlyDotEntries()
+    {
+        TestDir dir;
+        dir.createFile("visible.txt");
+        dir.createFile(".hiddenfile");
+        dir.createDir("visibledir");
+        dir.createDir(".hiddendir");
+
+        FileSystemModel model;
+        model.setSynchronousReload(true);
+        model.setHiddenOnly(true);
+        model.setRootPath(dir.path());
+
+        QCOMPARE(model.rowCount(), 2);
+        QCOMPARE(model.fileCount(), 1);
+        QCOMPARE(model.folderCount(), 1);
+        for (int i = 0; i < model.rowCount(); ++i)
+            QVERIFY2(model.fileName(i).startsWith("."), qPrintable(model.fileName(i)));
+    }
+
+    void testHiddenOnlyTogglesBackToAllEntries()
+    {
+        TestDir dir;
+        dir.createFile("visible.txt");
+        dir.createFile(".hiddenfile");
+
+        FileSystemModel model;
+        model.setSynchronousReload(true);
+        model.setShowHidden(true);
+        model.setHiddenOnly(true);
+        model.setRootPath(dir.path());
+        QCOMPARE(model.rowCount(), 1);
+
+        model.setHiddenOnly(false);
+        QCOMPARE(model.rowCount(), 2);
+    }
+
     // 8. All role data
     void testRoleDataFileName()
     {
