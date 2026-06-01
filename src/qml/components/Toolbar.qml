@@ -77,6 +77,7 @@ Rectangle {
     signal restoreTrashRequested()
     signal emptyTrashRequested()
     signal settingsRequested()
+    signal newFolderRequested()
     signal keyboardShortcutsRequested()
     signal closeRequested()
     signal minimizeRequested()
@@ -154,6 +155,88 @@ Rectangle {
                     height: 1
                 }
 
+                // ── Action cluster (left of the breadcrumb, #8) ──
+                // Merge/unmerge, sidebar toggle, search, settings, new folder.
+                // Relocated here from the toolbar's right edge so they sit on
+                // the left side of the breadcrumb. Always visible — they do not
+                // disappear when the sidebar (a separate panel) is collapsed.
+                HoverRect {
+                    id: mergeBtn
+                    width: Theme.controlSize; height: Theme.controlSize
+                    visible: !root.searchMode
+                    border.width: root.mergeWillUnmerge ? 1 : 0
+                    border.color: root.mergeWillUnmerge
+                        ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.65)
+                        : "transparent"
+                    color: root.mergeWillUnmerge
+                        ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, hovered ? 0.30 : 0.22)
+                        : (hovered ? Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.1) : "transparent")
+                    onClicked: root.splitViewToggled()
+                    IconLink { anchors.centerIn: parent; size: 18; color: Theme.text; visible: !root.mergeWillUnmerge }
+                    IconUnlink { anchors.centerIn: parent; size: 18; color: Theme.accent; visible: root.mergeWillUnmerge }
+                    Q.Tooltip { text: root.mergeTooltip; visible: mergeBtn.hovered && root.mergeTooltip.length > 0 }
+                }
+
+                HoverRect {
+                    id: sidebarToggleBtn
+                    width: Theme.controlSize; height: Theme.controlSize
+                    visible: !root.searchMode && root.window !== null
+                    onClicked: {
+                        if (root.window)
+                            root.window.sidebarVisible = !root.window.sidebarVisible
+                    }
+                    IconPanelLeft {
+                        anchors.centerIn: parent
+                        size: 18
+                        color: (root.window && root.window.sidebarVisible) ? Theme.accent : Theme.text
+                    }
+                    Q.Tooltip {
+                        text: (root.window && root.window.sidebarVisible) ? "Hide sidebar" : "Show sidebar"
+                        visible: sidebarToggleBtn.hovered
+                    }
+                }
+
+                HoverRect {
+                    id: searchBtn
+                    width: Theme.controlSize; height: Theme.controlSize
+                    visible: !root.searchMode && !root.isTrashView && !root.isRemoteView
+                    onClicked: root.searchClicked()
+                    IconSearch { anchors.centerIn: parent; size: 18; color: Theme.text }
+                    Q.Tooltip { text: "Search"; visible: searchBtn.hovered }
+                }
+
+                HoverRect {
+                    id: settingsBtn
+                    width: Theme.controlSize; height: Theme.controlSize
+                    visible: !root.searchMode
+                    onClicked: root.settingsRequested()
+                    IconSettings { anchors.centerIn: parent; size: 18; color: Theme.text }
+                    Q.Tooltip { text: "Settings"; visible: settingsBtn.hovered }
+                }
+
+                HoverRect {
+                    id: newFolderBtn
+                    width: Theme.controlSize; height: Theme.controlSize
+                    visible: !root.searchMode && !root.isTrashView
+                    onClicked: root.newFolderRequested()
+                    IconFolder { anchors.centerIn: parent; size: 18; color: Theme.text }
+                    IconPlus {
+                        anchors.right: parent.right; anchors.bottom: parent.bottom
+                        anchors.rightMargin: 5; anchors.bottomMargin: 5
+                        size: 10; color: Theme.accent
+                    }
+                    Q.Tooltip { text: "New folder"; visible: newFolderBtn.hovered }
+                }
+
+                // Divider between the action cluster and the navigation buttons
+                Rectangle {
+                    visible: !root.searchMode
+                    Layout.alignment: Qt.AlignVCenter
+                    width: 1
+                    height: Math.round(Theme.controlSize * 0.55)
+                    color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.15)
+                }
+
                 // Back button
                 HoverRect {
                     width: Theme.controlSize; height: Theme.controlSize
@@ -216,50 +299,6 @@ Rectangle {
                     }
                 }
 
-                HoverRect {
-                    id: mergeBtn
-                    width: Theme.controlSize; height: Theme.controlSize
-                    visible: !root.searchMode
-                    // Accent ring lights up whenever the next click would
-                    // unmerge (active tab is a supertab) — this is the
-                    // visual "active state" since merge from a non-selection
-                    // doesn't have a persistent "on" mode the way the old
-                    // split view did.
-                    border.width: root.mergeWillUnmerge ? 1 : 0
-                    border.color: root.mergeWillUnmerge
-                        ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.65)
-                        : "transparent"
-                    color: root.mergeWillUnmerge
-                        ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b,
-                                  hovered ? 0.30 : 0.22)
-                        : (hovered
-                            ? Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.1)
-                            : "transparent")
-                    onClicked: root.splitViewToggled()
-
-                    // P2-M5: swap glyph based on which action will fire.
-                    // Unlink = "this click will dissolve the supertab"; Link =
-                    // "this click will merge tabs into a supertab".  Active
-                    // tab being a supertab is the single discriminator.
-                    IconLink {
-                        anchors.centerIn: parent
-                        size: 18
-                        color: Theme.text
-                        visible: !root.mergeWillUnmerge
-                    }
-                    IconUnlink {
-                        anchors.centerIn: parent
-                        size: 18
-                        color: Theme.accent
-                        visible: root.mergeWillUnmerge
-                    }
-
-                    Q.Tooltip {
-                        text: root.mergeTooltip
-                        visible: mergeBtn.hovered && root.mergeTooltip.length > 0
-                    }
-                }
-
                 // Restore button (only in trash view)
                 HoverRect {
                     width: restoreTrashRow.implicitWidth + 16; height: Theme.controlSize
@@ -300,48 +339,11 @@ Rectangle {
                     }
                 }
 
-                // Persistent sidebar toggle — always visible so a collapsed
-                // sidebar can be reopened with the mouse (the in-sidebar
-                // collapse button disappears with the sidebar). Mirrors the
-                // toggle_sidebar keyboard shortcut.
-                HoverRect {
-                    id: sidebarToggleBtn
-                    width: Theme.controlSize; height: Theme.controlSize
-                    visible: !root.searchMode && root.window !== null
-                    onClicked: {
-                        if (root.window)
-                            root.window.sidebarVisible = !root.window.sidebarVisible
-                    }
-                    IconPanelLeft {
-                        anchors.centerIn: parent
-                        size: 18
-                        color: (root.window && root.window.sidebarVisible) ? Theme.accent : Theme.text
-                    }
-                    Q.Tooltip {
-                        text: (root.window && root.window.sidebarVisible) ? "Hide sidebar" : "Show sidebar"
-                        visible: sidebarToggleBtn.hovered
-                    }
-                }
-
-                HoverRect {
-                    width: Theme.controlSize; height: Theme.controlSize
-                    visible: !root.searchMode && !root.isTrashView && !root.isRemoteView
-                    onClicked: root.searchClicked()
-                    IconSearch { anchors.centerIn: parent; size: 18; color: Theme.text }
-                }
-
                 HoverRect {
                     width: Theme.controlSize; height: Theme.controlSize
                     visible: !root.searchMode
                     onClicked: root.keyboardShortcutsRequested()
                     IconKeyboard { anchors.centerIn: parent; size: 18; color: Theme.text }
-                }
-
-                HoverRect {
-                    width: Theme.controlSize; height: Theme.controlSize
-                    visible: !root.searchMode
-                    onClicked: root.settingsRequested()
-                    IconSettings { anchors.centerIn: parent; size: 18; color: Theme.text }
                 }
 
                 Item {

@@ -58,13 +58,36 @@ Item {
         // the rest once the strip overflows.  The old anchored-right
         // version pinned it to the bar edge regardless of tab count.
 
+        // App wordmark — relocated here from the sidebar header (#8). Sits at
+        // the far left of the tab bar, before the tab strip. Kept as a discrete
+        // element so a logo + custom font can replace it later.
+        Item {
+            id: appTitle
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 1
+            width: titleLabel.implicitWidth + Theme.spacing * 2
+
+            Text {
+                id: titleLabel
+                anchors.left: parent.left
+                anchors.leftMargin: Theme.spacing
+                anchors.verticalCenter: parent.verticalCenter
+                text: "Heimdall"
+                color: Theme.text
+                font.pointSize: Theme.fontLarge
+                font.weight: Font.Bold
+            }
+        }
+
         // Flickable scroll area for tabs. When the strip can hold every tab at
         // minTabWidth or wider, contentWidth == flickable.width and there's
         // nothing to scroll. Past that point tabs sit at minTabWidth and the
         // overflow scrolls horizontally via drag or mouse wheel.
         Flickable {
             id: tabScroll
-            anchors.left: parent.left
+            anchors.left: appTitle.right
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             anchors.right: parent.right

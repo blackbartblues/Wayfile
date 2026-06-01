@@ -1564,6 +1564,79 @@ ApplicationWindow {
             }
         }
 
+        // Toolbar + breadcrumb — full-width row between the tab bar and the
+        // [Sidebar | Content] row (#8). Living here (rather than inside the
+        // content column) puts the action cluster at the far left, above the
+        // sidebar, and keeps every icon visible when the sidebar is collapsed.
+        Toolbar {
+            id: toolbar
+            z: 5
+            Layout.fillWidth: true
+            window: root
+            activeTab: tabModel.activeTab
+            // #9: bind to the activePanePath reactive mirror. panePath()
+            // reads the untracked Q_INVOKABLE paneCurrentPath() (whose value
+            // is always non-empty, so the tracked currentPath fallback branch
+            // is never taken), so a raw panePath(activePaneIndex) binding only
+            // re-fires on tab/pane switches — never on in-pane navigation —
+            // which froze the breadcrumb on a stale path.
+            navigationPath: activePanePath
+            canGoBack: activePaneCanGoBack()
+            canGoForward: activePaneCanGoForward()
+            mergeWillUnmerge: root.mergeButtonWillUnmerge()
+            mergeTooltip: root.mergeButtonTooltip()
+            isRecentsView: root.isRecentsView
+            isTrashView: root.isTrashView
+            isRemoteView: root.isRemoteView
+            searchMode: root.searchMode
+            showWindowControls: false
+            windowButtonLayout: config.windowButtonLayout
+            currentSearchQuery: root.searchProxyForPane(activePaneIndex).searchQuery
+            searchTypeFilter: root.searchProxyForPane(activePaneIndex).fileTypeFilter
+            searchDateFilter: root.searchProxyForPane(activePaneIndex).dateFilter
+            searchSizeFilter: root.searchProxyForPane(activePaneIndex).sizeFilter
+            filterPanelOpen: root.paneFilterPanelOpen(activePaneIndex)
+            onBackRequested: root.goActivePaneBack()
+            onForwardRequested: root.goActivePaneForward()
+            onUpRequested: root.goActivePaneUp()
+            onNavigateRequested: (targetPath) => root.navigateActivePaneTo(targetPath)
+            onConnectRemoteRequested: root.openRemoteConnectDialog()
+            onSettingsRequested: root.openSettingsPanel()
+            onNewFolderRequested: root.showNewFolderDialog(activePanePath)
+            onKeyboardShortcutsRequested: root.openKeyboardShortcutsDialog()
+            onCloseRequested: root.close()
+            onMinimizeRequested: root.showMinimized()
+            onMaximizeRequested: root.visibility === Window.Maximized ? root.showNormal() : root.showMaximized()
+            onRestoreTrashRequested: {
+                var paths = getSelectedPaths()
+                if (paths.length > 0)
+                    fileOps.restoreFromTrash(paths)
+            }
+            onEmptyTrashRequested: mainOverlays.emptyTrashConfirmDialog.open()
+            onSplitViewToggled: root.toggleMergeOrUnmerge()
+            onHomeClicked: {
+                root.navigateActivePaneTo(fsModel.homePath())
+            }
+            onSearchClicked: root.openSearch()
+            onSearchClosed: root.closeSearch()
+            onSearchQueryChanged: (query) => root.handleSearchQuery(query)
+            onSearchEnterPressed: root.handleSearchEnter()
+            onSearchNavigateDown: {
+                var subView = root.activeSubView()
+                if (subView) subView.forceActiveFocus()
+            }
+            onSearchFilterToggled: root.setPaneFilterPanelOpen(activePaneIndex, !root.paneFilterPanelOpen(activePaneIndex))
+            onTransferRequested: (paths, destinationPath, moveOperation) => root.beginTransfer(paths, destinationPath, moveOperation, false)
+            onTypeFilterChanged: (filter) => root.searchProxyForPane(activePaneIndex).fileTypeFilter = filter
+            onDateFilterChanged: (filter) => root.searchProxyForPane(activePaneIndex).dateFilter = filter
+            onSizeFilterChanged: (filter) => root.searchProxyForPane(activePaneIndex).sizeFilter = filter
+            onClearAllFilters: {
+                root.searchProxyForPane(activePaneIndex).fileTypeFilter = ""
+                root.searchProxyForPane(activePaneIndex).dateFilter = ""
+                root.searchProxyForPane(activePaneIndex).sizeFilter = ""
+            }
+        }
+
         RowLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -1593,88 +1666,9 @@ ApplicationWindow {
                 // so this Item lands on the correct side without inheriting any
                 // mirroring — nothing to reset here.
 
-                Rectangle {
-                    visible: root.sidebarVisible
-                    x: config.sidebarPosition === "right" ? parent.width - 1 : -1
-                    y: 0
-                    width: 2
-                    height: toolbar.height
-                    color: Theme.mantle
-                    z: 2
-                }
-
                 ColumnLayout {
                     anchors.fill: parent
                     spacing: 0
-
-            // Toolbar with integrated tabs
-            Toolbar {
-                id: toolbar
-                z: 5
-                Layout.fillWidth: true
-                window: root
-                activeTab: tabModel.activeTab
-                // #9: bind to the activePanePath reactive mirror. panePath()
-                // reads the untracked Q_INVOKABLE paneCurrentPath() (whose value
-                // is always non-empty, so the tracked currentPath fallback branch
-                // is never taken), so a raw panePath(activePaneIndex) binding only
-                // re-fires on tab/pane switches — never on in-pane navigation —
-                // which froze the breadcrumb on a stale path.
-                navigationPath: activePanePath
-                canGoBack: activePaneCanGoBack()
-                canGoForward: activePaneCanGoForward()
-                mergeWillUnmerge: root.mergeButtonWillUnmerge()
-                mergeTooltip: root.mergeButtonTooltip()
-                isRecentsView: root.isRecentsView
-                isTrashView: root.isTrashView
-                isRemoteView: root.isRemoteView
-                searchMode: root.searchMode
-                showWindowControls: false
-                windowButtonLayout: config.windowButtonLayout
-                currentSearchQuery: root.searchProxyForPane(activePaneIndex).searchQuery
-                searchTypeFilter: root.searchProxyForPane(activePaneIndex).fileTypeFilter
-                searchDateFilter: root.searchProxyForPane(activePaneIndex).dateFilter
-                searchSizeFilter: root.searchProxyForPane(activePaneIndex).sizeFilter
-                filterPanelOpen: root.paneFilterPanelOpen(activePaneIndex)
-                onBackRequested: root.goActivePaneBack()
-                onForwardRequested: root.goActivePaneForward()
-                onUpRequested: root.goActivePaneUp()
-                onNavigateRequested: (targetPath) => root.navigateActivePaneTo(targetPath)
-                onConnectRemoteRequested: root.openRemoteConnectDialog()
-                onSettingsRequested: root.openSettingsPanel()
-                onKeyboardShortcutsRequested: root.openKeyboardShortcutsDialog()
-                onCloseRequested: root.close()
-                onMinimizeRequested: root.showMinimized()
-                onMaximizeRequested: root.visibility === Window.Maximized ? root.showNormal() : root.showMaximized()
-                onRestoreTrashRequested: {
-                    var paths = getSelectedPaths()
-                    if (paths.length > 0)
-                        fileOps.restoreFromTrash(paths)
-                }
-                onEmptyTrashRequested: mainOverlays.emptyTrashConfirmDialog.open()
-                onSplitViewToggled: root.toggleMergeOrUnmerge()
-                onHomeClicked: {
-                    root.navigateActivePaneTo(fsModel.homePath())
-                }
-                onSearchClicked: root.openSearch()
-                onSearchClosed: root.closeSearch()
-                onSearchQueryChanged: (query) => root.handleSearchQuery(query)
-                onSearchEnterPressed: root.handleSearchEnter()
-                onSearchNavigateDown: {
-                    var subView = root.activeSubView()
-                    if (subView) subView.forceActiveFocus()
-                }
-                onSearchFilterToggled: root.setPaneFilterPanelOpen(activePaneIndex, !root.paneFilterPanelOpen(activePaneIndex))
-                onTransferRequested: (paths, destinationPath, moveOperation) => root.beginTransfer(paths, destinationPath, moveOperation, false)
-                onTypeFilterChanged: (filter) => root.searchProxyForPane(activePaneIndex).fileTypeFilter = filter
-                onDateFilterChanged: (filter) => root.searchProxyForPane(activePaneIndex).dateFilter = filter
-                onSizeFilterChanged: (filter) => root.searchProxyForPane(activePaneIndex).sizeFilter = filter
-                onClearAllFilters: {
-                    root.searchProxyForPane(activePaneIndex).fileTypeFilter = ""
-                    root.searchProxyForPane(activePaneIndex).dateFilter = ""
-                    root.searchProxyForPane(activePaneIndex).sizeFilter = ""
-                }
-            }
 
             // File view (semi-transparent — Hyprland compositor blurs behind this)
             Rectangle {

@@ -119,7 +119,6 @@ Item {
         onRecentsClicked: {
             host.setPaneRecents(host.activePaneIndex, true)
         }
-        onCollapseClicked: host.sidebarVisible = !host.sidebarVisible
         onFeatureHintRequested: (message) => sidebarPane.toast.show(message, "info")
     }
 

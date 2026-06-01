@@ -16,7 +16,6 @@ Rectangle {
     signal bookmarkClicked(string path)
     signal sidebarContextMenuRequested(var item, point position)
     signal recentsClicked()
-    signal collapseClicked()
     signal featureHintRequested(string message)
 
     color: Theme.mantle
@@ -68,28 +67,12 @@ Rectangle {
         anchors.fill: parent
         spacing: 0
 
-        // App header: "heimdall" + collapse button
+        // Top breathing room — the "Heimdall" wordmark + action icons moved
+        // out of the sidebar (#8); the full-width toolbar now sits above this
+        // panel, so the list just needs a little padding from the top edge.
         Item {
             Layout.fillWidth: true
-            height: 44
-
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.verticalCenter: parent.verticalCenter
-                text: "Heimdall"
-                color: Theme.text
-                font.pointSize: Theme.fontLarge
-                font.weight: Font.Bold
-            }
-
-            HoverRect {
-                anchors.right: parent.right
-                anchors.rightMargin: Theme.spacing
-                anchors.verticalCenter: parent.verticalCenter
-                width: 28; height: 28
-                onClicked: root.collapseClicked()
-                IconPanelLeft { anchors.centerIn: parent; size: 16; color: Theme.subtext }
-            }
+            height: Theme.spacing
         }
 
         // Heimdall section header: PLACES — Linux home + common folders.
