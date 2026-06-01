@@ -416,6 +416,16 @@ Window {
         applyPendingSettings()
     }
 
+    // ── Shared dropdown overlay API (used by SettingsDropdown on the pages) ──
+    // openDropdownAnchor reports which trigger is currently open (so triggers
+    // can rotate their chevron); openDropdown() opens the shared overlay for a
+    // given trigger. See settingsDropdownPopup in pageContainer for why the
+    // Quill Q.Dropdown can't be used on Wayland.
+    property alias openDropdownAnchor: settingsDropdownPopup.openAnchor
+    function openDropdown(item, options, currentIndex, pick) {
+        settingsDropdownPopup.openFor(item, options, currentIndex, pick)
+    }
+
     onClosing: {
         root.flushPendingChanges()
         root.closed()
@@ -621,6 +631,125 @@ Window {
                     }
                 }
 
+            }
+        }
+
+        // ── Shared in-scene dropdown overlay ──────────────────────────────
+        // The Settings pages live inside the clipped `contentFlick` Flickable,
+        // so a popup parented to a section/trigger would be culled by that
+        // clip. Instead every Settings dropdown shares ONE overlay declared
+        // here in pageContainer (above the Flickable, z:1000) and positions
+        // itself with plain QML coords via mapToItem. This replaces Quill's
+        // Q.Dropdown, whose native Qt.Popup window is mispositioned and won't
+        // dismiss on Wayland (Hyprland). Same pattern as PropertiesDialog's
+        // accessPopup.
+        Item {
+            id: settingsDropdownPopup
+            anchors.fill: parent
+            z: 1000
+            visible: openAnchor !== null
+
+            property var openAnchor: null     // the open trigger Rectangle; null = closed
+            property var options: []
+            property int selectedIndex: 0
+            property var picker: null          // function(index, value)
+            property real anchorX: 0
+            property real anchorTopY: 0        // trigger top, in pageContainer coords
+            property real anchorBottomY: 0     // trigger bottom, in pageContainer coords
+            property real anchorWidth: 0
+
+            function openFor(item, opts, currentIndex, pick) {
+                var top = item.mapToItem(pageContainer, 0, 0)
+                var bottom = item.mapToItem(pageContainer, 0, item.height)
+                settingsDropdownPopup.anchorX = top.x
+                settingsDropdownPopup.anchorTopY = top.y
+                settingsDropdownPopup.anchorBottomY = bottom.y
+                settingsDropdownPopup.anchorWidth = item.width
+                settingsDropdownPopup.options = opts
+                settingsDropdownPopup.selectedIndex = currentIndex
+                settingsDropdownPopup.picker = pick
+                settingsDropdownPopup.openAnchor = item
+                Qt.callLater(function () {
+                    dropdownListView.positionViewAtIndex(Math.max(0, currentIndex), ListView.Center)
+                })
+            }
+            function dismiss() {
+                settingsDropdownPopup.openAnchor = null
+                settingsDropdownPopup.picker = null
+            }
+
+            // Outside-click catcher (only active while the overlay is visible).
+            MouseArea { anchors.fill: parent; onClicked: settingsDropdownPopup.dismiss() }
+
+            Rectangle {
+                id: dropdownList
+                readonly property int rowHeight: 30
+                // Full height if every row were shown (4px top+bottom padding).
+                readonly property real fullHeight: settingsDropdownPopup.options.length * rowHeight + 8
+                // Vertical room available below / above the trigger (leaving an
+                // 8px margin to the page edge and a 4px gap to the trigger).
+                readonly property real spaceBelow: pageContainer.height - settingsDropdownPopup.anchorBottomY - 12
+                readonly property real spaceAbove: settingsDropdownPopup.anchorTopY - 12
+                // Open below; flip above only if it won't fit below AND there is
+                // more room above. Long lists are capped to the available room
+                // and scroll inside the ListView.
+                readonly property bool flipUp: fullHeight > spaceBelow && spaceAbove > spaceBelow
+                readonly property real avail: flipUp ? spaceAbove : spaceBelow
+                width: settingsDropdownPopup.anchorWidth
+                height: Math.min(fullHeight, Math.max(rowHeight + 8, avail))
+                x: Math.max(8, Math.min(settingsDropdownPopup.anchorX, pageContainer.width - width - 8))
+                y: flipUp
+                    ? Math.max(8, settingsDropdownPopup.anchorTopY - 4 - height)
+                    : settingsDropdownPopup.anchorBottomY + 4
+                radius: Theme.radiusSmall
+                color: Theme.surface
+                border.width: 1
+                border.color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.15)
+
+                ListView {
+                    id: dropdownListView
+                    anchors.fill: parent
+                    anchors.margins: 4
+                    clip: true
+                    model: settingsDropdownPopup.options
+                    currentIndex: settingsDropdownPopup.selectedIndex
+                    boundsBehavior: Flickable.StopAtBounds
+                    delegate: Rectangle {
+                        required property string modelData
+                        required property int index
+                        width: dropdownListView.width
+                        height: dropdownList.rowHeight
+                        radius: Theme.radiusSmall
+                        color: index === settingsDropdownPopup.selectedIndex
+                            ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.15)
+                            : itemMa.containsMouse
+                                ? Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.08)
+                                : "transparent"
+                        Text {
+                            text: modelData
+                            color: index === settingsDropdownPopup.selectedIndex ? Theme.accent : Theme.text
+                            font.pointSize: Theme.fontSmall
+                            anchors.left: parent.left
+                            anchors.leftMargin: 10
+                            anchors.right: parent.right
+                            anchors.rightMargin: 10
+                            anchors.verticalCenter: parent.verticalCenter
+                            elide: Text.ElideRight
+                        }
+                        MouseArea {
+                            id: itemMa
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                var pick = settingsDropdownPopup.picker
+                                var opts = settingsDropdownPopup.options
+                                settingsDropdownPopup.dismiss()
+                                if (pick) pick(index, opts[index])
+                            }
+                        }
+                    }
+                }
             }
         }
     }

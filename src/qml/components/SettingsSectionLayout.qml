@@ -32,7 +32,8 @@ ColumnLayout {
         text: "Reveal dotfiles and hidden entries in the file list."
     }
 
-    Q.Dropdown {
+    SettingsDropdown {
+        settingsPanel: panel
         Layout.fillWidth: true
         label: "Default view for new tabs"
         model: panel.viewModeLabels
@@ -47,7 +48,8 @@ ColumnLayout {
         text: "Layout newly opened tabs start in: grid, Miller columns, or detailed list."
     }
 
-    Q.Dropdown {
+    SettingsDropdown {
+        settingsPanel: panel
         Layout.fillWidth: true
         label: "Default sort for new tabs"
         model: panel.sortByLabels

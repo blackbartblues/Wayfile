@@ -118,7 +118,8 @@ ColumnLayout {
         Layout.bottomMargin: 4
     }
 
-    Q.Dropdown {
+    SettingsDropdown {
+        settingsPanel: panel
         Layout.fillWidth: true
         label: "Enter"
         enabled: panel.draftAnimationsEnabled
@@ -135,7 +136,8 @@ ColumnLayout {
         text: "Easing curve used when elements appear or expand into view."
     }
 
-    Q.Dropdown {
+    SettingsDropdown {
+        settingsPanel: panel
         Layout.fillWidth: true
         label: "Exit"
         enabled: panel.draftAnimationsEnabled
@@ -152,7 +154,8 @@ ColumnLayout {
         text: "Easing curve used when elements disappear or collapse out of view."
     }
 
-    Q.Dropdown {
+    SettingsDropdown {
+        settingsPanel: panel
         Layout.fillWidth: true
         label: "Transition"
         enabled: panel.draftAnimationsEnabled

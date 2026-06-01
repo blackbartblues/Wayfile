@@ -49,7 +49,8 @@ ColumnLayout {
         Layout.bottomMargin: 4
     }
 
-    Q.Dropdown {
+    SettingsDropdown {
+        settingsPanel: panel
         Layout.fillWidth: true
         label: "Theme"
         model: panel.themeOptions
@@ -64,7 +65,8 @@ ColumnLayout {
         text: "Color palette used across the whole interface."
     }
 
-    Q.Dropdown {
+    SettingsDropdown {
+        settingsPanel: panel
         Layout.fillWidth: true
         label: "Font"
         model: panel.fontOptions
@@ -79,7 +81,8 @@ ColumnLayout {
         text: "Font family for all interface text; System Default follows your desktop."
     }
 
-    Q.Dropdown {
+    SettingsDropdown {
+        settingsPanel: panel
         Layout.fillWidth: true
         label: "Icon Pack"
         model: panel.iconThemeOptions
