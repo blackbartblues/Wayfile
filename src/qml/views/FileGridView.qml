@@ -43,18 +43,22 @@ GridView {
     function focusPath(path, reveal) { selectionController.focusPath(path, reveal) }
     function selectAll() { selectionController.selectAll() }
 
-    // Ctrl+scroll zoom. Changing columnCount resizes every cell, which moves
+    // Ctrl+scroll zoom. Changing cellSize resizes every cell, which moves
     // every delegate. We suppress the position-animating transitions, change
-    // the column count, then forceLayout() so delegates land directly on their
-    // new cells instead of animating (and overlapping) into stale positions.
+    // the size, then forceLayout() so delegates land directly on their new
+    // cells instead of animating (and overlapping) into stale positions.
     // The reset timer is (re)started on every step so a burst of rapid zooms
     // coalesces into a single re-enable once the user stops.
     function applyZoom(step) {
-        var next = Math.max(minColumns, Math.min(maxColumns, columnCount + step))
-        if (next === columnCount)
+        // step keeps the legacy column-delta sign: negative = scroll up =
+        // zoom IN (bigger icons), positive = zoom OUT. Translate to a
+        // cell-size delta — icon size is pinned to cellSize, so this is the
+        // ONLY thing that resizes icons (never the available width).
+        var next = Math.max(minCellSize, Math.min(maxCellSize, cellSize - step * cellSizeStep))
+        if (next === cellSize)
             return
         zoomRelayoutActive = true
-        columnCount = next
+        cellSize = next
         // Snap the (now resized) cells into place immediately, with transitions
         // disabled, so nothing is left mid-animation at the wrong coordinates.
         forceLayout()
@@ -76,22 +80,28 @@ GridView {
     // big win; larger off-screen buffers just materialize thumbnails the
     // user may never scroll to.
     cacheBuffer: 512
-    // Zoom controls column count, not icon size
-    property int columnCount: 7
-    readonly property int minColumns: 2
-    readonly property int maxColumns: 12
-    readonly property int minCellWidth: 140
-    readonly property int effectiveColumnCount: Math.max(
-        minColumns,
-        Math.min(columnCount, Math.min(maxColumns, Math.max(1, Math.floor(width / minCellWidth))))
-    )
+    // Zoom controls a fixed cell SIZE; the column count reflows with the
+    // available width. This pins the icon to cellSize so it keeps a constant
+    // size when the view is resized (sidebar toggle, window resize, split
+    // view) — only Ctrl+scroll zoom changes it.
+    property int cellSize: 180          // current zoom level (square cell, px)
+    readonly property int minCellSize: 110
+    readonly property int maxCellSize: 320
+    readonly property int cellSizeStep: 24
     readonly property int labelHeight: 32  // two lines of text below icon
     readonly property int iconRequestSize: 96 * Screen.devicePixelRatio
     readonly property int thumbnailRequestSize: 256 * Screen.devicePixelRatio
 
-    cellWidth: Math.floor(width / effectiveColumnCount)
-    cellHeight: cellWidth  // square cells
-    readonly property int iconSize: cellHeight - 8 - labelHeight - 5  // 8px top, 0px gap, 5px bottom
+    // Reflow: as many cellSize-wide columns as fit, then stretch them to fill
+    // the width (justified, no trailing gap). cellWidth therefore grows with
+    // the view, but the icon below is pinned to cellSize, so icons never
+    // resize when the available width changes — they just respace.
+    readonly property int columnsPerRow: Math.max(1, Math.floor(width / cellSize))
+    cellWidth: Math.floor(width / columnsPerRow)
+    cellHeight: cellSize  // pinned row height (not = cellWidth) so rows stay evenly spaced
+    // 8px top, 0px gap, 5px bottom. Clamp to cellWidth for the pathological
+    // single-column case where the pane is narrower than cellSize.
+    readonly property int iconSize: Math.min(cellSize, cellWidth) - 8 - labelHeight - 5
 
     focus: visible
     keyNavigationEnabled: false
@@ -186,8 +196,8 @@ GridView {
 
     Keys.onLeftPressed: (event) => moveSelection(-1, event.modifiers & Qt.ShiftModifier)
     Keys.onRightPressed: (event) => moveSelection(1, event.modifiers & Qt.ShiftModifier)
-    Keys.onUpPressed: (event) => moveSelection(-effectiveColumnCount, event.modifiers & Qt.ShiftModifier)
-    Keys.onDownPressed: (event) => moveSelection(effectiveColumnCount, event.modifiers & Qt.ShiftModifier)
+    Keys.onUpPressed: (event) => moveSelection(-columnsPerRow, event.modifiers & Qt.ShiftModifier)
+    Keys.onDownPressed: (event) => moveSelection(columnsPerRow, event.modifiers & Qt.ShiftModifier)
     Keys.onPressed: (event) => {
         if (event.key === Qt.Key_Home) {
             wheelScroller.stopAndSettle()
@@ -691,7 +701,7 @@ GridView {
             if (wheel.modifiers & Qt.ControlModifier) {
                 wheelScroller.stopAndSettle()
                 root.interactionStarted()
-                // Scroll up = zoom in = fewer columns (bigger icons)
+                // Scroll up = zoom in = bigger cells (bigger icons)
                 var delta = wheelScroller.deltaFor(wheel)
                 if (delta === 0) {
                     wheel.accepted = false
