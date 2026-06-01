@@ -218,6 +218,15 @@ list(APPEND heimdall_qml_module_args
 
 qt_add_qml_module(heimdall ${heimdall_qml_module_args})
 
+# Bundle binary assets (app logo) into the executable so the header logo and
+# window icon resolve via qrc regardless of HEIMDALL_DATA_DIR (dev loads QML
+# from source, but qrc resources are always compiled into the binary).
+qt_add_resources(heimdall "heimdall_assets"
+    PREFIX "/"
+    FILES
+        assets/heimdall-logo.png
+)
+
 # Make Quill module discoverable at runtime
 set_target_properties(heimdall PROPERTIES
     QT_QML_IMPORT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/qml"

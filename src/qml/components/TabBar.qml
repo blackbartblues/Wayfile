@@ -67,12 +67,32 @@ Item {
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 1
-            width: titleLabel.implicitWidth + Theme.spacing * 2
+            width: logo.width + titleLabel.implicitWidth + Theme.spacing * 2 + logoGap
+
+            // Gap between the logo and the wordmark.
+            readonly property int logoGap: Math.round(Theme.spacing * 0.6)
+
+            // Bifröst gate mark, bundled via qrc (see src/CMakeLists.txt). Sized
+            // to the wordmark's height and kept square (PreserveAspectFit).
+            Image {
+                id: logo
+                source: "qrc:/assets/heimdall-logo.png"
+                anchors.left: parent.left
+                anchors.leftMargin: Theme.spacing
+                anchors.verticalCenter: parent.verticalCenter
+                // Fill most of the tab-bar row height (logos read larger than
+                // the wordmark cap height). Bounded by the row so it can't clip.
+                height: Math.round(appTitle.height - 4)
+                width: height
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                mipmap: true
+            }
 
             Text {
                 id: titleLabel
-                anchors.left: parent.left
-                anchors.leftMargin: Theme.spacing
+                anchors.left: logo.right
+                anchors.leftMargin: appTitle.logoGap
                 anchors.verticalCenter: parent.verticalCenter
                 text: "Heimdall"
                 color: Theme.text

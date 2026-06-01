@@ -117,6 +117,9 @@ int main(int argc, char *argv[])
     app.setApplicationName("Heimdall");
     app.setOrganizationName("Heimdall");
     app.setDesktopFileName("heimdall");
+    // Window icon (task switchers, server-side decorations). Bundled via qrc so
+    // it resolves without depending on an installed theme icon.
+    app.setWindowIcon(QIcon(QStringLiteral(":/assets/heimdall-logo.png")));
 
     // Startup timing: opt-in via HEIMDALL_TIMING=1 so normal runs stay quiet.
     // Prints milliseconds from QGuiApplication construction at each phase.
