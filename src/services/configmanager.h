@@ -26,6 +26,7 @@ class ConfigManager : public QObject
     Q_PROPERTY(int sidebarWidth READ sidebarWidth NOTIFY configChanged)
     Q_PROPERTY(bool sidebarVisible READ sidebarVisible NOTIFY configChanged)
     Q_PROPERTY(double scrollSpeed READ scrollSpeed NOTIFY configChanged)
+    Q_PROPERTY(int gridCellSize READ gridCellSize NOTIFY configChanged)
     Q_PROPERTY(QStringList bookmarks READ bookmarks NOTIFY configChanged)
     Q_PROPERTY(int radiusSmall READ radiusSmall NOTIFY configChanged)
     Q_PROPERTY(int radiusMedium READ radiusMedium NOTIFY configChanged)
@@ -64,6 +65,7 @@ public:
     int sidebarWidth() const;
     bool sidebarVisible() const;
     double scrollSpeed() const;
+    int gridCellSize() const;
     QStringList bookmarks() const;
     int radiusSmall() const;
     int radiusMedium() const;
@@ -88,6 +90,7 @@ public:
     Q_INVOKABLE void saveShortcuts(const QVariantMap &shortcuts);
     Q_INVOKABLE void saveBookmarks(const QStringList &paths);
     Q_INVOKABLE void saveSidebarWidth(int width);
+    Q_INVOKABLE void saveGridCellSize(int size);
 
 signals:
     void configChanged();
@@ -113,6 +116,7 @@ private:
     int m_sidebarWidth;
     bool m_sidebarVisible;
     double m_scrollSpeed;
+    int m_gridCellSize;
     QStringList m_bookmarks;
     int m_radiusSmall;
     int m_radiusMedium;

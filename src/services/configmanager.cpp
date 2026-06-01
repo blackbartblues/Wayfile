@@ -258,6 +258,7 @@ void ConfigManager::setDefaults()
     m_sidebarWidth = 200;
     m_sidebarVisible = true;
     m_scrollSpeed = 3.0;
+    m_gridCellSize = 180;  // keep in sync with FileGridView min/maxCellSize (110–320)
     m_bookmarks = {"~/Documents", "~/Downloads", "~/Pictures", "~/Projects"};
     m_radiusSmall = 4;
     m_radiusMedium = 8;
@@ -316,6 +317,8 @@ void ConfigManager::loadConfig()
 
         if (auto v = config["general"]["scroll_speed"].value<double>())
             m_scrollSpeed = qBound(1.0, *v, 10.0);
+        if (auto v = config["general"]["grid_cell_size"].value<int64_t>())
+            m_gridCellSize = qBound(110, static_cast<int>(*v), 320);
 
         // Appearance
         if (auto v = config["appearance"]["radius_small"].value<int64_t>())
@@ -443,6 +446,7 @@ int ConfigManager::sidebarWidth() const { return m_sidebarWidth; }
 bool ConfigManager::sidebarVisible() const { return m_sidebarVisible; }
 QStringList ConfigManager::bookmarks() const { return m_bookmarks; }
 double ConfigManager::scrollSpeed() const { return m_scrollSpeed; }
+int ConfigManager::gridCellSize() const { return m_gridCellSize; }
 int ConfigManager::radiusSmall() const { return m_radiusSmall; }
 int ConfigManager::radiusMedium() const { return m_radiusMedium; }
 int ConfigManager::radiusLarge() const { return m_radiusLarge; }
@@ -577,6 +581,11 @@ void ConfigManager::saveSettings(const QVariantMap &settings)
     if (settings.contains("scrollSpeed")) {
         m_scrollSpeed = qBound(1.0, settings.value("scrollSpeed").toDouble(), 10.0);
         general.insert_or_assign("scroll_speed", m_scrollSpeed);
+    }
+
+    if (settings.contains("gridCellSize")) {
+        m_gridCellSize = qBound(110, settings.value("gridCellSize").toInt(), 320);
+        general.insert_or_assign("grid_cell_size", m_gridCellSize);
     }
 
     if (!general.empty())
@@ -781,4 +790,9 @@ void ConfigManager::saveBookmarks(const QStringList &paths)
 void ConfigManager::saveSidebarWidth(int width)
 {
     saveSettings(QVariantMap{{"sidebarWidth", width}});
+}
+
+void ConfigManager::saveGridCellSize(int size)
+{
+    saveSettings(QVariantMap{{"gridCellSize", size}});
 }

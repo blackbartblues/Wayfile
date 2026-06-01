@@ -33,6 +33,7 @@ private slots:
         QCOMPARE(mgr.sidebarPosition(), QString("left"));
         QCOMPARE(mgr.sidebarWidth(), 200);
         QCOMPARE(mgr.sidebarVisible(), true);
+        QCOMPARE(mgr.gridCellSize(), 180);
         QCOMPARE(mgr.transparencyEnabled(), true);
         QCOMPARE(mgr.transparencyLevel(), 1.0);
         QCOMPARE(mgr.animationsEnabled(), true);
@@ -869,6 +870,32 @@ private slots:
         QCOMPARE(mgr2.defaultView(), QString("detailed"));
         QCOMPARE(mgr2.sortBy(), QString("size"));
         QCOMPARE(mgr2.sortAscending(), false);
+    }
+
+    void testSaveGridCellSizePersistsAcrossInstances()
+    {
+        QTemporaryDir dir;
+        const QString path = dir.path() + "/config.toml";
+
+        ConfigManager mgr(path);
+        mgr.saveGridCellSize(232);
+
+        // Fresh instance against the same file must restore the zoom level.
+        ConfigManager mgr2(path);
+        QCOMPARE(mgr2.gridCellSize(), 232);
+    }
+
+    void testSaveGridCellSizeClampsOutOfRange()
+    {
+        QTemporaryDir dir;
+        const QString path = dir.path() + "/config.toml";
+
+        ConfigManager mgr(path);
+        mgr.saveGridCellSize(9000);   // above max
+        QCOMPARE(mgr.gridCellSize(), 320);
+
+        mgr.saveGridCellSize(10);     // below min
+        QCOMPARE(mgr.gridCellSize(), 110);
     }
 
     void testSaveViewDefaultsRejectsEmptyStrings()

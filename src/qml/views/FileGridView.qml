@@ -71,7 +71,12 @@ GridView {
         // are disabled (animDurationSlow == 0) so a zoom burst still coalesces.
         interval: Math.max(120, Theme.animDurationSlow + 40)
         repeat: false
-        onTriggered: root.zoomRelayoutActive = false
+        onTriggered: {
+            root.zoomRelayoutActive = false
+            // Persist the settled zoom so it survives restarts. Debounced here
+            // (not per scroll step) so a zoom burst writes the config once.
+            config.saveGridCellSize(root.cellSize)
+        }
     }
 
     clip: true
@@ -84,7 +89,9 @@ GridView {
     // available width. This pins the icon to cellSize so it keeps a constant
     // size when the view is resized (sidebar toggle, window resize, split
     // view) — only Ctrl+scroll zoom changes it.
-    property int cellSize: 180          // current zoom level (square cell, px)
+    // Seeded from the persisted preference; Ctrl+scroll zoom breaks this binding
+    // and the new size is saved back (debounced) when the zoom burst settles.
+    property int cellSize: config.gridCellSize
     readonly property int minCellSize: 110
     readonly property int maxCellSize: 320
     readonly property int cellSizeStep: 24
