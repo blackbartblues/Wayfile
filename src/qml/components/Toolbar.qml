@@ -223,8 +223,8 @@ Rectangle {
                     IconFolder { anchors.centerIn: parent; size: 18; color: Theme.text }
                     IconPlus {
                         anchors.right: parent.right; anchors.bottom: parent.bottom
-                        anchors.rightMargin: 5; anchors.bottomMargin: 5
-                        size: 10; color: Theme.accent
+                        anchors.rightMargin: 8; anchors.bottomMargin: 8
+                        size: 12; color: Theme.accent
                     }
                     Q.Tooltip { text: "New folder"; visible: newFolderBtn.hovered }
                 }
