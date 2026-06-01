@@ -217,3 +217,11 @@ set_tests_properties(tst_giotransferworker PROPERTIES
     RUN_SERIAL TRUE
     TIMEOUT 120
 )
+
+# QML load smoke test — launches the app headless (offscreen) and fails if the
+# QML engine logs any load/binding error. Automated form of the manual smoke
+# used during the Faza 5 QML splits; catches type/registration/binding
+# regressions that compile but break the QML tree at load. See qml-smoke.sh.
+add_test(NAME tst_qml_smoke
+    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/qml-smoke.sh $<TARGET_FILE:heimdall>)
+set_tests_properties(tst_qml_smoke PROPERTIES TIMEOUT 30)
