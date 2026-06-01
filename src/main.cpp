@@ -116,7 +116,7 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
     app.setApplicationName("Heimdall");
     app.setOrganizationName("Heimdall");
-    app.setDesktopFileName("heimdall");
+    app.setDesktopFileName("io.github.blackbartblues.Heimdall");
     // Window icon (task switchers, server-side decorations). Bundled via qrc so
     // it resolves without depending on an installed theme icon.
     app.setWindowIcon(QIcon(QStringLiteral(":/assets/heimdall-logo.png")));
@@ -174,11 +174,9 @@ int main(int argc, char *argv[])
     };
 
     // Ensure config directory exists
-    // Heimdall fork: user-visible config dir is ~/.config/heimdall. The CMake
-    // install-time data dir macros (HEIMDALL_DATA_DIR, HEIMDALL_SOURCE_DIR) still
-    // reference the upstream name — they're rebuild-time paths for finding
-    // shipped themes, not user config — and will be renamed in a follow-up
-    // CMakeLists pass.
+    // User-visible config lives at ~/.config/heimdall. The CMake install-time
+    // data dir macros (HEIMDALL_DATA_DIR, HEIMDALL_SOURCE_DIR) are rebuild-time
+    // paths for finding shipped themes and QML, not user config.
     const QString configDir = QStandardPaths::writableLocation(QStandardPaths::HomeLocation)
                               + "/.config/heimdall";
     QDir().mkpath(configDir);

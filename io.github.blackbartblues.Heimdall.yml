@@ -1,23 +1,23 @@
-# Flatpak manifest for HyprFM.
+# Flatpak manifest for Heimdall.
 #
 # Local build (run from repo root after committing your changes):
 #
 #   flatpak install -y flathub org.kde.Platform//6.9 org.kde.Sdk//6.9
 #   flatpak-builder --force-clean --user --install \
-#       build-flatpak io.github.soyeb_jim285.HyprFM.yml
-#   flatpak run io.github.soyeb_jim285.HyprFM
+#       build-flatpak io.github.blackbartblues.Heimdall.yml
+#   flatpak run io.github.blackbartblues.Heimdall
 #
-# For local iteration without committing, swap the `hyprfm` module's source
+# For local iteration without committing, swap the `heimdall` module's source
 # from `type: git` to `type: dir, path: .` (see comment below).
 #
 # For Flathub submission, this file is copied to a separate flathub repo
-# and the `hyprfm` source must stay as `type: git` with a pinned tag/commit.
+# and the `heimdall` source must stay as `type: git` with a pinned tag/commit.
 
-app-id: io.github.soyeb_jim285.HyprFM
+app-id: io.github.blackbartblues.Heimdall
 runtime: org.kde.Platform
 runtime-version: '6.9'
 sdk: org.kde.Sdk
-command: hyprfm
+command: heimdall
 
 finish-args:
   # Display + input
@@ -127,24 +127,24 @@ modules:
         url: https://github.com/sharkdp/bat/releases/download/v0.24.0/bat-v0.24.0-aarch64-unknown-linux-gnu.tar.gz
         sha256: feccae9a0576d97609c57e32d3914c5116136eab0df74c2ab74ef397d42c5b10
 
-  # ── HyprFM ─────────────────────────────────────────────────────────────
-  - name: hyprfm
+  # ── Heimdall ─────────────────────────────────────────────────────────────
+  - name: heimdall
     buildsystem: cmake-ninja
     config-opts:
       - -DCMAKE_BUILD_TYPE=Release
       - -DCMAKE_INSTALL_PREFIX=/app
-      - -DHYPRFM_DATA_DIR=/app/share/hyprfm
+      - -DHEIMDALL_DATA_DIR=/app/share/heimdall
       - -DBUILD_TESTS=OFF
-      - -DHYPRFM_ENABLE_PCH=OFF
-      - -DHYPRFM_ENABLE_UNITY_BUILD=OFF
+      - -DHEIMDALL_ENABLE_PCH=OFF
+      - -DHEIMDALL_ENABLE_UNITY_BUILD=OFF
     post-install:
       # Required by Flathub: every app must install its license file to
       # $FLATPAK_DEST/share/licenses/$FLATPAK_ID.
-      - install -Dm644 LICENSE /app/share/licenses/io.github.soyeb_jim285.HyprFM/LICENSE
+      - install -Dm644 LICENSE /app/share/licenses/io.github.blackbartblues.Heimdall/LICENSE
     sources:
       # ── FLATHUB SUBMISSION ──
       - type: git
-        url: https://github.com/soyeb-jim285/hyprfm.git
+        url: https://github.com/blackbartblues/Heimdall.git
         tag: v0.4.25
 
       # ── LOCAL ITERATION ──

@@ -267,9 +267,9 @@ if(KF6WindowSystem_FOUND)
 endif()
 
 install(TARGETS heimdall DESTINATION bin)
-install(FILES "${CMAKE_SOURCE_DIR}/dist/io.github.soyeb_jim285.Heimdall.desktop"
+install(FILES "${CMAKE_SOURCE_DIR}/dist/io.github.blackbartblues.Heimdall.desktop"
     DESTINATION share/applications)
-install(FILES "${CMAKE_SOURCE_DIR}/dist/io.github.soyeb_jim285.Heimdall.svg"
+install(FILES "${CMAKE_SOURCE_DIR}/dist/io.github.blackbartblues.Heimdall.svg"
     DESTINATION share/icons/hicolor/scalable/apps)
-install(FILES "${CMAKE_SOURCE_DIR}/dist/io.github.soyeb_jim285.Heimdall.metainfo.xml"
+install(FILES "${CMAKE_SOURCE_DIR}/dist/io.github.blackbartblues.Heimdall.metainfo.xml"
     DESTINATION share/metainfo)

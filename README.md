@@ -1,21 +1,21 @@
 <div align="center">
 
-<img src="dist/hyprfm.svg" width="96" alt="HyprFM logo"/>
+<img src="dist/heimdall.svg" width="96" alt="Heimdall logo"/>
 
-# HyprFM
+# Heimdall
 
 **A fast, keyboard-friendly file manager for Hyprland and Wayland desktops.**
 
-[![License](https://img.shields.io/github/license/soyeb-jim285/hyprfm?style=flat-square)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/soyeb-jim285/hyprfm?style=flat-square)](https://github.com/soyeb-jim285/hyprfm/releases)
-[![AUR](https://img.shields.io/aur/version/hyprfm-git?style=flat-square&logo=arch-linux)](https://aur.archlinux.org/packages/hyprfm-git)
-[![Build](https://img.shields.io/github/actions/workflow/status/soyeb-jim285/hyprfm/build.yml?style=flat-square)](https://github.com/soyeb-jim285/hyprfm/actions)
+[![License](https://img.shields.io/github/license/blackbartblues/Heimdall?style=flat-square)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/blackbartblues/Heimdall?style=flat-square)](https://github.com/blackbartblues/Heimdall/releases)
+[![AUR](https://img.shields.io/aur/version/heimdall-git?style=flat-square&logo=arch-linux)](https://aur.archlinux.org/packages/heimdall-git)
+[![Build](https://img.shields.io/github/actions/workflow/status/blackbartblues/Heimdall/build.yml?style=flat-square)](https://github.com/blackbartblues/Heimdall/actions)
 
 </div>
 
 ---
 
-HyprFM is a Qt6/QML file manager designed to feel native on Hyprland: lightweight, themeable, and built around fast keyboard navigation. It pairs a polished UI with the practical features power users expect — Miller column view, kinetic scrolling, drag & drop, async operations, rich previews, and a TOML-based theme system.
+Heimdall is a Qt6/QML file manager designed to feel native on Hyprland: lightweight, themeable, and built around fast keyboard navigation. It pairs a polished UI with the practical features power users expect — Miller column view, kinetic scrolling, drag & drop, async operations, rich previews, and a TOML-based theme system.
 
 <div align="center">
 
@@ -94,38 +94,38 @@ HyprFM is a Qt6/QML file manager designed to feel native on Hyprland: lightweigh
 ### Arch Linux (AUR)
 
 ```bash
-yay -S hyprfm-git
+yay -S heimdall-git
 ```
 
-The PKGBUILD pulls latest `main`, builds with Ninja + parallel jobs + tests disabled, and installs to `/usr/bin/hyprfm`.
+The PKGBUILD pulls latest `main`, builds with Ninja + parallel jobs + tests disabled, and installs to `/usr/bin/heimdall`.
 
 ### Flatpak (self-hosted)
 
-HyprFM publishes a signed Flatpak repository at `hyprfm.soyebjim.me`. Because HyprFM depends on the KDE Platform runtime from Flathub, the Flathub remote must exist at the **same scope** you install into — for `--user` installs, that means a `--user` Flathub remote. Add both remotes once and install:
+Heimdall publishes a signed Flatpak repository at `heimdall.soyebjim.me`. Because Heimdall depends on the KDE Platform runtime from Flathub, the Flathub remote must exist at the **same scope** you install into — for `--user` installs, that means a `--user` Flathub remote. Add both remotes once and install:
 
 ```bash
 # Flathub at user scope (provides org.kde.Platform)
 flatpak remote-add --user --if-not-exists \
     flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
-# HyprFM repo
+# Heimdall repo
 flatpak remote-add --user --if-not-exists \
-    hyprfm https://flatpak.hyprfm.soyebjim.me/hyprfm.flatpakrepo
-flatpak install --user hyprfm io.github.soyeb_jim285.HyprFM
+    heimdall https://flatpak.heimdall.soyebjim.me/heimdall.flatpakrepo
+flatpak install --user heimdall io.github.blackbartblues.Heimdall
 ```
 
 If you'd rather install system-wide, drop every `--user` flag and prefix with `sudo`; system Flathub is already configured on most distros.
 
-Updates arrive via the usual `flatpak update`. The repo is signed with a GPG key committed at [`public-key.asc`](https://github.com/soyeb-jim285/hyprfm-flatpak-repo/blob/main/public-key.asc); Flatpak verifies every download against it automatically.
+Updates arrive via the usual `flatpak update`. The repo is signed with a GPG key committed at [`public-key.asc`](https://github.com/blackbartblues/Heimdall-flatpak-repo/blob/main/public-key.asc); Flatpak verifies every download against it automatically.
 
-Each tagged release also attaches an `HyprFM-vX.Y.Z-x86_64.flatpak` bundle to the GitHub release for users who want a single-file install without adding a remote.
+Each tagged release also attaches an `Heimdall-vX.Y.Z-x86_64.flatpak` bundle to the GitHub release for users who want a single-file install without adding a remote.
 
 ### Debian / Ubuntu (.deb)
 
-Grab `hyprfm_*_amd64.deb` from the latest [release](https://github.com/soyeb-jim285/hyprfm/releases) and install:
+Grab `heimdall_*_amd64.deb` from the latest [release](https://github.com/blackbartblues/Heimdall/releases) and install:
 
 ```bash
-sudo apt install ./hyprfm_*_amd64.deb
+sudo apt install ./heimdall_*_amd64.deb
 ```
 
 Tested on Ubuntu 24.04. May work on other recent Debian-based distributions.
@@ -133,9 +133,9 @@ Tested on Ubuntu 24.04. May work on other recent Debian-based distributions.
 ### AppImage (any distro)
 
 ```bash
-wget https://github.com/soyeb-jim285/hyprfm/releases/latest/download/HyprFM-v0.4.20-x86_64.AppImage
-chmod +x HyprFM-*.AppImage
-./HyprFM-*.AppImage
+wget https://github.com/blackbartblues/Heimdall/releases/latest/download/Heimdall-v0.4.20-x86_64.AppImage
+chmod +x Heimdall-*.AppImage
+./Heimdall-*.AppImage
 ```
 
 The AppImage is fully self-contained — no system Qt installation required.
@@ -143,16 +143,16 @@ The AppImage is fully self-contained — no system Qt installation required.
 ### Build from source
 
 ```bash
-git clone --recursive https://github.com/soyeb-jim285/hyprfm.git
-cd hyprfm
+git clone --recursive https://github.com/blackbartblues/Heimdall.git
+cd Heimdall
 cmake -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_TESTS=OFF
 cmake --build build --parallel
-./build/src/hyprfm
+./build/src/heimdall
 ```
 
-> **Note:** the `--recursive` flag is important — HyprFM uses Git submodules for the [Quill](https://github.com/soyeb-jim285/quill) component library and the [quill-icons](https://github.com/soyeb-jim285/quill-icons) icon set.
+> **Note:** the `--recursive` flag is important — Heimdall uses Git submodules for the [Quill](https://github.com/soyeb-jim285/quill) component library and the [quill-icons](https://github.com/soyeb-jim285/quill-icons) icon set.
 
 #### Dependencies
 
@@ -212,13 +212,13 @@ cmake --build build --parallel
 | `Ctrl+Shift+N` | New folder |
 | `Ctrl+N` | New file |
 
-All shortcuts can be remapped in `~/.config/hyprfm/config.toml` under the `[shortcuts]` section.
+All shortcuts can be remapped in `~/.config/heimdall/config.toml` under the `[shortcuts]` section.
 
 ---
 
 ## ⚙️ Configuration
 
-Config lives at `~/.config/hyprfm/config.toml` and is created with sensible defaults on first run.
+Config lives at `~/.config/heimdall/config.toml` and is created with sensible defaults on first run.
 
 ```toml
 [general]
@@ -254,7 +254,7 @@ paths = ["~/Documents", "~/Downloads", "~/Pictures", "~/Projects"]
 
 ## 🎨 Theming
 
-Themes are TOML files in `themes/`. Drop a new file there or in `~/.config/hyprfm/themes/` and reference it from config:
+Themes are TOML files in `themes/`. Drop a new file there or in `~/.config/heimdall/themes/` and reference it from config:
 
 ```toml
 [colors]
@@ -278,7 +278,7 @@ Themes reload live on save.
 
 ## 🧱 Architecture
 
-HyprFM is a three-layer Qt6 application:
+Heimdall is a three-layer Qt6 application:
 
 - **QML frontend** (`src/qml/`) — all rendering. `Main.qml` wires tab state, selection, and shortcuts. Views (`FileGridView`, `FileDetailedView`, `FileMillerView`) are switched by `FileViewContainer`. The [Quill](https://github.com/soyeb-jim285/quill) component library provides themed Buttons, TextFields, Cards, etc.
 - **C++ backend** (`src/models/`, `src/services/`, `src/providers/`) — `QAbstractListModel` subclasses for files, tabs, bookmarks, devices. Async services for clipboard, file operations, search, disk usage, previews. Exposed to QML via `setContextProperty`.

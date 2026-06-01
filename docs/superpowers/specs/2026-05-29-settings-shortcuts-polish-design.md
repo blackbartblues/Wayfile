@@ -10,7 +10,7 @@ This spec is the single source of truth for Phase 3. It contains:
 - **Chapter B — Milestones** (M1–M6) derived from the audit, each shippable as one commit with explicit verify gates.
 
 Background, naming history, and architectural conventions live in the memory store
-([[project-heimdall-p3-polish]], [[project-helm-file-manager]], [[reference-hyprfm-as-stack-mirror]],
+([[project-heimdall-p3-polish]], [[project-helm-file-manager]], [[reference-heimdall-as-stack-mirror]],
 [[lessons-qt6-qml-wiring]], [[feedback-customization-first]], [[feedback-ux-mouse-windows-like]],
 [[feedback-verify-before-commit]], [[feedback-dry-no-duplicate-systems]]).
 

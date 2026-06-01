@@ -219,7 +219,7 @@ Rectangle {
         }
 
         // Heimdall section header: FAVORITES — user-curated bookmarks.
-        // Drag a folder onto the section to pin it (existing HyprFM logic).
+        // Drag a folder onto the section to pin it (existing Heimdall logic).
         Text {
             Layout.fillWidth: true
             Layout.leftMargin: Theme.spacing
