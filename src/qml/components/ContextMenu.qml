@@ -721,6 +721,13 @@ Item {
             items.push(viewMenuItem())
             items.push(sortMenuItem())
             items.push({ separator: true })
+            if (!isTrashView) {
+                // New Folder/File create inside the clicked dir, or alongside a
+                // clicked file (variant b) — both resolved via effectiveDir.
+                items.push({ text: "New Folder...", shortcut: config.shortcutMap["new_folder"] || "", action: "newfolder", icon: "Folder" })
+                items.push({ text: "New File...", shortcut: config.shortcutMap["new_file"] || "", action: "newfile", icon: "FileText" })
+                items.push({ separator: true })
+            }
             items.push({ text: "Properties", shortcut: "", action: "properties", icon: "Info" })
         } else {
             items.push({ text: "Select All", shortcut: "Ctrl+A", action: "selectall", icon: "Check" })
