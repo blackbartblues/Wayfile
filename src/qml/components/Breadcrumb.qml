@@ -83,18 +83,18 @@ Item {
     property int suggestionIndex: -1
 
     // Icon components for breadcrumb context
-    Component { id: bcIconHome; IconHome { size: 18; color: Theme.text } }
-    Component { id: bcIconClock; IconClock { size: 18; color: Theme.text } }
-    Component { id: bcIconTrash; IconTrash { size: 18; color: Theme.text } }
-    Component { id: bcIconImage; IconImage { size: 18; color: Theme.text } }
-    Component { id: bcIconDownload; IconDownload { size: 18; color: Theme.text } }
-    Component { id: bcIconFileText; IconFileText { size: 18; color: Theme.text } }
-    Component { id: bcIconMusic; IconMusic { size: 18; color: Theme.text } }
-    Component { id: bcIconVideo; IconVideo { size: 18; color: Theme.text } }
-    Component { id: bcIconMonitor; IconMonitor { size: 18; color: Theme.text } }
-    Component { id: bcIconFolder; IconFolder { size: 18; color: Theme.text } }
-    Component { id: bcIconSettings; IconSettings { size: 18; color: Theme.text } }
-    Component { id: bcIconRocket; IconRocket { size: 18; color: Theme.text } }
+    Component { id: bcIconHome; IconHome { size: 16; color: Theme.text} }
+    Component { id: bcIconClock; IconClock { size: 16; color: Theme.text} }
+    Component { id: bcIconTrash; IconTrash { size: 16; color: Theme.text} }
+    Component { id: bcIconImage; IconImage { size: 16; color: Theme.text} }
+    Component { id: bcIconDownload; IconDownload { size: 16; color: Theme.text} }
+    Component { id: bcIconFileText; IconFileText { size: 16; color: Theme.text} }
+    Component { id: bcIconMusic; IconMusic { size: 16; color: Theme.text} }
+    Component { id: bcIconVideo; IconVideo { size: 16; color: Theme.text} }
+    Component { id: bcIconMonitor; IconMonitor { size: 16; color: Theme.text} }
+    Component { id: bcIconFolder; IconFolder { size: 16; color: Theme.text} }
+    Component { id: bcIconSettings; IconSettings { size: 16; color: Theme.text} }
+    Component { id: bcIconRocket; IconRocket { size: 16; color: Theme.text} }
 
     function iconForLabel(label) {
         const l = label.toLowerCase()
@@ -140,7 +140,7 @@ Item {
 
             // Dynamic context icon
             Loader {
-                width: 18; height: 18
+                width: 16; height: 16
                 anchors.verticalCenter: parent.verticalCenter
                 sourceComponent: {
                     if (fileOps.isRemotePath(root.path)) return bcIconMonitor
@@ -201,9 +201,9 @@ Item {
                                 id: segLabel
                                 anchors.centerIn: parent
                                 text: modelData.label
-                                color: parent.parent.isLast ? Theme.text : Theme.overlay
-                                font.pointSize: Theme.fontNormal
-                                font.weight: Font.Bold
+                                color: parent.parent.isLast ? Theme.accent : Theme.text
+                                font.pointSize: Theme.fontSmall
+                                font.weight: Font.Medium
                                 verticalAlignment: Text.AlignVCenter
                             }
                         }
