@@ -27,6 +27,13 @@ Rectangle {
     // (which don't have a meaningful path) don't render a stale label.
     property string activePath: ""
 
+    // View-switch cluster (#8 pkt 7): mirrors the active tab's viewMode and
+    // emits viewModeRequested when one of the footer icons is clicked. Main.qml
+    // binds viewMode and handles the signal by flipping
+    // tabModel.activeTab.viewMode.
+    property string viewMode: "grid"
+    signal viewModeRequested(string mode)
+
     height: 28
     color: Theme.mantle
     clip: false
@@ -112,6 +119,54 @@ Rectangle {
             color: Theme.accent
             font.pointSize: Theme.fontSmall
             verticalAlignment: Text.AlignVCenter
+        }
+
+        // Divider sets the view-switch cluster apart from the status text.
+        Rectangle {
+            Layout.alignment: Qt.AlignVCenter
+            width: 1
+            height: 14
+            color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.15)
+        }
+
+        // View-switch cluster (#8 pkt 7): grid / miller / detailed. The active
+        // mode is accented; clicking requests a switch via viewModeRequested.
+        Row {
+            Layout.alignment: Qt.AlignVCenter
+            spacing: 2
+
+            HoverRect {
+                id: gridViewBtn
+                width: 24; height: 24
+                onClicked: statusBar.viewModeRequested("grid")
+                IconGrid {
+                    anchors.centerIn: parent
+                    size: 15
+                    color: statusBar.viewMode === "grid" ? Theme.accent : Theme.subtext
+                }
+            }
+
+            HoverRect {
+                id: millerViewBtn
+                width: 24; height: 24
+                onClicked: statusBar.viewModeRequested("miller")
+                IconColumns {
+                    anchors.centerIn: parent
+                    size: 15
+                    color: statusBar.viewMode === "miller" ? Theme.accent : Theme.subtext
+                }
+            }
+
+            HoverRect {
+                id: detailedViewBtn
+                width: 24; height: 24
+                onClicked: statusBar.viewModeRequested("detailed")
+                IconList {
+                    anchors.centerIn: parent
+                    size: 15
+                    color: statusBar.viewMode === "detailed" ? Theme.accent : Theme.subtext
+                }
+            }
         }
     }
 }

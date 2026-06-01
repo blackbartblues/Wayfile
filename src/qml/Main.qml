@@ -1841,6 +1841,12 @@ ApplicationWindow {
                     selectedCount: root.currentSelectedCount
                     selectedSize: root.currentSelectedSize
                     selectedSizePending: root.currentSelectedSizePending
+                    // View-switch cluster (#8 pkt 7): reflect and drive the
+                    // active tab's per-tab viewMode.
+                    viewMode: tabModel.activeTab ? tabModel.activeTab.viewMode : "grid"
+                    onViewModeRequested: (m) => {
+                        if (tabModel.activeTab) tabModel.activeTab.viewMode = m
+                    }
                 }
             }
         }
