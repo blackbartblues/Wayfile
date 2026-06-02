@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Effects
 import Heimdall
 
 // Heimdall browser-style tab bar.
@@ -34,22 +35,29 @@ Item {
     signal subPaneClicked(int tabIndex, int paneIdx)
 
     // Chrome-ish bounds. Tune here if the design canvas tightens these later.
-    readonly property int minTabWidth: 88
-    readonly property int maxTabWidth: 180
+    readonly property int minTabWidth: 128
+    readonly property int maxTabWidth: 210
 
-    implicitHeight: Math.round(36 * Theme.uiScale)
+    // "Heimdall Unified" tab strip: 44px tall, tabs bottom-aligned with a 9px
+    // gap above so their rounded top corners read against the strip gradient.
+    implicitHeight: Math.round(44 * Theme.uiScale)
+    readonly property int tabTopGap: Math.round(9 * Theme.uiScale)
 
     Rectangle {
         anchors.fill: parent
-        color: Theme.mantle
+        // Obsidian vertical gradient (handoff .tabstrip).
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: "#0d0e12" }
+            GradientStop { position: 1.0; color: "#121318" }
+        }
 
-        // Bottom separator divides the tab bar from the toolbar below.
+        // Bottom hairline divides the tab strip from the toolbar below.
         Rectangle {
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.right: parent.right
             height: 1
-            color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.06)
+            color: Theme.hair
             z: 2
         }
 
@@ -59,46 +67,41 @@ Item {
         // version pinned it to the bar edge regardless of tab count.
 
         // App wordmark — relocated here from the sidebar header (#8). Sits at
-        // the far left of the tab bar, before the tab strip. Kept as a discrete
-        // element so a logo + custom font can replace it later.
+        // the far left of the tab bar, before the tab strip.
         Item {
             id: appTitle
             anchors.left: parent.left
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 1
-            width: logo.width + titleLabel.implicitWidth + Theme.spacing * 2 + logoGap
+            width: wordmark.width + Theme.spacing * 2
 
-            // Gap between the logo and the wordmark.
-            readonly property int logoGap: Math.round(Theme.spacing * 0.6)
-
-            // Bifröst gate mark, bundled via qrc (see src/CMakeLists.txt). Sized
-            // to the wordmark's height and kept square (PreserveAspectFit).
-            Image {
-                id: logo
-                source: "qrc:/assets/heimdall-logo.png"
-                anchors.left: parent.left
-                anchors.leftMargin: Theme.spacing
-                anchors.verticalCenter: parent.verticalCenter
-                // Fill most of the tab-bar row height (logos read larger than
-                // the wordmark cap height). Bounded by the row so it can't clip.
-                height: Math.round(appTitle.height - 4)
-                width: height
-                fillMode: Image.PreserveAspectFit
-                smooth: true
-                mipmap: true
-            }
-
+            // "HEIMDALL" wordmark — Cinzel in warm gold. Rendered as a plain
+            // antialiased Text (no gradient mask): the earlier MultiEffect
+            // text-mask hard-stepped the glyph edges and looked jagged.
             Text {
-                id: titleLabel
-                anchors.left: logo.right
-                anchors.leftMargin: appTitle.logoGap
+                id: wordmark
+                anchors.left: parent.left
+                anchors.leftMargin: Theme.spacing + Math.round(2 * Theme.uiScale)
                 anchors.verticalCenter: parent.verticalCenter
-                text: "Heimdall"
-                color: Theme.text
-                font.pointSize: Theme.fontLarge
-                font.weight: Font.Bold
+                text: "HEIMDALL"
+                color: Theme.gold
+                font.family: Fonts.display
+                font.pixelSize: Math.round(18 * Theme.uiScale)
+                font.weight: Font.DemiBold
+                font.letterSpacing: Math.round(18 * Theme.uiScale) * 0.12
             }
+        }
+
+        // 1px divider between the brand and the tab strip (handoff .tab-brand__div).
+        Rectangle {
+            id: brandDivider
+            anchors.left: appTitle.right
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.leftMargin: Math.round(4 * Theme.uiScale)
+            width: 1
+            height: Math.round(24 * Theme.uiScale)
+            color: Theme.line
         }
 
         // Flickable scroll area for tabs. When the strip can hold every tab at
@@ -107,11 +110,13 @@ Item {
         // overflow scrolls horizontally via drag or mouse wheel.
         Flickable {
             id: tabScroll
-            anchors.left: appTitle.right
+            anchors.left: brandDivider.right
+            anchors.leftMargin: Math.round(8 * Theme.uiScale)
             anchors.top: parent.top
+            anchors.topMargin: root.tabTopGap   // tabs sit 9px below the strip top
             anchors.bottom: parent.bottom
             anchors.right: parent.right
-            anchors.bottomMargin: 1  // sit above the separator
+            anchors.bottomMargin: 0              // tab bottoms meet the hairline
             clip: true
             // Compute the scrollable content width directly from the same
             // formula the delegate uses. Row.implicitWidth wasn't tracking
@@ -574,34 +579,81 @@ Item {
                         }
                     }
 
-                    // Inner highlight rectangle. Active tab gets a slightly
-                    // lighter background + faint border; hover gives a softer
-                    // wash. Margin keeps it inside the cell so the gold top
-                    // stripe doesn't overlap it.
+                    // Tab body — full-height, top-rounded. Active gets the
+                    // obsidian gradient + 1px line border + inset top sheen;
+                    // hover gives a faint wash. (handoff .tab / .tab--active)
                     Rectangle {
+                        id: tabBody
                         anchors.fill: parent
-                        anchors.margins: 5
-                        radius: Theme.radiusSmall
-                        color: {
-                            if (tabDelegate.index === tabModel.activeIndex)
-                                return Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.1)
-                            if (tabDelegateHover.hovered)
-                                return Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.05)
-                            return "transparent"
-                        }
+                        anchors.leftMargin: 2
+                        anchors.rightMargin: 2
+                        topLeftRadius: Theme.radiusTab
+                        topRightRadius: Theme.radiusTab
+                        bottomLeftRadius: 0
+                        bottomRightRadius: 0
+                        readonly property bool active: tabDelegate.index === tabModel.activeIndex
+                        gradient: active ? activeTabGrad : null
+                        color: active ? "transparent"
+                             : (tabDelegateHover.hovered
+                                ? Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.03)
+                                : "transparent")
+                        border.width: active ? 1 : 0
+                        border.color: Theme.line
                         Behavior on color { ColorAnimation { duration: Theme.animDuration } }
-                        border.width: tabDelegate.index === tabModel.activeIndex ? 1 : 0
-                        border.color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.08)
+
+                        Gradient {
+                            id: activeTabGrad
+                            GradientStop { position: 0.0; color: "#1d1f27" }
+                            GradientStop { position: 1.0; color: "#16171d" }
+                        }
+
+                        // Inset top sheen.
+                        Rectangle {
+                            visible: tabBody.active
+                            anchors.top: parent.top
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.margins: 1
+                            height: 1
+                            color: Qt.rgba(1.0, 0.94, 0.84, 0.06)
+                        }
                     }
 
-                    // Phase 2 P2-M1: unified active+selected visual.  The
-                    // backend invariant guarantees the active tab is always
-                    // a member of the selection set, so this single outline
-                    // covers both states — no separate top-stripe for
-                    // active.  Inset slightly so it doesn't fight the bar's
-                    // bottom separator.
+                    // 2px gold top-underline for the active tab (handoff
+                    // .tab--active::after) with a soft glow. Coexists with the
+                    // multi-select ring below — different geometry (top edge vs
+                    // inset rect), so they never visually collide.
                     Rectangle {
-                        visible: tabDelegate.isSelected
+                        visible: tabDelegate.index === tabModel.activeIndex
+                        anchors.top: parent.top
+                        anchors.topMargin: 1
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        width: parent.width - 18
+                        height: 2
+                        radius: 1
+                        gradient: Gradient {
+                            orientation: Gradient.Horizontal
+                            GradientStop { position: 0.0; color: "transparent" }
+                            GradientStop { position: 0.5; color: Theme.gold }
+                            GradientStop { position: 1.0; color: "transparent" }
+                        }
+                        layer.enabled: true
+                        layer.effect: MultiEffect {
+                            autoPaddingEnabled: true
+                            shadowEnabled: true
+                            shadowColor: Theme.goldGlow
+                            shadowBlur: 0.5
+                        }
+                        z: 3
+                    }
+
+                    // pkt-11 multi-select ring: a gold inset outline marking
+                    // tabs picked for a merge. Shown ONLY while more than one
+                    // tab is selected — the lone active tab carries the handoff
+                    // active styling (gradient body + gold top-underline)
+                    // instead, so the two never double up.
+                    Rectangle {
+                        visible: tabDelegate.isSelected && tabModel.selectedCount > 1
                         anchors.fill: parent
                         anchors.margins: 3
                         color: "transparent"
@@ -611,7 +663,7 @@ Item {
                         z: 2
                     }
                     Rectangle {
-                        visible: tabDelegate.isSelected
+                        visible: tabDelegate.isSelected && tabModel.selectedCount > 1
                         anchors.fill: parent
                         anchors.margins: 1
                         color: "transparent"
@@ -627,21 +679,39 @@ Item {
                     // declarative (visible toggles) rather than a Loader
                     // keeps the binding fast in the common path where the
                     // strip is mostly single tabs.
-                    Text {
+                    // Single-tab content: leading folder glyph (gold when
+                    // active, muted otherwise) + left-aligned title.
+                    // (handoff .tab__ic + .tab__title)
+                    Item {
                         anchors.left: parent.left
                         anchors.right: parent.right
-                        anchors.leftMargin: 12
+                        anchors.leftMargin: 13
                         anchors.rightMargin: 28  // leave room for the × button
                         anchors.verticalCenter: parent.verticalCenter
-                        horizontalAlignment: Text.AlignHCenter
+                        height: parent.height
                         visible: !(tabDelegate.isSupertab && tabDelegate.paneCount > 1)
-                        text: tabDelegate.model.title || "New Tab"
-                        color: tabDelegate.index === tabModel.activeIndex ? Theme.text : Theme.subtext
-                        font.pointSize: Theme.fontNormal
-                        font.weight: tabDelegate.index === tabModel.activeIndex
-                            ? Font.Medium : Font.Normal
-                        elide: Text.ElideRight
-                        verticalAlignment: Text.AlignVCenter
+
+                        IconFolder {
+                            id: tabLeadingIcon
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            size: 15
+                            color: tabDelegate.index === tabModel.activeIndex
+                                ? Theme.gold : Theme.muted
+                        }
+                        Text {
+                            anchors.left: tabLeadingIcon.right
+                            anchors.leftMargin: 9
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: tabDelegate.model.title || "New Tab"
+                            color: tabDelegate.index === tabModel.activeIndex ? Theme.text : Theme.subtext
+                            font.pointSize: Theme.fontNormal
+                            font.weight: tabDelegate.index === tabModel.activeIndex
+                                ? Font.Medium : Font.Normal
+                            elide: Text.ElideRight
+                            verticalAlignment: Text.AlignVCenter
+                        }
                     }
 
                     // P2-M7: supertab strip.  N mini folder icons followed
@@ -654,93 +724,107 @@ Item {
                         id: supertabRow
                         anchors.left: parent.left
                         anchors.right: parent.right
-                        anchors.leftMargin: 8
+                        anchors.leftMargin: 10
                         anchors.rightMargin: 28
                         anchors.verticalCenter: parent.verticalCenter
-                        spacing: 4
+                        spacing: 6
                         visible: tabDelegate.isSupertab && tabDelegate.paneCount > 1
 
                         readonly property bool tabIsActive: tabDelegate.index === tabModel.activeIndex
+                        readonly property int tileSize: Math.round(22 * Theme.uiScale)
+                        readonly property int tileStep: Math.round(15 * Theme.uiScale) // 22 - 7 overlap
 
-                        Repeater {
-                            model: tabDelegate.paneCount
-                            delegate: Item {
-                                id: paneChip
-                                required property int index
-                                readonly property bool isActiveSubPane:
-                                    supertabRow.tabIsActive
-                                    && paneChip.index === root.activePaneIndex
-                                readonly property string chipName: {
-                                    var titles = tabDelegate.paneTitles
-                                    if (titles && paneChip.index < titles.length)
-                                        return titles[paneChip.index]
-                                    return ""
-                                }
-                                // Width: icon + small gap.  Total Row width
-                                // is bounded by the tab; if it overflows the
-                                // joined title beside it elides — for now
-                                // we don't render the title (icons alone
-                                // carry the supertab signal).
-                                width: 14
-                                height: supertabRow.height
+                        // Stacked metallic tiles (handoff .tab__stack) overlapping
+                        // -7px, first tile on top. Each carries a pane glyph that
+                        // turns gold for the focused sub-pane; clicking switches
+                        // sub-pane focus (root.subPaneClicked).
+                        Item {
+                            id: tabStack
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: supertabRow.tileSize + (tabDelegate.paneCount - 1) * supertabRow.tileStep
+                            height: supertabRow.tileSize
 
-                                IconFolder {
-                                    anchors.centerIn: parent
-                                    size: 12
-                                    color: paneChip.isActiveSubPane
-                                        ? Theme.accent
-                                        : (supertabRow.tabIsActive
-                                            ? Theme.text
-                                            : Theme.subtext)
-                                    opacity: paneChip.isActiveSubPane ? 1.0 : 0.78
-                                }
+                            Repeater {
+                                model: tabDelegate.paneCount
+                                delegate: Rectangle {
+                                    id: stackTile
+                                    required property int index
+                                    readonly property bool isActiveSubPane:
+                                        supertabRow.tabIsActive && index === root.activePaneIndex
+                                    x: index * supertabRow.tileStep
+                                    z: tabDelegate.paneCount - index   // first tile on top
+                                    width: supertabRow.tileSize
+                                    height: supertabRow.tileSize
+                                    radius: 6
+                                    gradient: Gradient {
+                                        GradientStop { position: 0.0; color: "#2a2c34" }
+                                        GradientStop { position: 1.0; color: "#17181d" }
+                                    }
+                                    border.width: 1
+                                    border.color: stackTile.isActiveSubPane ? Theme.goldLine : Theme.line
 
-                                MouseArea {
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
-                                    acceptedButtons: Qt.LeftButton
-                                    onClicked: {
-                                        root.subPaneClicked(tabDelegate.index,
-                                                            paneChip.index)
+                                    Rectangle {  // inset top sheen
+                                        anchors.top: parent.top; anchors.left: parent.left
+                                        anchors.right: parent.right; anchors.margins: 1
+                                        height: 1
+                                        color: Qt.rgba(1.0, 0.94, 0.84, 0.06)
+                                    }
+
+                                    IconFolder {
+                                        anchors.centerIn: parent
+                                        size: Math.round(11 * Theme.uiScale)
+                                        color: stackTile.isActiveSubPane
+                                            ? Theme.gold
+                                            : (supertabRow.tabIsActive ? Theme.text : Theme.subtext)
+                                        opacity: stackTile.isActiveSubPane ? 1.0 : 0.82
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        acceptedButtons: Qt.LeftButton
+                                        onClicked: root.subPaneClicked(tabDelegate.index, stackTile.index)
                                     }
                                 }
                             }
                         }
 
-                        // Separator after icons, then truncated title.  The
-                        // separator keeps the strip readable when a wide tab
-                        // gives us room for both icons and text; when narrow,
-                        // the Text elides immediately so icons stay legible.
-                        Item {
-                            width: 1
-                            height: parent.height
-                            visible: supertabTitle.implicitWidth > 0
-                                     && supertabRow.width
-                                        - tabDelegate.paneCount * 18 - 4 > 24
-                            Rectangle {
+                        // ×N count badge (handoff .tab__badge): gold mono.
+                        Rectangle {
+                            anchors.verticalCenter: parent.verticalCenter
+                            height: Math.round(16 * Theme.uiScale)
+                            width: badgeText.implicitWidth + Math.round(9 * Theme.uiScale)
+                            radius: 4
+                            color: Theme.goldWash
+                            border.width: 1
+                            border.color: Theme.goldLine
+                            Text {
+                                id: badgeText
                                 anchors.centerIn: parent
-                                width: 1
-                                height: parent.height * 0.5
-                                color: Qt.rgba(Theme.text.r, Theme.text.g,
-                                               Theme.text.b, 0.18)
+                                text: "×" + tabDelegate.paneCount
+                                color: Theme.gold
+                                font.family: Fonts.mono
+                                font.pixelSize: Math.round(10 * Theme.uiScale)
                             }
                         }
 
+                        // Joined pane titles, elided when the tab is narrow.
                         Text {
                             id: supertabTitle
                             anchors.verticalCenter: parent.verticalCenter
-                            width: Math.max(
-                                0,
-                                supertabRow.width
-                                - tabDelegate.paneCount * 18 - 8)
-                            text: tabDelegate.model.title || ""
+                            width: Math.max(0, supertabRow.width - tabStack.width - Math.round(46 * Theme.uiScale))
+                            text: {
+                                var titles = tabDelegate.paneTitles
+                                if (titles && titles.length > 0)
+                                    return titles.join(" · ")
+                                return tabDelegate.model.title || ""
+                            }
                             color: supertabRow.tabIsActive ? Theme.text : Theme.subtext
                             font.pointSize: Theme.fontNormal
-                            font.weight: supertabRow.tabIsActive
-                                ? Font.Medium : Font.Normal
+                            font.weight: supertabRow.tabIsActive ? Font.Medium : Font.Normal
                             elide: Text.ElideRight
                             verticalAlignment: Text.AlignVCenter
-                            visible: width > 12
+                            visible: width > 16
                         }
                     }
 
@@ -788,7 +872,7 @@ Item {
                 IconPlus {
                     anchors.centerIn: parent
                     size: 16
-                    color: addTabBtn.hovered ? Theme.text : Theme.subtext
+                    color: addTabBtn.hovered ? Theme.gold : Theme.subtext
                 }
             }
         }
