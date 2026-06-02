@@ -27,6 +27,7 @@ set(HEIMDALL_SOURCES
     models/recentfilesmodel.cpp
     models/searchresultsmodel.cpp
     models/searchproxymodel.cpp
+    models/dirfilterproxymodel.cpp
     services/searchservice.cpp
     services/undomanager.cpp
     services/previewservice.cpp

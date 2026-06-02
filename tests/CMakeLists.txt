@@ -193,6 +193,22 @@ target_include_directories(tst_searchproxymodel PRIVATE
 target_link_libraries(tst_searchproxymodel PRIVATE Qt6::Test Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Svg Qt6::SvgWidgets Qt6::Concurrent)
 add_test(NAME tst_searchproxymodel COMMAND tst_searchproxymodel)
 
+add_executable(tst_dirfilterproxymodel tst_dirfilterproxymodel.cpp
+    ${CMAKE_SOURCE_DIR}/src/models/dirfilterproxymodel.cpp
+    ${CMAKE_SOURCE_DIR}/src/models/filesystemmodel.cpp
+    ${CMAKE_SOURCE_DIR}/src/models/filesystemmodel_helpers.cpp
+    ${CMAKE_SOURCE_DIR}/src/models/filesystemmodel_apps.cpp
+    ${CMAKE_SOURCE_DIR}/src/models/filesystemmodel_properties.cpp
+    ${CMAKE_SOURCE_DIR}/src/models/filesystemmodel_reload.cpp
+    ${CMAKE_SOURCE_DIR}/src/services/gitstatusservice.cpp
+)
+target_include_directories(tst_dirfilterproxymodel PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/third_party
+)
+target_link_libraries(tst_dirfilterproxymodel PRIVATE Qt6::Test Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Svg Qt6::SvgWidgets Qt6::Concurrent)
+add_test(NAME tst_dirfilterproxymodel COMMAND tst_dirfilterproxymodel)
+
 add_executable(tst_searchservice tst_searchservice.cpp
     ${CMAKE_SOURCE_DIR}/src/services/searchservice.cpp
     ${CMAKE_SOURCE_DIR}/src/models/searchresultsmodel.cpp

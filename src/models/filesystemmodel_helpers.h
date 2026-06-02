@@ -43,6 +43,9 @@ QString formattedSize(qint64 size, bool verbose = false);
 QString iconNameForMimeName(const QString &mimeName);
 QString iconNameForEntry(const QString &name, bool isDir, const QString &contentType = QString());
 QString fileTypeForEntry(const QString &name, bool isDir, const QString &contentType = QString());
+// Coarse type taxonomy used for folder badges + the hybrid view:
+// folder / image / video / audio / document / code / archive / other.
+QString fileCategoryForEntry(const QString &name, bool isDir, const QString &contentType = QString());
 PreviewKind previewKindForEntry(const QString &localPath, bool isDir,
                                 const QString &contentType = QString());
 QString permissionsString(const QFileInfo &info);

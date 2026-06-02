@@ -155,6 +155,10 @@ private slots:
         QVERIFY(!foundUri.isEmpty());
         QVERIFY(foundUri.startsWith("trash:///"));
 
+        // trashEntryCount mirrors the trash listing size while trash is loaded.
+        QCOMPARE(model.trashEntryCount(), model.rowCount());
+        QVERIFY(model.trashEntryCount() >= 1);
+
         const QVariantMap props = model.fileProperties(foundUri);
         QCOMPARE(props.value("name").toString(), fileName);
         QCOMPARE(props.value("originalPath").toString(), filePath);
@@ -902,7 +906,7 @@ private slots:
         model.setSynchronousReload(true);
         auto roles = model.roleNames();
 
-        QCOMPARE(roles.count(), 15);
+        QCOMPARE(roles.count(), 17);
         QCOMPARE(roles[FileSystemModel::FileNameRole],         QByteArray("fileName"));
         QCOMPARE(roles[FileSystemModel::FilePathRole],         QByteArray("filePath"));
         QCOMPARE(roles[FileSystemModel::FileSizeRole],         QByteArray("fileSize"));
@@ -918,6 +922,64 @@ private slots:
         QCOMPARE(roles[FileSystemModel::GitStatusIconRole],    QByteArray("gitStatusIcon"));
         QCOMPARE(roles[FileSystemModel::HasImagePreviewRole],  QByteArray("hasImagePreview"));
         QCOMPARE(roles[FileSystemModel::HasVideoPreviewRole],  QByteArray("hasVideoPreview"));
+        QCOMPARE(roles[FileSystemModel::FileCategoryRole],     QByteArray("fileCategory"));
+        QCOMPARE(roles[FileSystemModel::FileExtensionRole],    QByteArray("fileExtension"));
+    }
+
+    // FileCategoryRole + FileExtensionRole population (local entries).
+    void testFileCategoryAndExtensionRoles()
+    {
+        TestDir dir;
+        dir.createFile("photo.png", "x");
+        dir.createFile("notes.md", "x");
+        dir.createFile("data.json", "x");
+        dir.createFile("archive.tar.gz", "x");
+        dir.createFile("plain", "x");      // no extension
+        dir.createFile(".bashrc", "x");    // dotfile (hidden)
+        dir.createDir("projects");
+
+        FileSystemModel model;
+        model.setSynchronousReload(true);
+        model.setShowHidden(true);
+        model.setRootPath(dir.path());
+
+        auto categoryOf = [&](const QString &name) {
+            const int r = rowForFileName(model, name);
+            return r < 0 ? QString()
+                         : model.data(model.index(r), FileSystemModel::FileCategoryRole).toString();
+        };
+        auto extensionOf = [&](const QString &name) {
+            const int r = rowForFileName(model, name);
+            return r < 0 ? QString()
+                         : model.data(model.index(r), FileSystemModel::FileExtensionRole).toString();
+        };
+
+        QCOMPARE(categoryOf("projects"), QString("folder"));
+        QCOMPARE(categoryOf("photo.png"), QString("image"));
+        QCOMPARE(categoryOf("data.json"), QString("code"));
+        QCOMPARE(categoryOf("archive.tar.gz"), QString("archive"));
+        // md is text/markdown -> document; the M-down chip is keyed off the ext.
+        QCOMPARE(categoryOf("notes.md"), QString("document"));
+
+        // Raw completeSuffix() for chip labels; folders carry no extension.
+        QCOMPARE(extensionOf("archive.tar.gz"), QString("tar.gz"));
+        QCOMPARE(extensionOf("photo.png"), QString("png"));
+        QCOMPARE(extensionOf("plain"), QString(""));
+        QCOMPARE(extensionOf("projects"), QString(""));
+    }
+
+    // trashEntryCount is 0 for an ordinary (non-trash) directory.
+    void testTrashEntryCountZeroOutsideTrash()
+    {
+        TestDir dir;
+        dir.createFile("a.txt", "x");
+        dir.createDir("b");
+
+        FileSystemModel model;
+        model.setSynchronousReload(true);
+        model.setRootPath(dir.path());
+
+        QCOMPARE(model.trashEntryCount(), 0);
     }
 
     // 16. QAbstractItemModelTester

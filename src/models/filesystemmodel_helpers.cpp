@@ -311,6 +311,70 @@ QString fileTypeForEntry(const QString &name, bool isDir, const QString &content
     return mime.isValid() ? mime.comment() : QFileInfo(name).suffix();
 }
 
+QString fileCategoryForEntry(const QString &name, bool isDir, const QString &contentType)
+{
+    if (isDir)
+        return QStringLiteral("folder");
+
+    QString mimeName = contentType;
+    if (mimeName.isEmpty()) {
+        const QMimeType mime = mimeDb().mimeTypeForFile(name);
+        if (mime.isValid())
+            mimeName = mime.name();
+    }
+
+    if (mimeName.startsWith(QLatin1String("image/")))
+        return QStringLiteral("image");
+    if (mimeName.startsWith(QLatin1String("video/")))
+        return QStringLiteral("video");
+    if (mimeName.startsWith(QLatin1String("audio/")))
+        return QStringLiteral("audio");
+
+    // Archives — explicit MIME names (covers tar/gzip/xz/bzip2/zstd/7z/rar/zip
+    // and their compound *-compressed-tar variants).
+    static const QStringList archiveMimes = {
+        QStringLiteral("application/zip"), QStringLiteral("application/gzip"),
+        QStringLiteral("application/x-tar"), QStringLiteral("application/x-7z-compressed"),
+        QStringLiteral("application/x-xz"), QStringLiteral("application/x-bzip"),
+        QStringLiteral("application/x-bzip2"), QStringLiteral("application/zstd"),
+        QStringLiteral("application/vnd.rar"), QStringLiteral("application/x-rar-compressed"),
+        QStringLiteral("application/x-compressed-tar"), QStringLiteral("application/x-bzip-compressed-tar"),
+        QStringLiteral("application/x-xz-compressed-tar"), QStringLiteral("application/x-7z-compressed-tar"),
+        QStringLiteral("application/x-archive"), QStringLiteral("application/vnd.android.package-archive"),
+    };
+    if (archiveMimes.contains(mimeName))
+        return QStringLiteral("archive");
+
+    // Code — source/markup/data formats. text/x-* covers most languages; the
+    // rest are common application/* and text/* code formats.
+    if (mimeName.startsWith(QLatin1String("text/x-")))
+        return QStringLiteral("code");
+    static const QStringList codeMimes = {
+        QStringLiteral("application/json"), QStringLiteral("application/xml"),
+        QStringLiteral("text/xml"), QStringLiteral("application/javascript"),
+        QStringLiteral("text/javascript"), QStringLiteral("application/x-shellscript"),
+        QStringLiteral("application/x-yaml"), QStringLiteral("text/yaml"),
+        QStringLiteral("application/toml"), QStringLiteral("text/html"),
+        QStringLiteral("text/css"), QStringLiteral("application/x-php"),
+        QStringLiteral("application/sql"),
+    };
+    if (codeMimes.contains(mimeName))
+        return QStringLiteral("code");
+
+    // Documents — PDFs, office formats, and plain/rich text.
+    if (mimeName == QLatin1String("application/pdf"))
+        return QStringLiteral("document");
+    if (mimeName.startsWith(QLatin1String("application/vnd.oasis"))
+        || mimeName.startsWith(QLatin1String("application/vnd.openxmlformats"))
+        || mimeName.startsWith(QLatin1String("application/msword"))
+        || mimeName.startsWith(QLatin1String("application/vnd.ms-")))
+        return QStringLiteral("document");
+    if (mimeName.startsWith(QLatin1String("text/")))
+        return QStringLiteral("document");
+
+    return QStringLiteral("other");
+}
+
 // Classify a file as image/video for thumbnail purposes. Prefers an
 // already-known content type (e.g. from `gio list -a standard::content-type`
 // for trash entries) and otherwise asks QMimeDatabase. For local files
@@ -393,6 +457,8 @@ QVariantMap buildRemoteEntryFromLine(const QString &line)
     entry[QStringLiteral("fileSize")] = isDir ? QVariant(qint64(-1)) : QVariant(size);
     entry[QStringLiteral("fileSizeText")] = isDir ? QString() : formattedSize(size);
     entry[QStringLiteral("fileType")] = fileTypeForEntry(displayName, isDir, contentType);
+    entry[QStringLiteral("fileCategory")] = fileCategoryForEntry(displayName, isDir, contentType);
+    entry[QStringLiteral("fileExtension")] = isDir ? QString() : QFileInfo(displayName).completeSuffix();
     entry[QStringLiteral("fileModified")] = modified;
     entry[QStringLiteral("fileModifiedText")] = modified.isValid() ? QLocale().toString(modified, QLocale::ShortFormat) : QString();
     entry[QStringLiteral("filePermissions")] = permissionsStringFromMode(unixMode);
@@ -512,6 +578,8 @@ QVariantMap buildTrashEntryFromLine(const QString &line)
     entry["fileSize"] = isDir ? QVariant(-1) : QVariant(size);
     entry["fileSizeText"] = isDir ? QString() : formattedSize(size);
     entry["fileType"] = fileTypeForEntry(displayName, isDir, contentType);
+    entry["fileCategory"] = fileCategoryForEntry(displayName, isDir, contentType);
+    entry["fileExtension"] = isDir ? QString() : QFileInfo(displayName).completeSuffix();
     entry["fileModified"] = modified;
     entry["fileModifiedText"] = modified.isValid() ? QLocale().toString(modified, QLocale::ShortFormat) : QString();
     entry["filePermissions"] = QString();

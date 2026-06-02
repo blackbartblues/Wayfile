@@ -356,6 +356,8 @@ void FileSystemModel::ensurePopulated(const Entry &entry) const
     const QString absPath = entry.info.absoluteFilePath();
     entry.iconName = iconNameForEntry(absPath, isDir);
     entry.fileType = fileTypeForEntry(entry.info.fileName(), isDir);
+    entry.fileCategory = fileCategoryForEntry(entry.info.fileName(), isDir);
+    entry.fileExtension = isDir ? QString() : entry.info.completeSuffix();
     entry.sizeText = isDir ? QString() : formattedSize(entry.info.size());
     entry.modifiedText = QLocale().toString(entry.info.lastModified(), QLocale::ShortFormat);
     entry.permissionsText = permissionsString(entry.info);

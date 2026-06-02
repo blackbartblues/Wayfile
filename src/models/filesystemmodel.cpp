@@ -96,6 +96,10 @@ QVariant FileSystemModel::data(const QModelIndex &index, int role) const
             return entry.value("isSymlink");
         case FileIconNameRole:
             return entry.value("fileIconName");
+        case FileCategoryRole:
+            return entry.value("fileCategory");
+        case FileExtensionRole:
+            return entry.value("fileExtension");
         case GitStatusRole:
         case GitStatusIconRole:
             // Trashed files aren't git-tracked, but the view delegates
@@ -146,6 +150,10 @@ QVariant FileSystemModel::data(const QModelIndex &index, int role) const
             return entry.value(QStringLiteral("isSymlink"));
         case FileIconNameRole:
             return entry.value(QStringLiteral("fileIconName"));
+        case FileCategoryRole:
+            return entry.value(QStringLiteral("fileCategory"));
+        case FileExtensionRole:
+            return entry.value(QStringLiteral("fileExtension"));
         case GitStatusRole:
         case GitStatusIconRole:
             // Remote files (sftp/smb/dav) aren't git-tracked, but the view
@@ -200,6 +208,12 @@ QVariant FileSystemModel::data(const QModelIndex &index, int role) const
     case HasVideoPreviewRole:
         ensurePopulated(entry);
         return entry.hasVideoPreview;
+    case FileCategoryRole:
+        ensurePopulated(entry);
+        return entry.fileCategory;
+    case FileExtensionRole:
+        ensurePopulated(entry);
+        return entry.fileExtension;
     case GitStatusRole:
         return m_gitService ? m_gitService->statusForPath(info.absoluteFilePath()) : QString();
     case GitStatusIconRole: {
@@ -239,6 +253,8 @@ QHash<int, QByteArray> FileSystemModel::roleNames() const
         {GitStatusIconRole,    "gitStatusIcon"},
         {HasImagePreviewRole,  "hasImagePreview"},
         {HasVideoPreviewRole,  "hasVideoPreview"},
+        {FileCategoryRole,     "fileCategory"},
+        {FileExtensionRole,    "fileExtension"},
     };
 }
 
@@ -246,6 +262,7 @@ QString FileSystemModel::rootPath() const { return m_rootPath; }
 bool FileSystemModel::showHidden() const { return m_showHidden; }
 int FileSystemModel::fileCount() const { return m_fileCount; }
 int FileSystemModel::folderCount() const { return m_folderCount; }
+int FileSystemModel::trashEntryCount() const { return m_trashEntries.size(); }
 
 bool FileSystemModel::isTrashRoot() const
 {

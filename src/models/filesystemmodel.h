@@ -21,6 +21,9 @@ class FileSystemModel : public QAbstractListModel
     Q_PROPERTY(bool showHidden READ showHidden WRITE setShowHidden NOTIFY showHiddenChanged)
     Q_PROPERTY(int fileCount READ fileCount NOTIFY countsChanged)
     Q_PROPERTY(int folderCount READ folderCount NOTIFY countsChanged)
+    // Number of entries in the trash listing (populated only while the trash
+    // root is loaded). Drives the sidebar Trash badge (Phase 4).
+    Q_PROPERTY(int trashEntryCount READ trashEntryCount NOTIFY countsChanged)
 
 public:
     enum Roles {
@@ -42,6 +45,11 @@ public:
         // ambiguous extensions like .ts (TypeScript vs MPEG-TS).
         HasImagePreviewRole,
         HasVideoPreviewRole,
+        // Coarse type taxonomy (folder/image/video/audio/document/code/
+        // archive/other) for folder badges + the hybrid view; and the raw
+        // completeSuffix() for the metallic file-type chip labels.
+        FileCategoryRole,
+        FileExtensionRole,
     };
     Q_ENUM(Roles)
 
@@ -56,6 +64,7 @@ public:
     bool showHidden() const;
     int fileCount() const;
     int folderCount() const;
+    int trashEntryCount() const;
 
     Q_INVOKABLE void setRootPath(const QString &path);
     Q_INVOKABLE void setShowHidden(bool show);
@@ -116,6 +125,8 @@ private:
         mutable QString sizeText;
         mutable QString modifiedText;
         mutable QString permissionsText;
+        mutable QString fileCategory;
+        mutable QString fileExtension;
         mutable bool hasImagePreview = false;
         mutable bool hasVideoPreview = false;
         mutable bool populated = false;

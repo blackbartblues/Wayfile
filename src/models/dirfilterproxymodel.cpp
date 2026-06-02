@@ -1,0 +1,89 @@
+#include "models/dirfilterproxymodel.h"
+#include "models/filesystemmodel.h"
+
+DirFilterProxyModel::DirFilterProxyModel(QObject *parent)
+    : QSortFilterProxyModel(parent)
+{
+    setDynamicSortFilter(true);
+    // Text columns (name/type) sort case-insensitively and locale-aware; the
+    // default lessThan handles numeric/date roles correctly on its own.
+    setSortCaseSensitivity(Qt::CaseInsensitive);
+    setSortLocaleAware(true);
+    setSortRole(FileSystemModel::FileNameRole);
+}
+
+void DirFilterProxyModel::setMode(Mode mode)
+{
+    if (m_mode == mode)
+        return;
+    m_mode = mode;
+    invalidateFilter();
+    emit modeChanged();
+}
+
+void DirFilterProxyModel::switchSourceModel(QAbstractItemModel *model)
+{
+    setSourceModel(model);
+}
+
+void DirFilterProxyModel::sortByColumn(const QString &column, bool ascending)
+{
+    int role = FileSystemModel::FileNameRole;
+    if (column == QLatin1String("size"))
+        role = FileSystemModel::FileSizeRole;
+    else if (column == QLatin1String("modified"))
+        role = FileSystemModel::FileModifiedRole;
+    else if (column == QLatin1String("type"))
+        role = FileSystemModel::FileTypeRole;
+    setSortRole(role);
+    sort(0, ascending ? Qt::AscendingOrder : Qt::DescendingOrder);
+}
+
+int DirFilterProxyModel::mapRowToSource(int proxyRow) const
+{
+    const QModelIndex src = mapToSource(index(proxyRow, 0));
+    return src.isValid() ? src.row() : -1;
+}
+
+int DirFilterProxyModel::mapRowFromSource(int sourceRow) const
+{
+    if (!sourceModel())
+        return -1;
+    const QModelIndex proxy = mapFromSource(sourceModel()->index(sourceRow, 0));
+    return proxy.isValid() ? proxy.row() : -1;
+}
+
+QString DirFilterProxyModel::filePath(int row) const
+{
+    if (!sourceModel())
+        return {};
+    const QModelIndex idx = mapToSource(index(row, 0));
+    return idx.isValid() ? sourceModel()->data(idx, FileSystemModel::FilePathRole).toString()
+                         : QString();
+}
+
+bool DirFilterProxyModel::isDir(int row) const
+{
+    if (!sourceModel())
+        return false;
+    const QModelIndex idx = mapToSource(index(row, 0));
+    return idx.isValid() && sourceModel()->data(idx, FileSystemModel::IsDirRole).toBool();
+}
+
+QString DirFilterProxyModel::fileName(int row) const
+{
+    if (!sourceModel())
+        return {};
+    const QModelIndex idx = mapToSource(index(row, 0));
+    return idx.isValid() ? sourceModel()->data(idx, FileSystemModel::FileNameRole).toString()
+                         : QString();
+}
+
+bool DirFilterProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
+{
+    if (!sourceModel())
+        return false;
+    const QModelIndex idx = sourceModel()->index(sourceRow, 0, sourceParent);
+    const bool isDirectory = sourceModel()->data(idx, FileSystemModel::IsDirRole).toBool();
+    return m_mode == FoldersOnly ? isDirectory : !isDirectory;
+}
