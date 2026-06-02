@@ -18,6 +18,23 @@ class ThemeLoader : public QObject
     Q_PROPERTY(QColor success READ success NOTIFY themeChanged)
     Q_PROPERTY(QColor warning READ warning NOTIFY themeChanged)
     Q_PROPERTY(QColor error READ error NOTIFY themeChanged)
+    // "Heimdall Unified" obsidian + gold token layer (handoff design).
+    // Gold ramp.
+    Q_PROPERTY(QColor gold READ gold NOTIFY themeChanged)
+    Q_PROPERTY(QColor goldMid READ goldMid NOTIFY themeChanged)
+    Q_PROPERTY(QColor goldDeep READ goldDeep NOTIFY themeChanged)
+    Q_PROPERTY(QColor goldLight READ goldLight NOTIFY themeChanged)
+    // Obsidian surfaces (page = deepest .. raise2 = highest).
+    Q_PROPERTY(QColor page READ page NOTIFY themeChanged)
+    Q_PROPERTY(QColor bgA READ bgA NOTIFY themeChanged)
+    Q_PROPERTY(QColor bgB READ bgB NOTIFY themeChanged)
+    Q_PROPERTY(QColor panel READ panel NOTIFY themeChanged)
+    Q_PROPERTY(QColor panel2 READ panel2 NOTIFY themeChanged)
+    Q_PROPERTY(QColor raise READ raise NOTIFY themeChanged)
+    Q_PROPERTY(QColor raise2 READ raise2 NOTIFY themeChanged)
+    Q_PROPERTY(QColor line READ line NOTIFY themeChanged)
+    Q_PROPERTY(QColor lineSoft READ lineSoft NOTIFY themeChanged)
+    Q_PROPERTY(QColor hair READ hair NOTIFY themeChanged)
 
 public:
     explicit ThemeLoader(QObject *parent = nullptr);
@@ -35,6 +52,20 @@ public:
     QColor success() const { return color("success"); }
     QColor warning() const { return color("warning"); }
     QColor error() const { return color("error"); }
+    QColor gold() const { return color("gold"); }
+    QColor goldMid() const { return color("goldMid"); }
+    QColor goldDeep() const { return color("goldDeep"); }
+    QColor goldLight() const { return color("goldLight"); }
+    QColor page() const { return color("page"); }
+    QColor bgA() const { return color("bgA"); }
+    QColor bgB() const { return color("bgB"); }
+    QColor panel() const { return color("panel"); }
+    QColor panel2() const { return color("panel2"); }
+    QColor raise() const { return color("raise"); }
+    QColor raise2() const { return color("raise2"); }
+    QColor line() const { return color("line"); }
+    QColor lineSoft() const { return color("lineSoft"); }
+    QColor hair() const { return color("hair"); }
 signals:
     void themeChanged();
 private:

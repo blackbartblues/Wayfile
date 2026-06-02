@@ -13,6 +13,15 @@ QMap<QString, QColor> ThemeLoader::s_defaults = {
     {"accent", QColor("#89b4fa")}, {"success", QColor("#a6e3a1")},
     {"warning", QColor("#f9e2af")}, {"error", QColor("#f38ba8")},
     {"purple", QColor("#cba6f7")},
+    // "Heimdall Unified" obsidian + gold tokens. Defaults are the handoff
+    // values so any theme that omits them still renders coherently.
+    {"gold", QColor("#E3A94B")}, {"goldMid", QColor("#C98F3C")},
+    {"goldDeep", QColor("#9a6e2e")}, {"goldLight", QColor("#FFE7B6")},
+    {"page", QColor("#050609")}, {"bgA", QColor("#121318")},
+    {"bgB", QColor("#0a0b0e")}, {"panel", QColor("#111217")},
+    {"panel2", QColor("#15161c")}, {"raise", QColor("#1b1d24")},
+    {"raise2", QColor("#22242c")}, {"line", QColor("#25262e")},
+    {"lineSoft", QColor("#1b1c22")}, {"hair", QColor("#0e0f13")},
 };
 
 ThemeLoader::ThemeLoader(QObject *parent) : QObject(parent), m_colors(s_defaults) {}

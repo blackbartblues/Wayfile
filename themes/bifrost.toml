@@ -1,17 +1,40 @@
 # Bifröst — Heimdall's signature dark theme.
-# Warm, low-saturation earth-stone surfaces; muted gold accent.
-# Derived from the design canvas in heimdall/design_handoff_heimdall.
+# "Heimdall Unified" obsidian + gold skin (hi-fi design handoff, 2026-06).
+# Deep obsidian surfaces with a warm gate-glow gold accent.
+#
+# The semantic tokens (base/mantle/crust/surface/overlay/text/...) are aliased
+# to the obsidian/gold token layer below so every existing component renders
+# coherently dark; new components consume the explicit handoff tokens directly.
 [colors]
-base = "#221f1b"
-mantle = "#1a1815"
-crust = "#181613"
-surface = "#2a2620"
-overlay = "#332e26"
-text = "#e6e1d6"
-subtext = "#a89e8c"
-muted = "#6e6555"
-accent = "#d4a85a"
+# Semantic tokens — aliased onto the obsidian surfaces + gold accent.
+base = "#111217"      # panel / main content surface
+mantle = "#0c0d11"    # darker chrome (sidebar)
+crust = "#050609"     # deepest page background
+surface = "#1b1d24"   # raised surface
+overlay = "#22242c"   # highest raised surface
+text = "#ECE7DC"
+subtext = "#9CA0A8"
+muted = "#62666e"
+accent = "#E3A94B"    # = gold
 success = "#7ab87a"
 warning = "#c9956a"
 error = "#c97070"
 purple = "#b89be0"
+
+# ── "Heimdall Unified" obsidian + gold token layer ─────────────────
+# Gold ramp.
+gold = "#E3A94B"
+goldMid = "#C98F3C"
+goldDeep = "#9a6e2e"
+goldLight = "#FFE7B6"
+# Obsidian surfaces (page = deepest .. raise2 = highest).
+page = "#050609"
+bgA = "#121318"       # window/stage gradient top
+bgB = "#0a0b0e"       # window/stage gradient bottom
+panel = "#111217"
+panel2 = "#15161c"
+raise = "#1b1d24"
+raise2 = "#22242c"
+line = "#25262e"
+lineSoft = "#1b1c22"
+hair = "#0e0f13"

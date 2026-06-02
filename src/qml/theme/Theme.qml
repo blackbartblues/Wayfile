@@ -17,9 +17,40 @@ QtObject {
     property color warning: theme.warning
     property color error: theme.error
 
+    // ── "Heimdall Unified" obsidian + gold token layer ─────────────
+    // Gold ramp.
+    property color gold: theme.gold
+    property color goldMid: theme.goldMid
+    property color goldDeep: theme.goldDeep
+    property color goldLight: theme.goldLight
+    // Obsidian surfaces (page = deepest .. raise2 = highest).
+    property color page: theme.page
+    property color bgA: theme.bgA
+    property color bgB: theme.bgB
+    property color panel: theme.panel
+    property color panel2: theme.panel2
+    property color raise: theme.raise
+    property color raise2: theme.raise2
+    property color line: theme.line
+    property color lineSoft: theme.lineSoft
+    property color hair: theme.hair
+    // Gold-derived alpha helpers (track `gold`).
+    readonly property color goldLine: Qt.rgba(gold.r, gold.g, gold.b, 0.45)
+    readonly property color goldGlow: Qt.rgba(gold.r, gold.g, gold.b, 0.30)
+    readonly property color goldWash: Qt.rgba(gold.r, gold.g, gold.b, 0.08)
+
     property int radiusSmall: config.radiusSmall
     property int radiusMedium: config.radiusMedium
     property int radiusLarge: config.radiusLarge
+    // Fixed handoff radii (independent of the config-driven radii above).
+    readonly property int radiusSm: 7    // --u-r-sm
+    readonly property int radiusMd: 10   // --u-r-md
+    readonly property int radiusLg: 14   // --u-r-lg
+    readonly property int radiusTab: 9   // tab top corners
+    readonly property int radiusButton: 8
+    readonly property int radiusPill: 6
+    readonly property int radiusTile: 11
+    readonly property int radiusRow: 8
     readonly property real baseFontSize: {
         var pointSize = Qt.application.font.pointSize
         return pointSize > 0 ? pointSize : 10

@@ -88,6 +88,8 @@ if(HEIMDALL_ENABLE_UNITY_BUILD)
 endif()
 
 set_source_files_properties(qml/theme/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+set_source_files_properties(qml/theme/Fonts.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+set_source_files_properties(qml/theme/FileTypeColors.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
 option(HEIMDALL_ENABLE_QML_CACHEGEN "Enable Qt QML cache compilation (faster startup, slower builds)" OFF)
 
@@ -104,6 +106,8 @@ list(APPEND heimdall_qml_module_args
     QML_FILES
         qml/Main.qml
         qml/theme/Theme.qml
+        qml/theme/Fonts.qml
+        qml/theme/FileTypeColors.qml
         qml/components/StatusBar.qml
         qml/components/OperationsBar.qml
         qml/components/Sidebar.qml
@@ -225,6 +229,9 @@ qt_add_resources(heimdall "heimdall_assets"
     PREFIX "/"
     FILES
         assets/heimdall-logo.png
+        assets/noise-grain.png
+        assets/fonts/Cinzel-VF.ttf
+        assets/fonts/JetBrainsMono-VF.ttf
 )
 
 # Make Quill module discoverable at runtime

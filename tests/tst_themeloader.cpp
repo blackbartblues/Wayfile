@@ -170,6 +170,53 @@ private slots:
         loader.loadTheme(path, "");
         QCOMPARE(loader.color("base"), QColor("#1e1e2e"));
     }
+
+    void testBifrostObsidianGoldTokens()
+    {
+        ThemeLoader loader;
+        loader.loadTheme("bifrost", THEMES_DIR);
+
+        // Gold ramp.
+        QCOMPARE(loader.gold(), QColor("#E3A94B"));
+        QCOMPARE(loader.goldMid(), QColor("#C98F3C"));
+        QCOMPARE(loader.goldDeep(), QColor("#9a6e2e"));
+        QCOMPARE(loader.goldLight(), QColor("#FFE7B6"));
+        // Obsidian surfaces.
+        QCOMPARE(loader.page(), QColor("#050609"));
+        QCOMPARE(loader.bgA(), QColor("#121318"));
+        QCOMPARE(loader.bgB(), QColor("#0a0b0e"));
+        QCOMPARE(loader.panel(), QColor("#111217"));
+        QCOMPARE(loader.panel2(), QColor("#15161c"));
+        QCOMPARE(loader.raise(), QColor("#1b1d24"));
+        QCOMPARE(loader.raise2(), QColor("#22242c"));
+        QCOMPARE(loader.line(), QColor("#25262e"));
+        QCOMPARE(loader.lineSoft(), QColor("#1b1c22"));
+        QCOMPARE(loader.hair(), QColor("#0e0f13"));
+        // Semantic tokens retuned to obsidian + gold.
+        QCOMPARE(loader.accent(), QColor("#E3A94B"));
+        QCOMPARE(loader.base(), QColor("#111217"));
+        QCOMPARE(loader.crust(), QColor("#050609"));
+        QCOMPARE(loader.text(), QColor("#ECE7DC"));
+        QCOMPARE(loader.subtext(), QColor("#9CA0A8"));
+        QCOMPARE(loader.muted(), QColor("#62666e"));
+    }
+
+    void testNewTokensFallBackToDefaults()
+    {
+        // A theme that omits the new tokens still resolves them via s_defaults.
+        QTemporaryDir dir;
+        QString path = dir.path() + "/partial.toml";
+        QFile f(path);
+        f.open(QIODevice::WriteOnly);
+        f.write("[colors]\nbase = \"#000000\"\n");
+        f.close();
+
+        ThemeLoader loader;
+        loader.loadTheme(path, "");
+        QCOMPARE(loader.gold(), QColor("#E3A94B"));
+        QCOMPARE(loader.page(), QColor("#050609"));
+        QCOMPARE(loader.hair(), QColor("#0e0f13"));
+    }
 };
 
 QTEST_MAIN(TestThemeLoader)
