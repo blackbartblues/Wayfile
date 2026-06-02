@@ -167,6 +167,7 @@ list(APPEND heimdall_qml_module_args
         qml/icons/IconLink.qml
         qml/icons/IconUnlink.qml
         qml/icons/IconPlus.qml
+        qml/icons/IconStar.qml
         qml/icons/IconClock.qml
         qml/icons/IconTrash.qml
         qml/icons/IconImage.qml

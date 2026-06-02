@@ -255,7 +255,7 @@ void ConfigManager::setDefaults()
     m_sortBy = "name";
     m_sortAscending = true;
     m_sidebarPosition = "left";
-    m_sidebarWidth = 200;
+    m_sidebarWidth = 236;
     m_sidebarVisible = true;
     m_scrollSpeed = 3.0;
     m_gridCellSize = 180;  // keep in sync with FileGridView min/maxCellSize (110–320)

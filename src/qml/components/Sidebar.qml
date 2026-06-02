@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Shapes
+import QtQuick.Effects
 import Heimdall
 import Quill as Quill
 
@@ -20,24 +21,41 @@ Rectangle {
     signal hiddenClicked()
     signal featureHintRequested(string message)
 
-    color: Theme.mantle
+    // "Heimdall Unified" sidebar: obsidian vertical gradient + right hairline.
+    gradient: Gradient {
+        GradientStop { position: 0.0; color: "#0f1015" }
+        GradientStop { position: 1.0; color: "#0c0d11" }
+    }
     clip: false
 
-    Component { id: iconHome; IconHome { size: 18; color: Theme.subtext } }
-    Component { id: iconEyeOff; IconEyeOff { size: 18; color: Theme.subtext } }
-    Component { id: iconClock; IconClock { size: 18; color: Theme.subtext } }
-    Component { id: iconTrash; IconTrash { size: 18; color: Theme.subtext } }
-    Component { id: iconImage; IconImage { size: 18; color: Theme.subtext } }
-    Component { id: iconDownload; IconDownload { size: 18; color: Theme.subtext } }
-    Component { id: iconGlobe; IconGlobe { size: 18; color: Theme.subtext } }
-    Component { id: iconFolder; IconFolder { size: 18; color: Theme.subtext } }
+    // Right edge hairline separating the sidebar from the content panel.
+    Rectangle {
+        z: 2
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        width: 1
+        color: Theme.hair
+    }
+
+    // Place/bookmark glyphs default to the muted (text-3) tint; the loaders in
+    // each row rebind the color to gold when their row is the active one.
+    Component { id: iconHome; IconHome { size: 18; color: Theme.muted } }
+    Component { id: iconEyeOff; IconEyeOff { size: 18; color: Theme.muted } }
+    Component { id: iconClock; IconClock { size: 18; color: Theme.muted } }
+    Component { id: iconTrash; IconTrash { size: 18; color: Theme.muted } }
+    Component { id: iconImage; IconImage { size: 18; color: Theme.muted } }
+    Component { id: iconDownload; IconDownload { size: 18; color: Theme.muted } }
+    Component { id: iconGlobe; IconGlobe { size: 18; color: Theme.muted } }
+    Component { id: iconFolder; IconFolder { size: 18; color: Theme.muted } }
+    Component { id: iconStarGold; IconStar { size: 11; color: Theme.gold } }
 
     // Inverse rounded corner — top right
     Shape {
         z: 1; width: Theme.radiusMedium; height: Theme.radiusMedium
         anchors.top: parent.top; anchors.left: parent.right
         ShapePath {
-            fillColor: Theme.mantle; strokeColor: "transparent"
+            fillColor: "#0f1015"; strokeColor: "transparent"
             startX: 0; startY: 0
             PathLine { x: Theme.radiusMedium; y: 0 }
             PathArc {
@@ -90,7 +108,7 @@ Rectangle {
             font.pointSize: Theme.fontSmall - 1
             font.bold: true
             font.capitalization: Font.AllUppercase
-            font.letterSpacing: 1
+            font.letterSpacing: 1.3
         }
 
         // Quick access section
@@ -137,12 +155,50 @@ Rectangle {
                     }
 
                     color: {
-                        if (isActive) return Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.18)
-                        if (qaHoverArea.containsMouse) return Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.07)
+                        if (qaHoverArea.containsMouse && !isActive)
+                            return Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.03)
                         return "transparent"
                     }
-                    radius: Theme.radiusSmall
+                    radius: Theme.radiusRow
                     Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+
+                    // Active: gold-wash → transparent gradient + faint goldLine
+                    // inset ring (handoff .sb-item--active).
+                    Rectangle {
+                        visible: quickAccessDelegate.isActive
+                        anchors.fill: parent
+                        radius: parent.radius
+                        gradient: Gradient {
+                            orientation: Gradient.Horizontal
+                            GradientStop { position: 0.0; color: Theme.goldWash }
+                            GradientStop { position: 1.0; color: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.02) }
+                        }
+                        border.width: 1
+                        border.color: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.14)
+                    }
+
+                    // Active: 3px gold left bar with a soft glow, sitting at the
+                    // sidebar's left edge (handoff .sb-item--active::before).
+                    Rectangle {
+                        visible: quickAccessDelegate.isActive
+                        anchors.left: parent.left
+                        anchors.leftMargin: -(Theme.spacing / 2)
+                        anchors.top: parent.top
+                        anchors.topMargin: 5
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: 5
+                        width: 3
+                        color: Theme.gold
+                        topRightRadius: 3
+                        bottomRightRadius: 3
+                        layer.enabled: true
+                        layer.effect: MultiEffect {
+                            autoPaddingEnabled: true
+                            shadowEnabled: true
+                            shadowColor: Theme.goldGlow
+                            shadowBlur: 0.6
+                        }
+                    }
 
                     Row {
                         anchors.left: parent.left
@@ -166,11 +222,13 @@ Rectangle {
                                 if (model.iconType === "download") return iconDownload
                                 return iconHome
                             }
+                            onLoaded: item.color = Qt.binding(
+                                () => quickAccessDelegate.isActive ? Theme.gold : Theme.muted)
                         }
 
                         Text {
                             text: model.name
-                            color: quickAccessDelegate.isActive ? Theme.accent : Theme.text
+                            color: quickAccessDelegate.isActive ? Theme.text : Theme.subtext
                             font.pointSize: Theme.fontNormal
                             verticalAlignment: Text.AlignVCenter
                             elide: Text.ElideRight
@@ -229,7 +287,7 @@ Rectangle {
             font.pointSize: Theme.fontSmall - 1
             font.bold: true
             font.capitalization: Font.AllUppercase
-            font.letterSpacing: 1
+            font.letterSpacing: 1.3
         }
 
         // Bookmarks section — drag folders to add, drag items to reorder
@@ -359,13 +417,48 @@ Rectangle {
                             !root.isRecentsView && !root.isHiddenView && model.path === root.currentPath
 
                         color: {
-                            if (isActive) return Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.18)
-                            if (bmInteraction.hoverIndex === index && bookmarksSection.dragCurrentIndex < 0)
-                                return Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.07)
+                            if (bmInteraction.hoverIndex === index && bookmarksSection.dragCurrentIndex < 0 && !isActive)
+                                return Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.03)
                             return "transparent"
                         }
-                        radius: Theme.radiusSmall
+                        radius: Theme.radiusRow
                         Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+
+                        // Active: gold-wash → transparent gradient + goldLine ring.
+                        Rectangle {
+                            visible: bmDelegate.isActive
+                            anchors.fill: parent
+                            radius: parent.radius
+                            gradient: Gradient {
+                                orientation: Gradient.Horizontal
+                                GradientStop { position: 0.0; color: Theme.goldWash }
+                                GradientStop { position: 1.0; color: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.02) }
+                            }
+                            border.width: 1
+                            border.color: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.14)
+                        }
+
+                        // Active: 3px gold left bar with glow.
+                        Rectangle {
+                            visible: bmDelegate.isActive
+                            anchors.left: parent.left
+                            anchors.leftMargin: -(Theme.spacing / 2)
+                            anchors.top: parent.top
+                            anchors.topMargin: 5
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: 5
+                            width: 3
+                            color: Theme.gold
+                            topRightRadius: 3
+                            bottomRightRadius: 3
+                            layer.enabled: true
+                            layer.effect: MultiEffect {
+                                autoPaddingEnabled: true
+                                shadowEnabled: true
+                                shadowColor: Theme.goldGlow
+                                shadowBlur: 0.6
+                            }
+                        }
 
                         Row {
                             anchors.left: parent.left
@@ -379,15 +472,24 @@ Rectangle {
                                 width: 18; height: 18
                                 anchors.verticalCenter: parent.verticalCenter
                                 sourceComponent: iconFolder
+                                onLoaded: item.color = Qt.binding(
+                                    () => bmDelegate.isActive ? Theme.gold : Theme.muted)
                             }
 
                             Text {
                                 text: model.name
-                                color: bmDelegate.isActive ? Theme.accent : Theme.text
+                                color: bmDelegate.isActive ? Theme.text : Theme.subtext
                                 font.pointSize: Theme.fontNormal
                                 verticalAlignment: Text.AlignVCenter
                                 elide: Text.ElideRight
-                                width: parent.width - 18 - Theme.spacing
+                                width: parent.width - 18 - 11 - Theme.spacing * 2
+                            }
+
+                            // Favorites carry a decorative trailing gold star.
+                            Loader {
+                                width: 11; height: 11
+                                anchors.verticalCenter: parent.verticalCenter
+                                sourceComponent: iconStarGold
                             }
                         }
                     }
@@ -585,7 +687,7 @@ Rectangle {
             font.pointSize: Theme.fontSmall - 1
             font.bold: true
             font.capitalization: Font.AllUppercase
-            font.letterSpacing: 1
+            font.letterSpacing: 1.3
             visible: devicesSection.visible
         }
 

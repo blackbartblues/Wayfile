@@ -449,6 +449,10 @@ ApplicationWindow {
         var next = paneRecents.slice()
         next[pane] = enabled
         paneRecents = next
+        // Recents and Hidden are mutually exclusive special views — entering
+        // one leaves the other (guarded by `enabled` to avoid recursion).
+        if (enabled)
+            setPaneHidden(pane, false)
     }
 
     function paneIsHidden(pane) {
@@ -461,6 +465,8 @@ ApplicationWindow {
         var next = paneHidden.slice()
         next[pane] = enabled
         paneHidden = next
+        if (enabled)
+            setPaneRecents(pane, false)
     }
 
     function searchProxyForPane(pane) {

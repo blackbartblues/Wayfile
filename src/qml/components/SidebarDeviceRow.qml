@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import Heimdall
 import Quill as Quill
 
@@ -19,14 +20,14 @@ Rectangle {
     signal bookmarkClicked(string path)
     signal featureHintRequested(string message)
 
-    Component { id: iconHardDrive; IconHardDrive { size: 18; color: Theme.subtext } }
+    Component { id: iconHardDrive; IconHardDrive { size: 18; color: Theme.muted } }
     Component { id: iconHardDriveOff; IconHardDriveOff { size: 18; color: Theme.muted } }
-    Component { id: iconUsb; IconUsb { size: 18; color: Theme.subtext } }
+    Component { id: iconUsb; IconUsb { size: 18; color: Theme.muted } }
     Component { id: iconUsbOff; IconUsb { size: 18; color: Theme.muted } }
 
     width: parent.width - Theme.spacing
     anchors.horizontalCenter: parent.horizontalCenter
-    height: 36
+    height: 52
     z: deviceHoverArea.containsMouse || tooltipOpen ? 100 : 0
     property bool tooltipOpen: false
     property real tooltipX: 0
@@ -86,26 +87,27 @@ Rectangle {
                 : (model.mounted ? iconHardDrive : iconHardDriveOff)
         }
 
-        // Right side: name + progress bar
+        // Right side: name + progress bar + free/total caption
         Column {
             width: parent.width - 18 - Theme.spacing
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 3
+            spacing: 4
 
             Text {
                 text: model.deviceName
-                color: model.mounted ? Theme.text : Theme.muted
+                color: model.mounted ? Theme.subtext : Theme.muted
                 font.pointSize: Theme.fontNormal
                 elide: Text.ElideRight
                 width: parent.width
             }
 
-            // Storage usage bar
+            // Storage usage bar: obsidian well + gold gradient fill + glow
+            // (handoff .dev__bar / .dev__fill).
             Rectangle {
                 width: parent.width
-                height: 3
-                radius: 1.5
-                color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.12)
+                height: 5
+                radius: 3
+                color: "#0a0b0e"
 
                 Rectangle {
                     width: model.mounted
@@ -113,12 +115,31 @@ Rectangle {
                         : 0
                     height: parent.height
                     radius: parent.radius
-                    color: model.usagePercent >= 90
-                        ? Theme.error
-                        : model.usagePercent >= 75
-                            ? Theme.warning
-                            : Theme.accent
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0.0; color: Theme.goldDeep }
+                        GradientStop { position: 1.0; color: Theme.gold }
+                    }
+                    layer.enabled: model.mounted
+                    layer.effect: MultiEffect {
+                        autoPaddingEnabled: true
+                        shadowEnabled: true
+                        shadowColor: Theme.goldGlow
+                        shadowBlur: 0.4
+                    }
                 }
+            }
+
+            // Always-visible free/total caption.
+            Text {
+                text: model.mounted
+                    ? Quill.Format.bytes(model.freeSpace) + " free of " + Quill.Format.bytes(model.totalSize)
+                    : "Not mounted"
+                color: Theme.muted
+                font.family: Fonts.mono
+                font.pointSize: Math.max(8, Theme.fontSmall - 1)
+                elide: Text.ElideRight
+                width: parent.width
             }
         }
     }

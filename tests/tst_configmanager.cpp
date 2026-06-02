@@ -31,7 +31,7 @@ private slots:
         QCOMPARE(mgr.sortBy(), QString("name"));
         QCOMPARE(mgr.sortAscending(), true);
         QCOMPARE(mgr.sidebarPosition(), QString("left"));
-        QCOMPARE(mgr.sidebarWidth(), 200);
+        QCOMPARE(mgr.sidebarWidth(), 236);
         QCOMPARE(mgr.sidebarVisible(), true);
         QCOMPARE(mgr.gridCellSize(), 180);
         QCOMPARE(mgr.transparencyEnabled(), true);
@@ -531,7 +531,7 @@ private slots:
         ConfigManager mgr(path);
         QCOMPARE(mgr.theme(), QString("test"));
         // Other sections should have defaults
-        QCOMPARE(mgr.sidebarWidth(), 200);
+        QCOMPARE(mgr.sidebarWidth(), 236);
         QCOMPARE(mgr.radiusMedium(), 8);
     }
 
