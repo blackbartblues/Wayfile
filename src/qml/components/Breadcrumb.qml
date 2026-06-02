@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import Qt.labs.platform as Platform
 import Heimdall
 
 Item {
@@ -82,19 +81,20 @@ Item {
     property var suggestionItems: []
     property int suggestionIndex: -1
 
-    // Icon components for breadcrumb context
-    Component { id: bcIconHome; IconHome { size: 16; color: Theme.text} }
-    Component { id: bcIconClock; IconClock { size: 16; color: Theme.text} }
-    Component { id: bcIconTrash; IconTrash { size: 16; color: Theme.text} }
-    Component { id: bcIconImage; IconImage { size: 16; color: Theme.text} }
-    Component { id: bcIconDownload; IconDownload { size: 16; color: Theme.text} }
-    Component { id: bcIconFileText; IconFileText { size: 16; color: Theme.text} }
-    Component { id: bcIconMusic; IconMusic { size: 16; color: Theme.text} }
-    Component { id: bcIconVideo; IconVideo { size: 16; color: Theme.text} }
-    Component { id: bcIconMonitor; IconMonitor { size: 16; color: Theme.text} }
-    Component { id: bcIconFolder; IconFolder { size: 16; color: Theme.text} }
-    Component { id: bcIconSettings; IconSettings { size: 16; color: Theme.text} }
-    Component { id: bcIconRocket; IconRocket { size: 16; color: Theme.text} }
+    // Icon components for the breadcrumb's leading context icon — gold, to
+    // match the handoff gold head glyph (.crumb--head svg).
+    Component { id: bcIconHome; IconHome { size: 16; color: Theme.gold} }
+    Component { id: bcIconClock; IconClock { size: 16; color: Theme.gold} }
+    Component { id: bcIconTrash; IconTrash { size: 16; color: Theme.gold} }
+    Component { id: bcIconImage; IconImage { size: 16; color: Theme.gold} }
+    Component { id: bcIconDownload; IconDownload { size: 16; color: Theme.gold} }
+    Component { id: bcIconFileText; IconFileText { size: 16; color: Theme.gold} }
+    Component { id: bcIconMusic; IconMusic { size: 16; color: Theme.gold} }
+    Component { id: bcIconVideo; IconVideo { size: 16; color: Theme.gold} }
+    Component { id: bcIconMonitor; IconMonitor { size: 16; color: Theme.gold} }
+    Component { id: bcIconFolder; IconFolder { size: 16; color: Theme.gold} }
+    Component { id: bcIconSettings; IconSettings { size: 16; color: Theme.gold} }
+    Component { id: bcIconRocket; IconRocket { size: 16; color: Theme.gold} }
 
     function iconForLabel(label) {
         const l = label.toLowerCase()
@@ -112,7 +112,9 @@ Item {
         return bcIconFolder
     }
 
-    height: 28
+    // No fixed height — the toolbar lays this out with Layout.fillHeight, so it
+    // fills the row and the well (below) centres within it. A hard height here
+    // fought the layout and pushed the content off-centre.
     clip: false
 
     // Background MouseArea: double-click empty space enters edit mode
@@ -123,10 +125,42 @@ Item {
         onDoubleClicked: root.startEditing()
     }
 
-    // Clickable path segments (display mode)
+    // Inset "well" the pills sit in (handoff .crumbs): obsidian bg, soft border,
+    // a faint inset top-shadow. Vertically centered in the toolbar row.
+    Rectangle {
+        id: crumbWell
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        height: Math.min(parent.height, Math.round(32 * Theme.uiScale))
+        visible: !root.editMode
+        color: "#0c0d11"
+        radius: Theme.radiusTab
+        border.width: 1
+        border.color: Theme.lineSoft
+
+        // Faux inset shadow — thin dark gradient strip along the top inner edge.
+        Rectangle {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: 1
+            height: 3
+            radius: parent.radius
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, 0.5) }
+                GradientStop { position: 1.0; color: "transparent" }
+            }
+        }
+    }
+
+    // Clickable path segments (display mode). Anchored to the well so the pills
+    // are centred inside it (and thus in the toolbar row), not in the full root.
     Flickable {
         id: segmentsFlickable
-        anchors.fill: parent
+        anchors.fill: crumbWell
+        anchors.leftMargin: Math.round(8 * Theme.uiScale)
+        anchors.rightMargin: Math.round(8 * Theme.uiScale)
         visible: !root.editMode
         contentWidth: segmentsRow.width
         contentHeight: height
@@ -137,6 +171,37 @@ Item {
             id: segmentsRow
             height: parent.height
             spacing: 4
+
+            // Split-mode head pill — "split · N panes" with a merge glyph,
+            // shown when the active tab is a merged supertab (handoff split head).
+            Rectangle {
+                visible: root.activeTab !== null && root.activeTab.isSupertab
+                anchors.verticalCenter: parent.verticalCenter
+                height: Math.round(22 * Theme.uiScale)
+                width: splitHeadRow.implicitWidth + Math.round(16 * Theme.uiScale)
+                radius: Theme.radiusPill
+                color: Theme.goldWash
+                border.width: 1
+                border.color: Theme.goldLine
+
+                Row {
+                    id: splitHeadRow
+                    anchors.centerIn: parent
+                    spacing: 6
+                    IconLink {
+                        anchors.verticalCenter: parent.verticalCenter
+                        size: 13
+                        color: Theme.gold
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "split · " + (root.activeTab ? root.activeTab.paneCount : 0) + " panes"
+                        color: Theme.goldLight
+                        font.pointSize: Theme.fontSmall
+                        font.weight: Font.Medium
+                    }
+                }
+            }
 
             // Dynamic context icon
             Loader {
@@ -168,20 +233,25 @@ Item {
 
                 delegate: Row {
                     height: segmentsRow.height
-                    spacing: 0
+                    // 4px each side of the chevron (this spacing sits after the
+                    // separator; segmentsRow.spacing supplies the matching 4px
+                    // before it) so the chevron is centred between segments.
+                    spacing: 4
 
-                    // Separator (hidden for first segment)
+                    // Separator (hidden for first segment) — chevron, tertiary.
                     Text {
-                        text: " / "
+                        text: "▸"
                         visible: model.index > 0
                         color: Theme.muted
-                        font.pointSize: Theme.fontNormal
+                        font.pointSize: Theme.fontSmall
                         anchors.verticalCenter: parent ? parent.verticalCenter : undefined
                         height: parent.height
                         verticalAlignment: Text.AlignVCenter
                     }
 
-                    // Segment button
+                    // Segment button. The current (last) segment renders as a
+                    // gold pill — goldWash fill, goldLine border, goldLight text;
+                    // earlier segments stay plain with a faint hover wash.
                     Item {
                         height: parent.height
                         width: segRect.width
@@ -192,8 +262,20 @@ Item {
                             id: segRect
                             height: 24
                             anchors.verticalCenter: parent.verticalCenter
-                            width: segLabel.width + Theme.spacing
+                            // Same generous padding for every segment (the
+                            // gold-pill padding the design uses) so the centred
+                            // label sits in the identical spot whether or not
+                            // this is the current pill — no shift between active
+                            // and inactive segments.
+                            width: segLabel.width + Theme.spacing * 2
+                            radius: Theme.radiusPill
                             hoverEnabled: !parent.isLast
+                            color: parent.isLast
+                                ? Theme.goldWash
+                                : (hovered ? Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.05)
+                                           : "transparent")
+                            border.width: parent.isLast ? 1 : 0
+                            border.color: Theme.goldLine
                             onClicked: root.navigateRequested(modelData.fullPath)
                             onDoubleClicked: root.startEditing()
 
@@ -201,7 +283,7 @@ Item {
                                 id: segLabel
                                 anchors.centerIn: parent
                                 text: modelData.label
-                                color: parent.parent.isLast ? Theme.accent : Theme.text
+                                color: segRect.parent.isLast ? Theme.goldLight : Theme.text
                                 font.pointSize: Theme.fontSmall
                                 font.weight: Font.Medium
                                 verticalAlignment: Text.AlignVCenter

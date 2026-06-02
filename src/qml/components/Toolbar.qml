@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Effects
 import Heimdall
 import Quill as Q
 
@@ -98,7 +99,21 @@ Rectangle {
     }
 
     implicitHeight: toolbarColumn.implicitHeight
-    color: Theme.mantle
+    // Obsidian toolbar gradient (handoff .toolbar).
+    gradient: Gradient {
+        GradientStop { position: 0.0; color: "#16171d" }
+        GradientStop { position: 1.0; color: "#131419" }
+    }
+
+    // 1px bottom border line separating the toolbar from the content below.
+    Rectangle {
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 1
+        color: Theme.lineSoft
+        z: 5
+    }
 
     // Heimdall fork: window is always frameless on Linux, so the toolbar is
     // the only drag region. Enable the handler whenever a window is present
@@ -161,27 +176,54 @@ Rectangle {
                 // Relocated here from the toolbar's right edge so they sit on
                 // the left side of the breadcrumb. Always visible — they do not
                 // disappear when the sidebar (a separate panel) is collapsed.
+                // Signature merge action. Idle = gold-wash + goldLine border +
+                // gold link glyph (handoff .iconbtn--gold). Armed (the active
+                // tab is a supertab / a merge is pending) = solid gold gradient
+                // + dark glyph + gold glow (handoff .iconbtn--armed).
                 HoverRect {
                     id: mergeBtn
                     width: Theme.controlSize; height: Theme.controlSize
                     visible: !root.searchMode
-                    border.width: root.mergeWillUnmerge ? 1 : 0
-                    border.color: root.mergeWillUnmerge
-                        ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.65)
-                        : "transparent"
+                    border.width: 1
+                    border.color: root.mergeWillUnmerge ? Theme.gold : Theme.goldLine
+                    gradient: root.mergeWillUnmerge ? mergeArmedGrad : null
                     color: root.mergeWillUnmerge
-                        ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, hovered ? 0.30 : 0.22)
-                        : (hovered ? Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.1) : "transparent")
+                        ? "transparent"
+                        : (hovered ? Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.12)
+                                   : Theme.goldWash)
+                    layer.enabled: root.mergeWillUnmerge
+                    layer.effect: MultiEffect {
+                        autoPaddingEnabled: true
+                        shadowEnabled: true
+                        shadowColor: Theme.goldGlow
+                        shadowBlur: 0.7
+                    }
                     onClicked: root.splitViewToggled()
-                    IconLink { anchors.centerIn: parent; size: 18; color: Theme.text; visible: !root.mergeWillUnmerge }
-                    IconUnlink { anchors.centerIn: parent; size: 18; color: Theme.accent; visible: root.mergeWillUnmerge }
+
+                    Gradient {
+                        id: mergeArmedGrad
+                        GradientStop { position: 0.0; color: "#F0CE8F" }
+                        GradientStop { position: 0.6; color: "#E3A94B" }
+                        GradientStop { position: 1.0; color: "#C98F3C" }
+                    }
+
+                    IconLink { anchors.centerIn: parent; size: 18; color: Theme.gold; visible: !root.mergeWillUnmerge }
+                    IconUnlink { anchors.centerIn: parent; size: 18; color: "#1a1206"; visible: root.mergeWillUnmerge }
                     Q.Tooltip { text: root.mergeTooltip; visible: mergeBtn.hovered && root.mergeTooltip.length > 0 }
                 }
 
+                // Gold-highlighted when the sidebar is HIDDEN (signals "click to
+                // bring it back"); plain when it's already showing.
                 HoverRect {
                     id: sidebarToggleBtn
                     width: Theme.controlSize; height: Theme.controlSize
                     visible: !root.searchMode && root.window !== null
+                    readonly property bool sbHidden: root.window !== null && !root.window.sidebarVisible
+                    border.width: sbHidden ? 1 : 0
+                    border.color: Theme.goldLine
+                    color: sbHidden
+                        ? (hovered ? Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.12) : Theme.goldWash)
+                        : (hovered ? Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.1) : "transparent")
                     onClicked: {
                         if (root.window)
                             root.window.sidebarVisible = !root.window.sidebarVisible
@@ -189,7 +231,7 @@ Rectangle {
                     IconPanelLeft {
                         anchors.centerIn: parent
                         size: 18
-                        color: (root.window && root.window.sidebarVisible) ? Theme.accent : Theme.text
+                        color: sidebarToggleBtn.sbHidden ? Theme.gold : Theme.text
                     }
                     Q.Tooltip {
                         text: (root.window && root.window.sidebarVisible) ? "Hide sidebar" : "Show sidebar"
@@ -215,6 +257,15 @@ Rectangle {
                     Q.Tooltip { text: "Settings"; visible: settingsBtn.hovered }
                 }
 
+                // Separator between settings and the new-folder action.
+                Rectangle {
+                    visible: !root.searchMode
+                    Layout.alignment: Qt.AlignVCenter
+                    width: 1
+                    height: Math.round(Theme.controlSize * 0.55)
+                    color: Theme.line
+                }
+
                 HoverRect {
                     id: newFolderBtn
                     width: Theme.controlSize; height: Theme.controlSize
@@ -229,13 +280,13 @@ Rectangle {
                     Q.Tooltip { text: "New folder"; visible: newFolderBtn.hovered }
                 }
 
-                // Divider between the action cluster and the navigation buttons
+                // Divider between the new-folder action and the navigation buttons
                 Rectangle {
                     visible: !root.searchMode
                     Layout.alignment: Qt.AlignVCenter
                     width: 1
                     height: Math.round(Theme.controlSize * 0.55)
-                    color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.15)
+                    color: Theme.line
                 }
 
                 // Back button
@@ -263,6 +314,14 @@ Rectangle {
                     opacity: hoverEnabled ? 1.0 : 0.4
                     onClicked: root.upRequested()
                     IconChevronUp { anchors.centerIn: parent; size: 18; color: Theme.text }
+                }
+
+                // Separator between the navigation buttons and the breadcrumb.
+                Rectangle {
+                    Layout.alignment: Qt.AlignVCenter
+                    width: 1
+                    height: Math.round(Theme.controlSize * 0.55)
+                    color: Theme.line
                 }
 
                 // Breadcrumb / address bar (hidden in search mode)
@@ -341,12 +400,9 @@ Rectangle {
                     }
                 }
 
-                HoverRect {
-                    width: Theme.controlSize; height: Theme.controlSize
-                    visible: !root.searchMode
-                    onClicked: root.keyboardShortcutsRequested()
-                    IconKeyboard { anchors.centerIn: parent; size: 18; color: Theme.text }
-                }
+                // (D7) The Keyboard-Shortcuts toolbar button was removed — the
+                // keyboard shortcut still opens the dialog (Main.qml). The
+                // keyboardShortcutsRequested signal is retained for that path.
 
                 Item {
                     visible: root.showWindowControls && root._parsedLayout.right.length > 0
