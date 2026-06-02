@@ -91,18 +91,21 @@ Item {
         color: {
             if (folderDropArea.containsDrag)
                 return Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.3)
-            if (detRow.isSelected)
-                return Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.2)
             if (rowMa.containsMouse)
                 return Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.05)
+            // Selection fill + outline drawn by FileDetailedView's overlay;
+            // the row goes transparent so it shows through.
+            if (detRow.isSelected)
+                return "transparent"
             // Alternating rows
             if (detRow.index % 2 === 0)
                 return "transparent"
             return Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.025)
         }
         Behavior on color { ColorAnimation { duration: Theme.animDuration } }
-        border.color: folderDropArea.containsDrag ? Theme.accent : (detRow.isSelected ? Theme.accent : "transparent")
-        border.width: folderDropArea.containsDrag ? 2 : (detRow.isSelected ? 1 : 0)
+        // Selection outline is the overlay; per-row border is drop-target only.
+        border.color: folderDropArea.containsDrag ? Theme.accent : "transparent"
+        border.width: folderDropArea.containsDrag ? 2 : 0
 
         // Heimdall design-canvas: right-edge gold chevron on selected
         // folder rows — affordance for "drill in" (double-click or

@@ -344,6 +344,125 @@ GridView {
         }
     }
 
+    // ── Merged-selection overlay ────────────────────────────────────────────
+    // Draws the whole selection as ONE rounded shape: the selected cells' union
+    // outline is traced and every corner — convex AND concave — is rounded with
+    // arcTo, then filled + stroked gold. Pinned to the viewport (x/y follow
+    // contentX/contentY) and only traces rows in view. NOTE: this is compiled
+    // into the binary — `cmake --build build` after editing or it won't change.
+    Canvas {
+        id: selectionOverlay
+        x: root.contentX
+        y: root.contentY
+        width: root.width
+        height: root.height
+        z: -1
+        antialiasing: true
+        renderStrategy: Canvas.Cooperative
+
+        Connections {
+            target: root
+            function onContentYChanged() { selectionOverlay.requestPaint() }
+            function onContentXChanged() { selectionOverlay.requestPaint() }
+        }
+        property var selRef: root.selectedIndices
+        property int colsRef: root.columnsPerRow
+        property int cwRef: root.cellWidth
+        property int chRef: root.cellHeight
+        property bool dragRef: root.isDragging
+        onSelRefChanged: requestPaint()
+        onColsRefChanged: requestPaint()
+        onCwRefChanged: requestPaint()
+        onChRefChanged: requestPaint()
+        onDragRefChanged: requestPaint()
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
+
+        onPaint: {
+            var ctx = getContext("2d")
+            ctx.clearRect(0, 0, width, height)
+            var sel = root.selectedIndices
+            if (!sel || sel.length === 0)
+                return
+            var cols = root.columnsPerRow
+            var cw = root.cellWidth
+            var ch = root.cellHeight
+            var cnt = root.count
+            if (cols < 1 || cw <= 0 || ch <= 0)
+                return
+            var cY = root.contentY
+            var rad = Math.min(Theme.radiusMedium, cw / 2, ch / 2)
+
+            var firstRow = Math.max(0, Math.floor(cY / ch) - 1)
+            var lastRow = Math.floor((cY + height) / ch) + 1
+
+            var set = {}
+            for (var k = 0; k < sel.length; k++)
+                set[sel[k]] = true
+            function selAt(c, r) {
+                if (c < 0 || c >= cols || r < firstRow || r > lastRow)
+                    return false
+                var i = r * cols + c
+                if (i < 0 || i >= cnt)
+                    return false
+                return set[i] === true
+            }
+
+            var edges = {}
+            function addEdge(c1, r1, c2, r2) { edges[c1 + "," + r1] = { c: c2, r: r2 } }
+            for (var key in set) {
+                var idx = parseInt(key)
+                if (idx < 0 || idx >= cnt)
+                    continue
+                var c = idx % cols
+                var r = Math.floor(idx / cols)
+                if (r < firstRow || r > lastRow)
+                    continue
+                if (!selAt(c, r - 1)) addEdge(c, r, c + 1, r)
+                if (!selAt(c + 1, r)) addEdge(c + 1, r, c + 1, r + 1)
+                if (!selAt(c, r + 1)) addEdge(c + 1, r + 1, c, r + 1)
+                if (!selAt(c - 1, r)) addEdge(c, r + 1, c, r)
+            }
+
+            ctx.beginPath()
+            var visited = {}
+            for (var startKey in edges) {
+                if (visited[startKey])
+                    continue
+                var loop = []
+                var cur = startKey
+                var guard = 0
+                while (cur !== undefined && edges[cur] && !visited[cur] && guard < 200000) {
+                    visited[cur] = true
+                    var parts = cur.split(",")
+                    // +0.5 so a 1px stroke lands on one pixel column/row instead
+                    // of straddling two (which reads as a frayed/soft edge).
+                    loop.push({ x: parseInt(parts[0]) * cw + 0.5, y: parseInt(parts[1]) * ch - cY + 0.5 })
+                    var nxt = edges[cur]
+                    cur = nxt.c + "," + nxt.r
+                    guard++
+                }
+                if (loop.length < 3)
+                    continue
+                var n = loop.length
+                var sx = (loop[n - 1].x + loop[0].x) / 2
+                var sy = (loop[n - 1].y + loop[0].y) / 2
+                ctx.moveTo(sx, sy)
+                for (var v = 0; v < n; v++) {
+                    var curr = loop[v]
+                    var next = loop[(v + 1) % n]
+                    ctx.arcTo(curr.x, curr.y, next.x, next.y, rad)
+                }
+                ctx.closePath()
+            }
+            ctx.fillStyle = Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, root.isDragging ? 0.1 : 0.2)
+            ctx.fill()
+            ctx.lineWidth = 1
+            ctx.strokeStyle = Theme.accent
+            ctx.stroke()
+        }
+    }
+
     // ── Delegate ───────────────────────────────────────────────────────────
     delegate: Item {
         id: delegateItem
@@ -560,17 +679,15 @@ GridView {
             color: {
                 if (folderDropArea.containsDrag)
                     return Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.35)
-                if (delegateItem.isSelected)
-                    return Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.2)
                 if (ma.containsMouse)
                     return Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.07)
                 return "transparent"
             }
             Behavior on color { ColorAnimation { duration: Theme.animDuration } }
-            border.color: folderDropArea.containsDrag ? Theme.accent
-                        : delegateItem.isSelected ? Theme.accent : "transparent"
-            border.width: folderDropArea.containsDrag ? 2
-                        : delegateItem.isSelected ? 2 : 0
+            // Selection fill + outline are drawn by selectionOverlay (the merged
+            // Canvas). Per-cell border is only the drop-target highlight.
+            border.color: folderDropArea.containsDrag ? Theme.accent : "transparent"
+            border.width: folderDropArea.containsDrag ? 2 : 0
         }
 
         MouseArea {
@@ -666,14 +783,23 @@ GridView {
         keys: ["text/uri-list"]
         z: -2
 
-        // Subtle background hint — only when not hovering a specific folder
+        // ── Discovery note (selection-outline work, GH #10) ──────────────
+        // A transparent Rectangle + border renders a VISIBLE outline because the
+        // border sits on the background — UNLIKE a Rectangle.border drawn over
+        // its own fill (gold-on-gold → no contrast → invisible) and UNLIKE a
+        // Canvas (which does NOT composite inside a ListView's contentItem, only
+        // inside a GridView). This drag hint was the live example of that pattern.
+        // NOTE: this element is drag-only — it is NOT the gold border seen on a
+        // normal selection (that is `selectionRect`'s border, above). Muted per
+        // request (visible:false, border 0) so it never shows. See #10 to reuse
+        // the transparent-Rectangle+border pattern for a merged-selection outline.
         Rectangle {
             anchors.fill: parent
             color: "transparent"
             border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.15)
-            border.width: 1
+            border.width: 0
             radius: Theme.radiusMedium
-            visible: parent.containsDrag
+            visible: false
         }
 
         onDropped: (drop) => {

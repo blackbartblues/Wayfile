@@ -42,6 +42,25 @@ FocusScope {
     readonly property int maxRowHeight: 56
     readonly property int detailIconSize: Math.round(rowHeight * 0.571)  // 16 at default 28
 
+    // Contiguous runs of selected rows — one merged outline block each.
+    readonly property var selectionRuns: {
+        var sel = selectedIndices
+        if (!sel || sel.length === 0)
+            return []
+        var s = sel.slice().sort(function(a, b) { return a - b })
+        var runs = []
+        var start = s[0]
+        var prev = s[0]
+        for (var i = 1; i < s.length; i++) {
+            if (s[i] === prev + 1) { prev = s[i]; continue }
+            runs.push({ start: start, end: prev })
+            start = s[i]
+            prev = s[i]
+        }
+        runs.push({ start: start, end: prev })
+        return runs
+    }
+
     // Map of folder path → item count
     property var folderItemCounts: ({})
 
@@ -389,6 +408,42 @@ FocusScope {
                 colType: root.colType
                 rowHeight: root.rowHeight
                 detailIconSize: root.detailIconSize
+            }
+
+            // ── Merged-selection overlay ─────────────────────────────────
+            // One block per contiguous run of selected rows. Uses the same
+            // transparent-Rectangle+border pattern as the drop-area hint and the
+            // RubberBand (both render as ListView children), so the gold outline
+            // sits on the background and is visible. Two rects per run: inset
+            // fill + transparent-fill outline. z:-1 keeps row text untinted; a
+            // ListView child is viewport-fixed, so y tracks contentY. Rows render
+            // their selection transparent and defer the look to here.
+            Item {
+                anchors.fill: parent
+                z: -1
+                Repeater {
+                    model: root.selectionRuns
+                    delegate: Item {
+                        x: 2
+                        y: modelData.start * root.rowHeight - listView.contentY + 2
+                        width: listView.width - 4
+                        height: (modelData.end - modelData.start + 1) * root.rowHeight - 4
+
+                        Rectangle {   // inset fill
+                            anchors.fill: parent
+                            anchors.margins: 1
+                            radius: Math.max(0, Theme.radiusMedium - 1)
+                            color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.2)
+                        }
+                        Rectangle {   // outline — transparent fill, gold border
+                            anchors.fill: parent
+                            radius: Theme.radiusMedium
+                            color: "transparent"
+                            border.width: 1
+                            border.color: Theme.accent
+                        }
+                    }
+                }
             }
 
             // ── Drop area ─────────────────────────────────────────────────

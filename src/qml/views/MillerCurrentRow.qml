@@ -84,16 +84,19 @@ Item {
         color: {
             if (folderDropArea.containsDrag)
                 return Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.3)
-            if (row.isSelected)
-                return Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.2)
             if (currentDelegateMa.containsMouse)
                 return Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.05)
+            // Selection fill + outline drawn by FileMillerView's overlay;
+            // the row goes transparent so it shows through.
+            if (row.isSelected)
+                return "transparent"
             if (row.index % 2 === 1)
                 return Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.025)
             return "transparent"
         }
-        border.color: folderDropArea.containsDrag ? Theme.accent : (row.isSelected ? Theme.accent : "transparent")
-        border.width: folderDropArea.containsDrag ? 2 : (row.isSelected ? 1 : 0)
+        // Selection outline is the overlay; per-row border is drop-target only.
+        border.color: folderDropArea.containsDrag ? Theme.accent : "transparent"
+        border.width: folderDropArea.containsDrag ? 2 : 0
 
         Row {
             anchors.fill: parent

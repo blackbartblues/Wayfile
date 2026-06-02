@@ -59,6 +59,25 @@ FocusScope {
     readonly property int maxRowHeight: 56
     readonly property int millerIconSize: Math.round(rowHeight * 0.571)  // 16 at default 28
 
+    // Contiguous runs of selected rows — one merged outline block each.
+    readonly property var selectionRuns: {
+        var sel = selectedIndices
+        if (!sel || sel.length === 0)
+            return []
+        var s = sel.slice().sort(function(a, b) { return a - b })
+        var runs = []
+        var start = s[0]
+        var prev = s[0]
+        for (var i = 1; i < s.length; i++) {
+            if (s[i] === prev + 1) { prev = s[i]; continue }
+            runs.push({ start: start, end: prev })
+            start = s[i]
+            prev = s[i]
+        }
+        runs.push({ start: start, end: prev })
+        return runs
+    }
+
     function syncParentModel() {
         if (!visible)
             return
@@ -525,6 +544,38 @@ FocusScope {
                 listViewRef: currentColumn
                 selectionControllerRef: selectionController
                 wheelScrollerRef: currentWheelScroller
+            }
+
+            // ── Merged-selection overlay ─────────────────────────────────
+            // Same transparent-Rectangle+border pattern as FileDetailedView
+            // (renders as a ListView child, border on bg = visible). One block
+            // per contiguous run; y tracks contentY; rows render transparent.
+            Item {
+                anchors.fill: parent
+                z: -1
+                Repeater {
+                    model: root.selectionRuns
+                    delegate: Item {
+                        x: 2
+                        y: modelData.start * root.rowHeight - currentColumn.contentY + 2
+                        width: currentColumn.width - 4
+                        height: (modelData.end - modelData.start + 1) * root.rowHeight - 4
+
+                        Rectangle {   // inset fill
+                            anchors.fill: parent
+                            anchors.margins: 1
+                            radius: Math.max(0, Theme.radiusMedium - 1)
+                            color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.2)
+                        }
+                        Rectangle {   // outline — transparent fill, gold border
+                            anchors.fill: parent
+                            radius: Theme.radiusMedium
+                            color: "transparent"
+                            border.width: 1
+                            border.color: Theme.accent
+                        }
+                    }
+                }
             }
 
             DropArea {
