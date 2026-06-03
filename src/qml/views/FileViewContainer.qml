@@ -4,7 +4,7 @@ import Heimdall
 Item {
     id: root
 
-    // "grid" | "detailed" | "miller"
+    // "hybrid" | "grid" | "detailed" | "miller"
     property string viewMode: "grid"
     property var fileModel: null
     property string currentPath: ""
@@ -20,21 +20,38 @@ Item {
     signal sortRequested(string column, bool ascending)
 
     function selectAll() {
-        if (viewMode === "grid") gridView.selectAll()
+        if (viewMode === "hybrid") hybridView.selectAll()
+        else if (viewMode === "grid") gridView.selectAll()
         else if (viewMode === "miller") millerView.selectAll()
         else detailedView.selectAll()
     }
 
     function focusPath(path, reveal) {
+        hybridView.focusPath(path, reveal)
         gridView.focusPath(path, reveal)
         detailedView.focusPath(path, reveal)
         millerView.focusPath(path, reveal)
     }
 
     // Expose sub-views so main.qml can access selection state
+    property alias hybridViewItem: hybridView
     property alias gridViewItem: gridView
     property alias detailedViewItem: detailedView
     property alias millerViewItem: millerView
+
+    HybridView {
+        id: hybridView
+        anchors.fill: parent
+        visible: root.viewMode === "hybrid"
+        viewModel: visible ? root.fileModel : null
+        currentPath: root.currentPath
+
+        onFileActivated: (fp, isDir) => root.fileActivated(fp, isDir)
+        onContextMenuRequested: (fp, isDir, pos) => root.contextMenuRequested(fp, isDir, pos)
+        onSelectionChanged: root.selectionChanged()
+        onInteractionStarted: root.interactionStarted()
+        onTransferRequested: (paths, destinationPath, moveOperation) => root.transferRequested(paths, destinationPath, moveOperation)
+    }
 
     FileGridView {
         id: gridView

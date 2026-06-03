@@ -62,11 +62,6 @@ Rectangle {
             Layout.preferredHeight: visible ? 26 : 0
             visible: paneFrame.splitViewPresented
             path: paneFrame.paneCurrentPath
-            // fileCount/folderCount are reactive (NOTIFY countsChanged) so the
-            // strip count updates on every reload of this pane's model.
-            itemCount: paneFrame.paneFileModel
-                ? paneFrame.paneFileModel.fileCount + paneFrame.paneFileModel.folderCount
-                : 0
             activePaneHeader: paneFrame.active
         }
 

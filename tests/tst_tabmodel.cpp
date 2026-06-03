@@ -18,7 +18,7 @@ private slots:
     {
         TabModel tab;
         QCOMPARE(tab.currentPath(), QDir::homePath());
-        QCOMPARE(tab.viewMode(), QString("grid"));
+        QCOMPARE(tab.viewMode(), QString("hybrid"));
         QCOMPARE(tab.canGoBack(), false);
         QCOMPARE(tab.canGoForward(), false);
         QCOMPARE(tab.sortBy(), QString("name"));

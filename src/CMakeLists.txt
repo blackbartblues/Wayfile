@@ -124,6 +124,7 @@ list(APPEND heimdall_qml_module_args
         qml/components/HoverRect.qml
         qml/components/SelectionController.qml
         qml/views/FileViewContainer.qml
+        qml/views/HybridView.qml
         qml/views/OsFolder.qml
         qml/views/OsFile.qml
         qml/views/FileTypeChip.qml
@@ -164,6 +165,7 @@ list(APPEND heimdall_qml_module_args
         qml/icons/IconPlay.qml
         qml/icons/IconGrid.qml
         qml/icons/IconList.qml
+        qml/icons/IconPanelTop.qml
         qml/icons/IconAlignJustify.qml
         qml/icons/IconColumns.qml
         qml/icons/IconHome.qml

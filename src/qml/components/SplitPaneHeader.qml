@@ -17,7 +17,6 @@ Item {
     id: splitPaneHeader
 
     property string path: ""
-    property int itemCount: 0
     property bool activePaneHeader: false
 
     // Tilde-collapse the home prefix for display (matches Breadcrumb's "Home"
@@ -51,7 +50,9 @@ Item {
     RowLayout {
         anchors.fill: parent
         anchors.leftMargin: 14
-        anchors.rightMargin: 14
+        // Clears the per-pane close (×) button that PaneFrame overlays at the
+        // top-right of the strip, so the path never slides under it.
+        anchors.rightMargin: 34
         spacing: 8
 
         // Status dot — gold with a soft glow when this is the active pane,
@@ -83,17 +84,6 @@ Item {
             font.family: Fonts.mono
             font.pointSize: Theme.fontSmall
             elide: Text.ElideLeft
-            verticalAlignment: Text.AlignVCenter
-            Behavior on color { ColorAnimation { duration: Theme.animDuration } }
-        }
-
-        // Item count, right-aligned.
-        Text {
-            Layout.alignment: Qt.AlignVCenter
-            text: splitPaneHeader.itemCount + " items"
-            color: splitPaneHeader.activePaneHeader ? Theme.gold : Theme.muted
-            font.family: Fonts.mono
-            font.pointSize: Theme.fontSmall
             verticalAlignment: Text.AlignVCenter
             Behavior on color { ColorAnimation { duration: Theme.animDuration } }
         }

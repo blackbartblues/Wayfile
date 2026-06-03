@@ -136,6 +136,7 @@ FocusScope {
     // Forwarders for external callers (FileViewContainer / Main.qml).
     function focusPath(path, reveal) { selectionController.focusPath(path, reveal) }
     function selectAll() { selectionController.selectAll() }
+    function clearSelection() { selectionController.clearSelection() }
 
     function clickHeader(col) {
         if (sortColumn === col) {

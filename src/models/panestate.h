@@ -26,7 +26,7 @@ inline constexpr int kMaxPanes = 4;
 // are not duplicated here.
 struct PaneState {
     QString currentPath;
-    QString viewMode = QStringLiteral("grid");
+    QString viewMode = QStringLiteral("hybrid");
     QString sortBy = QStringLiteral("name");
     bool sortAscending = true;
     QStringList backStack;

@@ -43,6 +43,12 @@ GridView {
     // Forwarders for external callers (FileViewContainer / Main.qml).
     function focusPath(path, reveal) { selectionController.focusPath(path, reveal) }
     function selectAll() { selectionController.selectAll() }
+    function clearSelection() { selectionController.clearSelection() }
+
+    // HybridView reuses this grid for its folders section at a fixed cell size;
+    // it sets zoomEnabled:false so Ctrl+scroll doesn't resize (and persist) the
+    // main grid's zoom from inside the folders strip.
+    property bool zoomEnabled: true
 
     // Ctrl+scroll zoom. Changing cellSize resizes every cell, which moves
     // every delegate. We suppress the position-animating transitions, change
@@ -51,6 +57,8 @@ GridView {
     // The reset timer is (re)started on every step so a burst of rapid zooms
     // coalesces into a single re-enable once the user stops.
     function applyZoom(step) {
+        if (!root.zoomEnabled)
+            return
         // step keeps the legacy column-delta sign: negative = scroll up =
         // zoom IN (bigger icons), positive = zoom OUT. Translate to a
         // cell-size delta — icon size is pinned to cellSize, so this is the

@@ -536,7 +536,8 @@ ApplicationWindow {
         if (!view)
             return null
 
-        var vm = tabModel.activeTab ? tabModel.activeTab.viewMode : "grid"
+        var vm = tabModel.activeTab ? tabModel.activeTab.viewMode : "hybrid"
+        if (vm === "hybrid") return view.hybridViewItem
         if (vm === "grid") return view.gridViewItem
         if (vm === "miller") return view.millerViewItem
         return view.detailedViewItem
@@ -1763,7 +1764,7 @@ ApplicationWindow {
                                 var _t = tabModel.activeTab
                                 return root.panePath(index)
                             }
-                            paneViewMode: tabModel.activeTab ? tabModel.activeTab.viewMode : "grid"
+                            paneViewMode: tabModel.activeTab ? tabModel.activeTab.viewMode : "hybrid"
 
                             onInteractionStarted: root.setActivePane(index)
                             onFileActivated: (filePath, isDirectory) =>
@@ -1808,7 +1809,7 @@ ApplicationWindow {
                     selectedSizePending: root.currentSelectedSizePending
                     // View-switch cluster (#8 pkt 7): reflect and drive the
                     // active tab's per-tab viewMode.
-                    viewMode: tabModel.activeTab ? tabModel.activeTab.viewMode : "grid"
+                    viewMode: tabModel.activeTab ? tabModel.activeTab.viewMode : "hybrid"
                     onViewModeRequested: (m) => {
                         if (tabModel.activeTab) tabModel.activeTab.viewMode = m
                     }

@@ -10,6 +10,13 @@ DirFilterProxyModel::DirFilterProxyModel(QObject *parent)
     setSortCaseSensitivity(Qt::CaseInsensitive);
     setSortLocaleAware(true);
     setSortRole(FileSystemModel::FileNameRole);
+
+    // Keep the `count` property reactive: any structural change to the filtered
+    // row set re-emits countChanged so the hybrid section headers update.
+    connect(this, &QAbstractItemModel::rowsInserted, this, &DirFilterProxyModel::countChanged);
+    connect(this, &QAbstractItemModel::rowsRemoved, this, &DirFilterProxyModel::countChanged);
+    connect(this, &QAbstractItemModel::modelReset, this, &DirFilterProxyModel::countChanged);
+    connect(this, &QAbstractItemModel::layoutChanged, this, &DirFilterProxyModel::countChanged);
 }
 
 void DirFilterProxyModel::setMode(Mode mode)

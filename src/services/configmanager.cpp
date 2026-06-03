@@ -250,7 +250,7 @@ void ConfigManager::setDefaults()
     m_iconTheme = "Heimdall";
     m_builtinIcons = true;
     m_fontFamily.clear();
-    m_defaultView = "grid";
+    m_defaultView = "hybrid";
     m_showHidden = false;
     m_sortBy = "name";
     m_sortAscending = true;

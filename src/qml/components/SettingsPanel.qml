@@ -57,7 +57,7 @@ Window {
     readonly property bool defaultShowWindowControls: false
     readonly property string defaultWindowButtonLayout: ":minimize,maximize,close"
     readonly property bool defaultBuiltinIcons: true
-    readonly property string defaultView: "grid"
+    readonly property string defaultView: "hybrid"
     readonly property string defaultSortBy: "name"
     readonly property bool defaultSortAscending: true
 
@@ -104,8 +104,8 @@ Window {
 
     readonly property var curveOptions: ["OutCubic", "InOutCubic", "InCubic", "OutQuad", "InOutQuad", "OutExpo", "InOutExpo", "OutBack", "Linear", "Bezier"]
 
-    readonly property var viewModeValues: ["grid", "miller", "detailed"]
-    readonly property var viewModeLabels: ["Grid", "Miller columns", "Detailed list"]
+    readonly property var viewModeValues: ["hybrid", "grid", "miller", "detailed"]
+    readonly property var viewModeLabels: ["Hybrid", "Grid", "Miller columns", "Detailed list"]
     readonly property var sortByValues: ["name", "size", "modified", "type"]
     readonly property var sortByLabels: ["Name", "Size", "Date modified", "Type"]
 

@@ -129,11 +129,23 @@ Rectangle {
             color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.15)
         }
 
-        // View-switch cluster (#8 pkt 7): grid / miller / detailed. The active
-        // mode is accented; clicking requests a switch via viewModeRequested.
+        // View-switch cluster (#8 pkt 7; hybrid added Phase 8): hybrid / grid /
+        // miller / detailed. The active mode is accented; clicking requests a
+        // switch via viewModeRequested.
         Row {
             Layout.alignment: Qt.AlignVCenter
             spacing: 2
+
+            HoverRect {
+                id: hybridViewBtn
+                width: 24; height: 24
+                onClicked: statusBar.viewModeRequested("hybrid")
+                IconPanelTop {
+                    anchors.centerIn: parent
+                    size: 15
+                    color: statusBar.viewMode === "hybrid" ? Theme.accent : Theme.subtext
+                }
+            }
 
             HoverRect {
                 id: gridViewBtn

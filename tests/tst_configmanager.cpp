@@ -26,7 +26,7 @@ private slots:
         QCOMPARE(mgr.iconTheme(), QString("Heimdall"));
         QCOMPARE(mgr.builtinIcons(), true);
         QCOMPARE(mgr.fontFamily(), QString());
-        QCOMPARE(mgr.defaultView(), QString("grid"));
+        QCOMPARE(mgr.defaultView(), QString("hybrid"));
         QCOMPARE(mgr.showHidden(), false);
         QCOMPARE(mgr.sortBy(), QString("name"));
         QCOMPARE(mgr.sortAscending(), true);
@@ -584,7 +584,7 @@ private slots:
         ConfigManager mgr(path);
         // Should use all defaults
         QCOMPARE(mgr.theme(), QString("catppuccin-mocha"));
-        QCOMPARE(mgr.defaultView(), QString("grid"));
+        QCOMPARE(mgr.defaultView(), QString("hybrid"));
     }
 
     // --- P3 M1: split_view -> toggle_merge rename ---
@@ -911,7 +911,7 @@ private slots:
         });
 
         ConfigManager mgr2(path);
-        QCOMPARE(mgr2.defaultView(), QString("grid"));
+        QCOMPARE(mgr2.defaultView(), QString("hybrid"));
         QCOMPARE(mgr2.sortBy(), QString("name"));
     }
 };

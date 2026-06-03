@@ -40,6 +40,7 @@
 #include "models/recentfilesmodel.h"
 #include "models/searchresultsmodel.h"
 #include "models/searchproxymodel.h"
+#include "models/dirfilterproxymodel.h"
 #include "services/searchservice.h"
 #include "services/undomanager.h"
 #include "services/previewservice.h"
@@ -396,6 +397,10 @@ int main(int argc, char *argv[])
         QIcon::setThemeName(config->iconTheme());
         iconProvider->setPrimaryTheme(config->iconTheme());
     });
+
+    // Creatable QML type: each HybridView instantiates its own folders/files
+    // filter proxies over its pane's source model (Phase 8).
+    qmlRegisterType<DirFilterProxyModel>("Heimdall", 1, 0, "DirFilterProxyModel");
 
     // Register context properties
     engine.rootContext()->setContextProperty("config", config);
