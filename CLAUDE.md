@@ -45,12 +45,12 @@ QML action → Q_INVOKABLE C++ method → model property change → QML property
 
 Never add Co-Authored-By lines to commits.
 
-## Shared Submodules
+## Shared Submodules & Vendored Libraries
 
-- `src/qml/icons/` → [quill-icons](https://github.com/soyeb-jim285/quill-icons) — 60 PathSvg icons (Lucide-derived, ISC/MIT)
-- `src/qml/Quill/` → [quill](https://github.com/soyeb-jim285/quill) — Themed QML component library (Button, TextField, Card, Tabs, Dropdown, etc.)
+- `src/qml/icons/` → [quill-icons](https://github.com/soyeb-jim285/quill-icons) **submodule** — 60 PathSvg icons (Lucide-derived, ISC/MIT). No push access; do not edit in place (inline glyphs in the main repo instead — see GitBadge.qml).
+- `src/qml/Quill/` → **vendored** (forked) from [quill](https://github.com/soyeb-jim285/quill) @ `e3a7d99` — Themed QML component library (Button, TextField, Card, Tabs, Dropdown, etc.). Un-submoduled so its components can be re-skinned (obsidian+gold) directly in this repo. Edit these files freely.
 
-Quill's `Theme.qml` singleton is bridged from Heimdall's theme in `Main.qml` `Component.onCompleted`. The directory must be uppercase `Quill/` to match the QML module name.
+Quill's `Theme.qml` singleton is bridged from Heimdall's theme in `Main.qml` `Component.onCompleted`. The directory must be uppercase `Quill/` to match the QML module name. Quill is loaded from disk at runtime via `engine.addImportPath(.../src/qml)` (not the rcc resource), so edits to Quill components take effect on relaunch without a rebuild.
 
 ## Packaging & Distribution
 

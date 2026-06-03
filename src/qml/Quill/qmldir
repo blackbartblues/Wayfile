@@ -1,0 +1,25 @@
+module Quill
+singleton Theme 1.0 Theme.qml
+singleton Format 1.0 components/Format.qml
+Button 1.0 components/Button.qml
+IconButton 1.0 components/IconButton.qml
+Toggle 1.0 components/Toggle.qml
+Slider 1.0 components/Slider.qml
+TextField 1.0 components/TextField.qml
+Dropdown 1.0 components/Dropdown.qml
+Checkbox 1.0 components/Checkbox.qml
+RadioButton 1.0 components/RadioButton.qml
+RadioGroup 1.0 components/RadioGroup.qml
+Card 1.0 components/Card.qml
+Dialog 1.0 components/Dialog.qml
+Separator 1.0 components/Separator.qml
+Tabs 1.0 components/Tabs.qml
+Collapsible 1.0 components/Collapsible.qml
+ScrollableList 1.0 components/ScrollableList.qml
+Tooltip 1.0 components/Tooltip.qml
+Badge 1.0 components/Badge.qml
+ProgressBar 1.0 components/ProgressBar.qml
+Spinner 1.0 components/Spinner.qml
+Icon 1.0 components/Icon.qml
+Avatar 1.0 components/Avatar.qml
+Label 1.0 components/Label.qml
