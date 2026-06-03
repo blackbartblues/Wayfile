@@ -51,6 +51,8 @@ Item {
     required property string gitStatusIcon
     required property bool hasImagePreview
     required property bool hasVideoPreview
+    required property string fileCategory
+    required property string fileExtension
 
     readonly property bool isSelected: selectedIndices.indexOf(index) >= 0
     readonly property bool isCutPending: clipboard.isCut && clipboard.contains(row.filePath)
@@ -105,18 +107,32 @@ Item {
             spacing: 6
 
             Item {
+                id: iconSlot
                 width: millerIconSize + 2; height: millerIconSize + 2
                 anchors.verticalCenter: parent.verticalCenter
 
                 readonly property bool hasThumbnail: !fileOps.isRemotePath(row.filePath)
                     && (row.hasImagePreview || row.hasVideoPreview)
 
-                Image {
+                // Folders get a clean gold folder glyph (folder = gold tint;
+                // the glossy OsFolder is too muddy at row size).
+                IconFolder {
+                    visible: !iconSlot.hasThumbnail && row.isDir
+                    anchors.centerIn: parent
+                    size: millerIconSize + 2
+                    color: FileTypeColors.folder
+                }
+
+                // Files (without a thumbnail) get a metallic type chip.
+                FileTypeChip {
+                    visible: !iconSlot.hasThumbnail && !row.isDir
                     anchors.fill: parent
-                    visible: !parent.hasThumbnail
-                    source: "image://icon/" + row.fileIconName + "?theme=" + config.iconTheme + "&builtin=" + (config.builtinIcons ? "1" : "0")
-                    sourceSize: Qt.size(millerIconSize + 2, millerIconSize + 2)
-                    asynchronous: true
+                    size: millerIconSize + 2
+                    readonly property var desc: FileTypeColors.chipFor(
+                        row.fileExtension, row.fileCategory,
+                        row.fileName.startsWith("."))
+                    label: desc.label
+                    tint: desc.color
                 }
 
                 Image {

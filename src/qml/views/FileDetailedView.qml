@@ -147,8 +147,10 @@ FocusScope {
         root.sortRequested(sortColumn, sortAscending)
     }
 
-    // Column widths
-    readonly property int colName: root.width - colSize - colModified - colType
+    // Column widths. The 20px tail keeps the right-aligned Size column clear of
+    // the right edge / the AsNeeded scrollbar (handoff right margin).
+    readonly property int rightGutter: 40
+    readonly property int colName: root.width - colSize - colModified - colType - rightGutter
     readonly property int colSize: 110
     readonly property int colModified: 140
     readonly property int colType: 80
@@ -181,9 +183,9 @@ FocusScope {
                 Repeater {
                     model: [
                         { key: "name",     label: "Name",        width: root.colName },
-                        { key: "size",     label: "Size",        width: root.colSize },
                         { key: "modified", label: "Modified",    width: root.colModified },
-                        { key: "type",     label: "Type",        width: root.colType }
+                        { key: "type",     label: "Type",        width: root.colType },
+                        { key: "size",     label: "Size",        width: root.colSize }
                     ]
 
                     delegate: Item {
@@ -249,6 +251,14 @@ FocusScope {
                         }
                     }
                 }
+            }
+
+            // Top hairline (handoff header inset).
+            Rectangle {
+                anchors.top: parent.top
+                width: parent.width
+                height: 1
+                color: Theme.hair
             }
 
             // Bottom border
@@ -429,11 +439,15 @@ FocusScope {
                         width: listView.width - 4
                         height: (modelData.end - modelData.start + 1) * root.rowHeight - 4
 
-                        Rectangle {   // inset fill
+                        Rectangle {   // inset fill — handoff gold gradient
                             anchors.fill: parent
                             anchors.margins: 1
                             radius: Math.max(0, Theme.radiusMedium - 1)
-                            color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.2)
+                            gradient: Gradient {
+                                orientation: Gradient.Horizontal
+                                GradientStop { position: 0.0; color: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.18) }
+                                GradientStop { position: 1.0; color: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.04) }
+                            }
                         }
                         Rectangle {   // outline — transparent fill, gold border
                             anchors.fill: parent

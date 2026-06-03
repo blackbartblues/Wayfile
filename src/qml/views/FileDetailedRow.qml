@@ -58,6 +58,8 @@ Item {
     required property string gitStatusIcon
     required property bool hasImagePreview
     required property bool hasVideoPreview
+    required property string fileCategory
+    required property string fileExtension
 
     readonly property bool isSelected: selectedIndices.indexOf(index) >= 0
     readonly property bool isCutPending: clipboard.isCut && clipboard.contains(detRow.filePath)
@@ -107,17 +109,14 @@ Item {
         border.color: folderDropArea.containsDrag ? Theme.accent : "transparent"
         border.width: folderDropArea.containsDrag ? 2 : 0
 
-        // Heimdall design-canvas: right-edge gold chevron on selected
-        // folder rows — affordance for "drill in" (double-click or
-        // Enter opens it). Files don't get the chevron because there's
-        // no navigation target.
+        // Handoff: right-edge gold chevron on every selected row (files too).
         IconChevronRight {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             anchors.rightMargin: 6
             size: 14
             color: Theme.accent
-            visible: detRow.isSelected && detRow.isDir
+            visible: detRow.isSelected
             z: 1
         }
 
@@ -135,6 +134,7 @@ Item {
 
                 // Icon with git badge
                 Item {
+                    id: iconSlot
                     width: detailIconSize
                     height: detailIconSize
                     anchors.verticalCenter: parent.verticalCenter
@@ -142,12 +142,25 @@ Item {
                     readonly property bool hasThumbnail: !fileOps.isRemotePath(detRow.filePath)
                         && (detRow.hasImagePreview || detRow.hasVideoPreview)
 
-                    Image {
+                    // Folders get a clean gold folder glyph (folder = gold tint;
+                    // the glossy OsFolder is too muddy at row size).
+                    IconFolder {
+                        visible: !iconSlot.hasThumbnail && detRow.isDir
+                        anchors.centerIn: parent
+                        size: detailIconSize
+                        color: FileTypeColors.folder
+                    }
+
+                    // Files (without a thumbnail) get a metallic type chip.
+                    FileTypeChip {
+                        visible: !iconSlot.hasThumbnail && !detRow.isDir
                         anchors.fill: parent
-                        visible: !parent.hasThumbnail
-                        source: "image://icon/" + detRow.fileIconName + "?theme=" + config.iconTheme + "&builtin=" + (config.builtinIcons ? "1" : "0")
-                        sourceSize: Qt.size(detailIconSize, detailIconSize)
-                        asynchronous: true
+                        size: detailIconSize
+                        readonly property var desc: FileTypeColors.chipFor(
+                            detRow.fileExtension, detRow.fileCategory,
+                            detRow.fileName.startsWith("."))
+                        label: desc.label
+                        tint: desc.color
                     }
 
                     Image {
@@ -261,25 +274,6 @@ Item {
                 }
             }
 
-            // Size
-            Text {
-                width: colSize
-                anchors.verticalCenter: parent.verticalCenter
-                text: {
-                    if (detRow.isDir) {
-                        var cnt = folderItemCounts[detRow.filePath]
-                        if (cnt !== undefined)
-                            return cnt + (cnt === 1 ? " item" : " items")
-                        return "—"
-                    }
-                    return detRow.fileSizeText
-                }
-                color: Theme.subtext
-                font.pointSize: Theme.fontSmall
-                horizontalAlignment: Text.AlignRight
-                rightPadding: 8
-            }
-
             // Modified
             Text {
                 width: colModified
@@ -299,7 +293,26 @@ Item {
                 color: Theme.subtext
                 font.pointSize: Theme.fontSmall
                 elide: Text.ElideRight
-                rightPadding: 4
+                rightPadding: 8
+            }
+
+            // Size
+            Text {
+                width: colSize
+                anchors.verticalCenter: parent.verticalCenter
+                text: {
+                    if (detRow.isDir) {
+                        var cnt = folderItemCounts[detRow.filePath]
+                        if (cnt !== undefined)
+                            return cnt + (cnt === 1 ? " item" : " items")
+                        return "—"
+                    }
+                    return detRow.fileSizeText
+                }
+                color: Theme.subtext
+                font.pointSize: Theme.fontSmall
+                horizontalAlignment: Text.AlignRight
+                rightPadding: 8
             }
 
         }

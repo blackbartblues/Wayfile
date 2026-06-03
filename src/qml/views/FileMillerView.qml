@@ -561,11 +561,15 @@ FocusScope {
                         width: currentColumn.width - 4
                         height: (modelData.end - modelData.start + 1) * root.rowHeight - 4
 
-                        Rectangle {   // inset fill
+                        Rectangle {   // inset fill — handoff gold gradient
                             anchors.fill: parent
                             anchors.margins: 1
                             radius: Math.max(0, Theme.radiusMedium - 1)
-                            color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.2)
+                            gradient: Gradient {
+                                orientation: Gradient.Horizontal
+                                GradientStop { position: 0.0; color: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.18) }
+                                GradientStop { position: 1.0; color: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.04) }
+                            }
                         }
                         Rectangle {   // outline — transparent fill, gold border
                             anchors.fill: parent

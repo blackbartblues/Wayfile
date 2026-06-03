@@ -124,6 +124,7 @@ list(APPEND heimdall_qml_module_args
         qml/views/FileViewContainer.qml
         qml/views/OsFolder.qml
         qml/views/OsFile.qml
+        qml/views/FileTypeChip.qml
         qml/views/FileGridView.qml
         qml/views/FileDetailedView.qml
         qml/views/FileDetailedRow.qml
