@@ -15,13 +15,12 @@ Rectangle {
 
     // Bindings from Main.qml: which pane this is and the metadata + handlers
     // it needs.  Strings are passed through so existing dispatch helpers
-    // (paneModel, panePath, paneDisplayName, etc.) keep working unchanged
+    // (paneModel, panePath, etc.) keep working unchanged
     // for now; M7 swaps the dispatch over to indices.
     property int paneIndex: 0
     property bool active: false
     property bool splitViewPresented: false
     property real splitTransitionProgress: 0
-    property string paneTitle: ""
     property var paneFileModel: null
     property string paneCurrentPath: ""
     property string paneViewMode: "grid"
@@ -60,9 +59,14 @@ Rectangle {
         spacing: 0
 
         SplitPaneHeader {
-            Layout.preferredHeight: visible ? 34 : 0
+            Layout.preferredHeight: visible ? 26 : 0
             visible: paneFrame.splitViewPresented
-            title: paneFrame.paneTitle
+            path: paneFrame.paneCurrentPath
+            // fileCount/folderCount are reactive (NOTIFY countsChanged) so the
+            // strip count updates on every reload of this pane's model.
+            itemCount: paneFrame.paneFileModel
+                ? paneFrame.paneFileModel.fileCount + paneFrame.paneFileModel.folderCount
+                : 0
             activePaneHeader: paneFrame.active
         }
 

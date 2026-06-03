@@ -358,48 +358,6 @@ ApplicationWindow {
         return path !== "" ? path : tabModel.activeTab.currentPath
     }
 
-    function pathDisplayName(path) {
-        if (!path)
-            return ""
-
-        if (fileOps.isTrashPath(path)) {
-            var trashPath = path.length > 9 && path.endsWith("/") ? path.slice(0, -1) : path
-            if (trashPath === unifiedTrashPath || trashPath === unifiedTrashPath.slice(0, -1))
-                return "Trash"
-            var trashIndex = trashPath.lastIndexOf("/")
-            return decodeURIComponent(trashIndex >= 0 ? trashPath.substring(trashIndex + 1) : trashPath)
-        }
-
-        if (fileOps.isRemotePath(path)) {
-            var remotePath = path.split("?")[0]
-            if (remotePath.length > 1 && remotePath.endsWith("/"))
-                remotePath = remotePath.slice(0, -1)
-            var remoteIndex = remotePath.lastIndexOf("/")
-            var remoteName = remoteIndex >= 0 ? remotePath.substring(remoteIndex + 1) : ""
-            if (remoteName !== "")
-                return decodeURIComponent(remoteName)
-            var hostMatch = path.match(/^[^:]+:\/\/([^/]+)/)
-            return hostMatch && hostMatch.length > 1 ? hostMatch[1] : path
-        }
-
-        if (path === "/")
-            return "/"
-
-        var localPath = path.length > 1 && path.endsWith("/") ? path.slice(0, -1) : path
-        var slashIndex = localPath.lastIndexOf("/")
-        return slashIndex >= 0 ? (localPath.substring(slashIndex + 1) || "/") : localPath
-    }
-
-    function paneDisplayName(pane) {
-        if (root.paneIsRecents(pane))
-            return "Recents"
-
-        if (root.paneIsHidden(pane))
-            return "Hidden"
-
-        return root.pathDisplayName(root.panePath(pane))
-    }
-
     // SplitPaneHeader moved to components/SplitPaneHeader.qml so PaneFrame
     // (which also lives in the Heimdall module) can reach it via plain
     // `import Heimdall` rather than depending on this inline-component scope.
@@ -1793,8 +1751,9 @@ ApplicationWindow {
                             // the row hosts more than one frame.
                             splitViewPresented: paneRow.multiPane
                             splitTransitionProgress: paneRow.multiPane ? 1 : 0
-                            paneTitle: root.paneDisplayName(index)
                             paneFileModel: root.paneModel(index)
+                            // (paneTitle removed in Phase 7 — SplitPaneHeader
+                            // now shows the pane's path + item count instead.)
                             // panePath() reads an untracked Q_INVOKABLE; depend
                             // on paneNavTick (bumped on every navigation) and
                             // the active tab so this re-evaluates instead of
