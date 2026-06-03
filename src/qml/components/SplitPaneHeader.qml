@@ -18,6 +18,10 @@ Item {
 
     property string path: ""
     property bool activePaneHeader: false
+    // Top-corner radius, matched to the owning PaneFrame so the strip follows
+    // the pane's rounded top instead of poking a square corner past it
+    // (PaneFrame's clip:true clips to the bounding box, not the rounded shape).
+    property real topRadius: 0
 
     // Tilde-collapse the home prefix for display (matches Breadcrumb's "Home"
     // convention). fsModel.homePath() is a constant Q_INVOKABLE so reading it
@@ -37,6 +41,8 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: Qt.rgba(0, 0, 0, 0.22)
+        topLeftRadius: splitPaneHeader.topRadius
+        topRightRadius: splitPaneHeader.topRadius
 
         Rectangle {
             anchors.left: parent.left

@@ -220,6 +220,8 @@ FocusScope {
             visible: filesProxy.count > 0
             viewModel: filesProxy
             currentPath: root.currentPath
+            // Mid-content section divider, not a pane top → sharp top corners.
+            headerRadius: 0
 
             onFileActivated: (fp, isDir) => root.fileActivated(fp, isDir)
             onContextMenuRequested: (fp, isDir, pos) => root.contextMenuRequested(fp, isDir, pos)

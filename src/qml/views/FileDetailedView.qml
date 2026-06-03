@@ -38,6 +38,10 @@ FocusScope {
     property var viewModel
 
     property int rowHeight: 28
+    // Top-corner radius of the column header. Rounded when this view sits at the
+    // top of a pane (standalone); HybridView sets it to 0 because there the
+    // header is a mid-content "Files" section divider, not a pane top.
+    property int headerRadius: Theme.radiusMedium
     readonly property int minRowHeight: 22
     readonly property int maxRowHeight: 56
     readonly property int detailIconSize: Math.round(rowHeight * 0.571)  // 16 at default 28
@@ -164,7 +168,7 @@ FocusScope {
             width: root.width
             height: root.rowHeight
             color: Theme.mantle
-            radius: Theme.radiusMedium
+            radius: root.headerRadius
 
             // Cover the bottom corners so only the top is rounded
             Rectangle {

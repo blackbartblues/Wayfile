@@ -63,6 +63,8 @@ Rectangle {
             visible: paneFrame.splitViewPresented
             path: paneFrame.paneCurrentPath
             activePaneHeader: paneFrame.active
+            // Follow the pane's (possibly animating) rounded top.
+            topRadius: paneFrame.radius
         }
 
         FileViewContainer {
@@ -120,7 +122,8 @@ Rectangle {
         radius: 11
         anchors.top: parent.top
         anchors.right: parent.right
-        anchors.topMargin: 6
+        // Centre the 22px button in the 26px header strip: (26-22)/2 = 2.
+        anchors.topMargin: 2
         anchors.rightMargin: 6
         z: 11
         color: closePaneHover.hovered
