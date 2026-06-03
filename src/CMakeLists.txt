@@ -125,6 +125,7 @@ list(APPEND heimdall_qml_module_args
         qml/components/SelectionController.qml
         qml/views/FileViewContainer.qml
         qml/views/HybridView.qml
+        qml/views/EmptyState.qml
         qml/views/OsFolder.qml
         qml/views/OsFile.qml
         qml/views/FileTypeChip.qml

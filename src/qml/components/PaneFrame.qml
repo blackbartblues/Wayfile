@@ -35,6 +35,8 @@ Rectangle {
     // Column-header sort from this pane's detailed view; Main.qml applies it
     // tab-wide (see FileViewContainer.sortRequested).
     signal sortRequested(string column, bool ascending)
+    // Empty-state "New folder" / "New file" (kind) for this pane's directory.
+    signal createItemRequested(string kind, string parentPath)
     // Phase 2 P2-M9: user-driven 'close this pane' (X button or Ctrl+W).
     // Main.qml routes this to TabModel.removePane(paneIndex); the receiver
     // handles the demote-to-single-pane / kill-the-tab edge cases.
@@ -85,6 +87,8 @@ Rectangle {
                 paneFrame.contextMenuRequested(filePath, isDirectory, position)
             onSortRequested: (column, ascending) =>
                 paneFrame.sortRequested(column, ascending)
+            onCreateItemRequested: (kind, parentPath) =>
+                paneFrame.createItemRequested(kind, parentPath)
         }
     }
 

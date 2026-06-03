@@ -1783,6 +1783,15 @@ ApplicationWindow {
                                 root.setActivePane(index)
                                 root.applySortFromUi(column, ascending)
                             }
+                            // Empty-state New folder / New file → open the matching
+                            // create dialog rooted at this pane's directory.
+                            onCreateItemRequested: (kind, parentPath) => {
+                                root.setActivePane(index)
+                                if (kind === "folder")
+                                    root.showNewFolderDialog(parentPath)
+                                else
+                                    root.showNewFileDialog(parentPath)
+                            }
                             onCloseRequested: root.closePaneAt(index)
                         }
                     }
