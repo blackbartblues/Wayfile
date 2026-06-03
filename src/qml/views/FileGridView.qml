@@ -532,9 +532,10 @@ GridView {
             asynchronous: true
         }
 
-        // Glossy stone folder / type-tinted file page (handoff OsFolder/OsFile).
-        // Kept as an Item slot named `iconImg` so the cut/paste/git badges and
-        // the label keep anchoring to it exactly as before.
+        // Gold folder glyph / metallic file chip (matches the detailed + miller
+        // rows, user pref). Kept as an Item slot named `iconImg` so the cut/
+        // paste/git badges, the typed-folder emblems, and the label keep
+        // anchoring to it / to `folderArt` exactly as before.
         Item {
             id: iconImg
             visible: !delegateItem.hasThumbnail
@@ -549,20 +550,24 @@ GridView {
                 NumberAnimation { duration: Theme.animDurationFast; easing.type: Theme.animEasingEnter; easing.bezierCurve: Theme.animBezierCurve }
             }
 
-            OsFolder {
+            IconFolder {
                 id: folderArt
                 visible: delegateItem.isDir
                 anchors.centerIn: parent
                 size: root.iconSize
+                color: FileTypeColors.folder
+                // Default size/12 stroke is far too heavy at grid scale; slim it.
+                strokeWidth: Math.max(1.5, root.iconSize / 28)
             }
-            OsFile {
+            FileTypeChip {
                 visible: !delegateItem.isDir
                 anchors.centerIn: parent
-                size: root.iconSize
-                variant: delegateItem.fileCategory === "code" ? "json"
-                       : (delegateItem.fileCategory === "image" || delegateItem.fileCategory === "video") ? "img"
-                       : "doc"
-                accent: FileTypeColors.colorForCategory(delegateItem.fileCategory)
+                size: Math.round(root.iconSize * 0.82)
+                readonly property var desc: FileTypeColors.chipFor(
+                    delegateItem.fileExtension, delegateItem.fileCategory,
+                    delegateItem.fileName.startsWith("."))
+                label: desc.label
+                tint: desc.color
             }
 
             // Typed-folder marker (handoff v2 §B). Home gets a centred gold
@@ -680,41 +685,15 @@ GridView {
             }
         }
 
-        // Git status overlay badge — backing disc guarantees the small icon
-        // stays legible over any file icon, thumbnail, or theme background.
-        Rectangle {
-            id: gitBadge
-            visible: delegateItem.gitStatus !== ""
+        // Git status overlay badge (handoff re-skin — obsidian disc + glyph).
+        GitBadge {
+            statusIcon: delegateItem.gitStatusIcon
+            size: 16
             anchors.right: (iconImg.visible ? iconImg : thumbImg).right
             anchors.bottom: (iconImg.visible ? iconImg : thumbImg).bottom
             anchors.rightMargin: -2
             anchors.bottomMargin: -2
-            width: 16
-            height: 16
-            radius: 8
             z: 4
-            color: Qt.rgba(Theme.mantle.r, Theme.mantle.g, Theme.mantle.b, 0.92)
-            border.width: 1
-            border.color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.18)
-
-            Loader {
-                anchors.centerIn: parent
-                width: 12
-                height: 12
-                sourceComponent: {
-                    switch (delegateItem.gitStatusIcon) {
-                        case "git-modified":   return gitModifiedIcon
-                        case "git-staged":     return gitStagedIcon
-                        case "git-untracked":  return gitUntrackedIcon
-                        case "git-deleted":    return gitDeletedIcon
-                        case "git-renamed":    return gitRenamedIcon
-                        case "git-conflicted": return gitConflictedIcon
-                        case "git-ignored":    return gitIgnoredIcon
-                        case "git-dirty":      return gitDirtyIcon
-                        default: return null
-                    }
-                }
-            }
         }
 
         // Hidden text to check if name fits in 2 lines
@@ -1020,15 +999,6 @@ GridView {
         kineticGain: 1.01
         onScrollStarted: root.interactionStarted()
     }
-
-    Component { id: gitModifiedIcon;   IconGitModified   { size: 12 } }
-    Component { id: gitStagedIcon;     IconGitStaged     { size: 12 } }
-    Component { id: gitUntrackedIcon;  IconGitUntracked  { size: 12 } }
-    Component { id: gitDeletedIcon;    IconGitDeleted    { size: 12 } }
-    Component { id: gitRenamedIcon;    IconGitRenamed    { size: 12 } }
-    Component { id: gitConflictedIcon; IconGitConflicted { size: 12 } }
-    Component { id: gitIgnoredIcon;    IconGitIgnored    { size: 12 } }
-    Component { id: gitDirtyIcon;      IconGitDirty      { size: 12 } }
 
     // Typed-folder badge glyphs (gold), keyed off folderType.
     Component { id: badgeDocs;     IconFileText { color: Theme.gold } }

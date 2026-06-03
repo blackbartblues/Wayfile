@@ -88,6 +88,9 @@ Item {
                     required property string fileName
                     required property bool isDir
                     required property string fileIconName
+                    required property string fileCategory
+                    required property string fileExtension
+                    required property string gitStatusIcon
 
                     Row {
                         anchors.fill: parent
@@ -95,12 +98,34 @@ Item {
                         anchors.rightMargin: 4
                         spacing: 6
 
-                        Image {
+                        Item {
                             width: 14; height: 14
                             anchors.verticalCenter: parent.verticalCenter
-                            source: "image://icon/" + fileIconName + "?theme=" + config.iconTheme + "&builtin=" + (config.builtinIcons ? "1" : "0")
-                            sourceSize: Qt.size(14, 14)
-                            asynchronous: true
+
+                            IconFolder {
+                                visible: isDir
+                                anchors.centerIn: parent
+                                size: 14
+                                color: FileTypeColors.folder
+                            }
+                            FileTypeChip {
+                                visible: !isDir
+                                anchors.fill: parent
+                                size: 14
+                                readonly property var desc: FileTypeColors.chipFor(
+                                    fileExtension, fileCategory, fileName.startsWith("."))
+                                label: desc.label
+                                tint: desc.color
+                            }
+                            GitBadge {
+                                statusIcon: gitStatusIcon
+                                size: 10
+                                anchors.right: parent.right
+                                anchors.bottom: parent.bottom
+                                anchors.rightMargin: -2
+                                anchors.bottomMargin: -2
+                                z: 4
+                            }
                         }
 
                         Text {

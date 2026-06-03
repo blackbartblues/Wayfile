@@ -198,40 +198,15 @@ Item {
                     }
                 }
 
-                // Git status badge — backing disc keeps the small
-                // icon legible over the file icon and above the
-                // cut/paste overlays (z:2/3).
-                Rectangle {
-                    visible: row.gitStatus !== ""
+                // Git status badge (handoff re-skin — obsidian disc + glyph).
+                GitBadge {
+                    statusIcon: row.gitStatusIcon
+                    size: 13
                     anchors.right: parent.right
                     anchors.bottom: parent.bottom
                     anchors.rightMargin: -3
                     anchors.bottomMargin: -3
-                    width: 14
-                    height: 14
-                    radius: 7
                     z: 4
-                    color: Qt.rgba(Theme.mantle.r, Theme.mantle.g, Theme.mantle.b, 0.92)
-                    border.width: 1
-                    border.color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.18)
-
-                    Loader {
-                        anchors.centerIn: parent
-                        width: 10; height: 10
-                        sourceComponent: {
-                            switch (row.gitStatusIcon) {
-                                case "git-modified":   return gitModifiedIcon
-                                case "git-staged":     return gitStagedIcon
-                                case "git-untracked":  return gitUntrackedIcon
-                                case "git-deleted":    return gitDeletedIcon
-                                case "git-renamed":    return gitRenamedIcon
-                                case "git-conflicted": return gitConflictedIcon
-                                case "git-ignored":    return gitIgnoredIcon
-                                case "git-dirty":      return gitDirtyIcon
-                                default: return null
-                            }
-                        }
-                    }
                 }
             }
 
@@ -322,12 +297,4 @@ Item {
         }
     }
 
-    Component { id: gitModifiedIcon;   IconGitModified   { size: 10 } }
-    Component { id: gitStagedIcon;     IconGitStaged     { size: 10 } }
-    Component { id: gitUntrackedIcon;  IconGitUntracked  { size: 10 } }
-    Component { id: gitDeletedIcon;    IconGitDeleted    { size: 10 } }
-    Component { id: gitRenamedIcon;    IconGitRenamed    { size: 10 } }
-    Component { id: gitConflictedIcon; IconGitConflicted { size: 10 } }
-    Component { id: gitIgnoredIcon;    IconGitIgnored    { size: 10 } }
-    Component { id: gitDirtyIcon;      IconGitDirty      { size: 10 } }
 }

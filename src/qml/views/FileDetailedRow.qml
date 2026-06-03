@@ -226,41 +226,15 @@ Item {
                         }
                     }
 
-                    // Git status badge — backing disc keeps the
-                    // small icon legible over the file icon and
-                    // above the cut/paste overlays (z:2/3).
-                    Rectangle {
-                        visible: detRow.gitStatus !== ""
+                    // Git status badge (handoff re-skin — obsidian disc + glyph).
+                    GitBadge {
+                        statusIcon: detRow.gitStatusIcon
+                        size: 12
                         anchors.right: parent.right
                         anchors.bottom: parent.bottom
                         anchors.rightMargin: -3
                         anchors.bottomMargin: -3
-                        width: 13
-                        height: 13
-                        radius: 6.5
                         z: 4
-                        color: Qt.rgba(Theme.mantle.r, Theme.mantle.g, Theme.mantle.b, 0.92)
-                        border.width: 1
-                        border.color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.18)
-
-                        Loader {
-                            anchors.centerIn: parent
-                            width: 9
-                            height: 9
-                            sourceComponent: {
-                                switch (detRow.gitStatusIcon) {
-                                    case "git-modified":   return gitModifiedIcon
-                                    case "git-staged":     return gitStagedIcon
-                                    case "git-untracked":  return gitUntrackedIcon
-                                    case "git-deleted":    return gitDeletedIcon
-                                    case "git-renamed":    return gitRenamedIcon
-                                    case "git-conflicted": return gitConflictedIcon
-                                    case "git-ignored":    return gitIgnoredIcon
-                                    case "git-dirty":      return gitDirtyIcon
-                                    default: return null
-                                }
-                            }
-                        }
                     }
                 }
 
@@ -398,13 +372,4 @@ Item {
         height: 1
         color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.05)
     }
-
-    Component { id: gitModifiedIcon;   IconGitModified   { size: 9 } }
-    Component { id: gitStagedIcon;     IconGitStaged     { size: 9 } }
-    Component { id: gitUntrackedIcon;  IconGitUntracked  { size: 9 } }
-    Component { id: gitDeletedIcon;    IconGitDeleted    { size: 9 } }
-    Component { id: gitRenamedIcon;    IconGitRenamed    { size: 9 } }
-    Component { id: gitConflictedIcon; IconGitConflicted { size: 9 } }
-    Component { id: gitIgnoredIcon;    IconGitIgnored    { size: 9 } }
-    Component { id: gitDirtyIcon;      IconGitDirty      { size: 9 } }
 }

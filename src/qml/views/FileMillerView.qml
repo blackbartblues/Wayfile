@@ -293,6 +293,9 @@ FocusScope {
                 required property string filePath
                 required property bool isDir
                 required property string fileIconName
+                required property string fileCategory
+                required property string fileExtension
+                required property string gitStatusIcon
 
                 readonly property bool isCurrentDir: parentDelegate.fileName === root.currentDirName
 
@@ -331,13 +334,36 @@ FocusScope {
                         anchors.rightMargin: 4
                         spacing: 6
 
-                        Image {
+                        Item {
                             width: root.millerIconSize; height: root.millerIconSize
                             anchors.verticalCenter: parent.verticalCenter
-                            source: "image://icon/" + parentDelegate.fileIconName + "?theme=" + config.iconTheme + "&builtin=" + (config.builtinIcons ? "1" : "0")
-                            sourceSize: Qt.size(root.millerIconSize, root.millerIconSize)
-                            asynchronous: true
                             opacity: parentDelegate.isCurrentDir ? 0.95 : 0.8
+
+                            IconFolder {
+                                visible: parentDelegate.isDir
+                                anchors.centerIn: parent
+                                size: root.millerIconSize
+                                color: FileTypeColors.folder
+                            }
+                            FileTypeChip {
+                                visible: !parentDelegate.isDir
+                                anchors.fill: parent
+                                size: root.millerIconSize
+                                readonly property var desc: FileTypeColors.chipFor(
+                                    parentDelegate.fileExtension, parentDelegate.fileCategory,
+                                    parentDelegate.fileName.startsWith("."))
+                                label: desc.label
+                                tint: desc.color
+                            }
+                            GitBadge {
+                                statusIcon: parentDelegate.gitStatusIcon
+                                size: 11
+                                anchors.right: parent.right
+                                anchors.bottom: parent.bottom
+                                anchors.rightMargin: -2
+                                anchors.bottomMargin: -2
+                                z: 4
+                            }
                         }
 
                         Text {
