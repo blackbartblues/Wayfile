@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Effects
 import ".."
 
 RowLayout {
@@ -31,23 +32,39 @@ RowLayout {
         Layout.fillWidth: true
         height: 24
         property real ratio: Math.max(0, Math.min(1, (root.value - root.from) / (root.to - root.from)))
+        // Inset obsidian track well.
         Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             width: parent.width; height: 4; radius: 2
-            color: Theme.surface1
+            color: Theme.backgroundDeep
+            border.width: 1
+            border.color: Theme.surface1
         }
+        // Gold gradient fill.
         Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             width: parent.width * parent.ratio
             height: 4; radius: 2
-            color: root.trackColor
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0.0; color: "#C98F3C" }
+                GradientStop { position: 1.0; color: root.trackColor }
+            }
         }
+        // Warm-white knob + gold glow.
         Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             x: parent.width * parent.ratio - 7
             width: 14; height: 14; radius: 7
-            color: sliderMouse.pressed ? Qt.lighter(root.trackColor, 1.2) : root.trackColor
+            color: sliderMouse.pressed ? "#ffffff" : "#fff3df"
             Behavior on color { ColorAnimation { duration: 80 } }
+            layer.enabled: true
+            layer.effect: MultiEffect {
+                shadowEnabled: true
+                shadowColor: Qt.rgba(root.trackColor.r, root.trackColor.g, root.trackColor.b, 0.55)
+                shadowBlur: 0.5
+                autoPaddingEnabled: true
+            }
         }
         MouseArea {
             id: sliderMouse

@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Effects
 import ".."
 
 Rectangle {
@@ -36,6 +37,9 @@ Rectangle {
                 default: return Theme.surface1;
             }
         }
+        // Primary is painted by the gold-gradient overlay below.
+        if (variant === "primary")
+            return "transparent";
         let base;
         switch (variant) {
             case "primary": base = Theme.primary; break;
@@ -70,6 +74,27 @@ Rectangle {
         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
             event.accepted = true
             root.clicked()
+        }
+    }
+
+    // Primary: gold gradient fill (#F0CE8F→gold→#C98F3C) + soft gold glow.
+    Rectangle {
+        anchors.fill: parent
+        radius: parent.radius
+        visible: root.variant === "primary" && root.enabled
+        opacity: mouse.pressed ? 0.85 : (mouse.containsMouse ? 1.0 : 0.96)
+        Behavior on opacity { NumberAnimation { duration: Theme.animDurationFast } }
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: "#F0CE8F" }
+            GradientStop { position: 0.6; color: Theme.primary }
+            GradientStop { position: 1.0; color: "#C98F3C" }
+        }
+        layer.enabled: visible
+        layer.effect: MultiEffect {
+            shadowEnabled: true
+            shadowColor: Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.35)
+            shadowBlur: 0.6
+            autoPaddingEnabled: true
         }
     }
 

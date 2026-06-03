@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Effects
 import ".."
 
 RowLayout {
@@ -22,14 +23,44 @@ RowLayout {
     }
     Rectangle {
         width: 40; height: 22; radius: 11
-        color: root.checked ? Theme.primary : Theme.surface1
+        // Off: obsidian inset well; on: painted by the gold gradient below.
+        color: root.checked ? "transparent" : Theme.backgroundDeep
+        border.width: root.checked ? 0 : 1
+        border.color: Theme.surface2
         Behavior on color { ColorAnimation { duration: Theme.animDurationFast } }
+        // Gold gradient track when on + soft glow.
+        Rectangle {
+            anchors.fill: parent
+            radius: parent.radius
+            visible: root.checked
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0.0; color: "#F0CE8F" }
+                GradientStop { position: 0.55; color: Theme.primary }
+                GradientStop { position: 1.0; color: "#C98F3C" }
+            }
+            layer.enabled: root.checked
+            layer.effect: MultiEffect {
+                shadowEnabled: true
+                shadowColor: Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.40)
+                shadowBlur: 0.5
+                autoPaddingEnabled: true
+            }
+        }
         Rectangle {
             width: 18; height: 18; radius: 9
             anchors.verticalCenter: parent.verticalCenter
             x: root.checked ? parent.width - width - 2 : 2
-            color: Theme.textPrimary
+            color: root.checked ? "#fff3df" : Theme.textTertiary
             Behavior on x { NumberAnimation { duration: Theme.animDuration; easing.type: Easing.OutCubic } }
+            Behavior on color { ColorAnimation { duration: Theme.animDurationFast } }
+            layer.enabled: root.checked
+            layer.effect: MultiEffect {
+                shadowEnabled: true
+                shadowColor: Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.5)
+                shadowBlur: 0.4
+                autoPaddingEnabled: true
+            }
         }
         MouseArea {
             anchors.fill: parent

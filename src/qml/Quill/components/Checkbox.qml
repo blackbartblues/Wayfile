@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Effects
 import ".."
 
 RowLayout {
@@ -15,11 +16,19 @@ RowLayout {
     Rectangle {
         width: 20; height: 20
         radius: Theme.radiusSm
-        color: root.checked ? Theme.primary : "transparent"
+        color: root.checked ? Theme.primary : Theme.backgroundDeep
         border.color: root.checked ? Theme.primary : Theme.surface2
         border.width: 2
         Behavior on color { ColorAnimation { duration: Theme.animDurationFast } }
         Behavior on border.color { ColorAnimation { duration: Theme.animDurationFast } }
+        // Gold glow when checked.
+        layer.enabled: root.checked
+        layer.effect: MultiEffect {
+            shadowEnabled: true
+            shadowColor: Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.45)
+            shadowBlur: 0.45
+            autoPaddingEnabled: true
+        }
         Text {
             anchors.centerIn: parent
             text: "\uf00c"

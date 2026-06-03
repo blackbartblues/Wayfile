@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Effects
 import ".."
 
 RowLayout {
@@ -19,7 +20,7 @@ RowLayout {
     Rectangle {
         width: 20; height: 20
         radius: Theme.radiusFull
-        color: "transparent"
+        color: root._isSelected ? "transparent" : Theme.backgroundDeep
         border.color: root._isSelected ? Theme.primary : Theme.surface2
         border.width: 2
         Behavior on border.color { ColorAnimation { duration: Theme.animDurationFast } }
@@ -31,6 +32,14 @@ RowLayout {
             visible: root._isSelected
             scale: root._isSelected ? 1.0 : 0.0
             Behavior on scale { NumberAnimation { duration: Theme.animDurationFast; easing.type: Easing.OutCubic } }
+            // Gold dot glow when selected.
+            layer.enabled: root._isSelected
+            layer.effect: MultiEffect {
+                shadowEnabled: true
+                shadowColor: Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.55)
+                shadowBlur: 0.5
+                autoPaddingEnabled: true
+            }
         }
     }
     Text {
