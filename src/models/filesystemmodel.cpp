@@ -100,6 +100,9 @@ QVariant FileSystemModel::data(const QModelIndex &index, int role) const
             return entry.value("fileCategory");
         case FileExtensionRole:
             return entry.value("fileExtension");
+        case FolderTypeRole:
+            // Trashed folders carry no typed-folder emblem.
+            return QString();
         case GitStatusRole:
         case GitStatusIconRole:
             // Trashed files aren't git-tracked, but the view delegates
@@ -154,6 +157,9 @@ QVariant FileSystemModel::data(const QModelIndex &index, int role) const
             return entry.value(QStringLiteral("fileCategory"));
         case FileExtensionRole:
             return entry.value(QStringLiteral("fileExtension"));
+        case FolderTypeRole:
+            // Remote folders carry no typed-folder emblem.
+            return QString();
         case GitStatusRole:
         case GitStatusIconRole:
             // Remote files (sftp/smb/dav) aren't git-tracked, but the view
@@ -214,6 +220,9 @@ QVariant FileSystemModel::data(const QModelIndex &index, int role) const
     case FileExtensionRole:
         ensurePopulated(entry);
         return entry.fileExtension;
+    case FolderTypeRole:
+        // Path-only — no populate needed (mirrors GitStatusRole below).
+        return info.isDir() ? folderTypeForPath(info.absoluteFilePath()) : QString();
     case GitStatusRole:
         return m_gitService ? m_gitService->statusForPath(info.absoluteFilePath()) : QString();
     case GitStatusIconRole: {
@@ -255,6 +264,7 @@ QHash<int, QByteArray> FileSystemModel::roleNames() const
         {HasVideoPreviewRole,  "hasVideoPreview"},
         {FileCategoryRole,     "fileCategory"},
         {FileExtensionRole,    "fileExtension"},
+        {FolderTypeRole,       "folderType"},
     };
 }
 

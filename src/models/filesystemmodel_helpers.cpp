@@ -375,6 +375,45 @@ QString fileCategoryForEntry(const QString &name, bool isDir, const QString &con
     return QStringLiteral("other");
 }
 
+QString folderTypeForPath(const QString &absolutePath)
+{
+    if (absolutePath.isEmpty())
+        return QString();
+
+    const QDir target(absolutePath);
+    auto matches = [&target](QStandardPaths::StandardLocation loc) {
+        const QString dir = QStandardPaths::writableLocation(loc);
+        return !dir.isEmpty() && target == QDir(dir);
+    };
+
+    // XDG user-dirs (QStandardPaths). HomeLocation is always defined; the
+    // rest fall back to ~/Subdir when unset, which is exactly what we want.
+    if (matches(QStandardPaths::HomeLocation))      return QStringLiteral("home");
+    if (matches(QStandardPaths::DocumentsLocation)) return QStringLiteral("documents");
+    if (matches(QStandardPaths::DownloadLocation))  return QStringLiteral("downloads");
+    if (matches(QStandardPaths::PicturesLocation))  return QStringLiteral("pictures");
+    if (matches(QStandardPaths::MusicLocation))     return QStringLiteral("music");
+    if (matches(QStandardPaths::MoviesLocation))    return QStringLiteral("videos");
+    if (matches(QStandardPaths::DesktopLocation))   return QStringLiteral("desktop");
+
+    // "Projects" has no XDG entry — match the handoff convention of a dev
+    // directory living directly under $HOME.
+    const QString home = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
+    if (!home.isEmpty()) {
+        static const QStringList devNames = {
+            QStringLiteral("Projects"), QStringLiteral("Code"),
+            QStringLiteral("Developer"), QStringLiteral("dev"),
+            QStringLiteral("Development"),
+        };
+        for (const QString &name : devNames) {
+            if (target == QDir(home + QLatin1Char('/') + name))
+                return QStringLiteral("projects");
+        }
+    }
+
+    return QString();
+}
+
 // Classify a file as image/video for thumbnail purposes. Prefers an
 // already-known content type (e.g. from `gio list -a standard::content-type`
 // for trash entries) and otherwise asks QMimeDatabase. For local files

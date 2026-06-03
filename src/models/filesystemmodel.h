@@ -50,6 +50,9 @@ public:
         // completeSuffix() for the metallic file-type chip labels.
         FileCategoryRole,
         FileExtensionRole,
+        // Well-known folder type (home/documents/downloads/pictures/music/
+        // videos/desktop/projects, or "") for the typed-folder emblem/badge.
+        FolderTypeRole,
     };
     Q_ENUM(Roles)
 

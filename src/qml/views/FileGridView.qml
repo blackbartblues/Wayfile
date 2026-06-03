@@ -485,6 +485,7 @@ GridView {
         required property bool hasVideoPreview
         required property string fileCategory
         required property string fileExtension
+        required property string folderType
 
         readonly property bool isSelected: root.selectedIndices.indexOf(index) >= 0
         readonly property bool isCutPending: clipboard.isCut && clipboard.contains(delegateItem.filePath)
@@ -549,6 +550,7 @@ GridView {
             }
 
             OsFolder {
+                id: folderArt
                 visible: delegateItem.isDir
                 anchors.centerIn: parent
                 size: root.iconSize
@@ -561,6 +563,60 @@ GridView {
                        : (delegateItem.fileCategory === "image" || delegateItem.fileCategory === "video") ? "img"
                        : "doc"
                 accent: FileTypeColors.colorForCategory(delegateItem.fileCategory)
+            }
+
+            // Typed-folder marker (handoff v2 §B). Home gets a centred gold
+            // "arch" emblem; other XDG dirs get a bottom-right obsidian badge.
+            Rectangle {
+                visible: delegateItem.isDir && delegateItem.folderType === "home"
+                anchors.centerIn: folderArt
+                anchors.verticalCenterOffset: Math.round(folderArt.height * 0.06)
+                width: Math.round(root.iconSize * 0.20)
+                height: Math.round(root.iconSize * 0.26)
+                topLeftRadius: width * 0.5
+                topRightRadius: width * 0.5
+                bottomLeftRadius: 2
+                bottomRightRadius: 2
+                // Bottom-lit gold (handoff radial ellipse at 50% 120%).
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: "#7a4f1e" }
+                    GradientStop { position: 0.45; color: "#E3A94B" }
+                    GradientStop { position: 1.0; color: "#fff3d6" }
+                }
+            }
+
+            Rectangle {
+                id: folderBadge
+                visible: delegateItem.isDir
+                         && delegateItem.folderType !== ""
+                         && delegateItem.folderType !== "home"
+                anchors.right: folderArt.right
+                anchors.bottom: folderArt.bottom
+                anchors.rightMargin: Math.round(root.iconSize * 0.05)
+                anchors.bottomMargin: Math.round(root.iconSize * 0.02)
+                width: Math.round(root.iconSize * 0.30)
+                height: width
+                radius: Math.round(width * 0.28)
+                color: Qt.rgba(12 / 255, 13 / 255, 17 / 255, 0.9)
+                border.width: 1
+                border.color: Theme.line
+
+                Loader {
+                    anchors.centerIn: parent
+                    sourceComponent: {
+                        switch (delegateItem.folderType) {
+                            case "documents": return badgeDocs
+                            case "downloads": return badgeDownload
+                            case "pictures":  return badgeImage
+                            case "music":     return badgeMusic
+                            case "videos":    return badgeVideo
+                            case "desktop":   return badgeMonitor
+                            case "projects":  return badgeTerminal
+                            default:          return null
+                        }
+                    }
+                    onLoaded: item.size = Qt.binding(() => Math.round(folderBadge.width * 0.55))
+                }
             }
 
             // Soft gold halo behind the art when selected or hovered. Coexists
@@ -973,4 +1029,13 @@ GridView {
     Component { id: gitConflictedIcon; IconGitConflicted { size: 12 } }
     Component { id: gitIgnoredIcon;    IconGitIgnored    { size: 12 } }
     Component { id: gitDirtyIcon;      IconGitDirty      { size: 12 } }
+
+    // Typed-folder badge glyphs (gold), keyed off folderType.
+    Component { id: badgeDocs;     IconFileText { color: Theme.gold } }
+    Component { id: badgeDownload; IconDownload { color: Theme.gold } }
+    Component { id: badgeImage;    IconImage    { color: Theme.gold } }
+    Component { id: badgeMusic;    IconMusic    { color: Theme.gold } }
+    Component { id: badgeVideo;    IconVideo    { color: Theme.gold } }
+    Component { id: badgeMonitor;  IconMonitor  { color: Theme.gold } }
+    Component { id: badgeTerminal; IconTerminal { color: Theme.gold } }
 }

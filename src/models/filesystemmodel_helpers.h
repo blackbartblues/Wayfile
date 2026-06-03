@@ -46,6 +46,11 @@ QString fileTypeForEntry(const QString &name, bool isDir, const QString &content
 // Coarse type taxonomy used for folder badges + the hybrid view:
 // folder / image / video / audio / document / code / archive / other.
 QString fileCategoryForEntry(const QString &name, bool isDir, const QString &contentType = QString());
+// Well-known folder type for a directory's absolute path, matched against the
+// XDG user-dirs (QStandardPaths) + the ~/Projects convention. Returns one of
+// home / documents / downloads / pictures / music / videos / desktop / projects,
+// or "" for any other directory. Drives the typed-folder emblem/badge overlay.
+QString folderTypeForPath(const QString &absolutePath);
 PreviewKind previewKindForEntry(const QString &localPath, bool isDir,
                                 const QString &contentType = QString());
 QString permissionsString(const QFileInfo &info);

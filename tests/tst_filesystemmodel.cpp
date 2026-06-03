@@ -8,6 +8,7 @@
 #include <QProcess>
 #include <QUuid>
 #include "models/filesystemmodel.h"
+#include "models/filesystemmodel_helpers.h"
 #include "services/gitstatusservice.h"
 #include "testdir.h"
 
@@ -906,7 +907,7 @@ private slots:
         model.setSynchronousReload(true);
         auto roles = model.roleNames();
 
-        QCOMPARE(roles.count(), 17);
+        QCOMPARE(roles.count(), 18);
         QCOMPARE(roles[FileSystemModel::FileNameRole],         QByteArray("fileName"));
         QCOMPARE(roles[FileSystemModel::FilePathRole],         QByteArray("filePath"));
         QCOMPARE(roles[FileSystemModel::FileSizeRole],         QByteArray("fileSize"));
@@ -924,6 +925,30 @@ private slots:
         QCOMPARE(roles[FileSystemModel::HasVideoPreviewRole],  QByteArray("hasVideoPreview"));
         QCOMPARE(roles[FileSystemModel::FileCategoryRole],     QByteArray("fileCategory"));
         QCOMPARE(roles[FileSystemModel::FileExtensionRole],    QByteArray("fileExtension"));
+        QCOMPARE(roles[FileSystemModel::FolderTypeRole],       QByteArray("folderType"));
+    }
+
+    // folderTypeForPath() maps XDG user-dirs to typed-folder identifiers.
+    void testFolderTypeForPath()
+    {
+        // Anchored on HomeLocation (always defined, checked first) so the
+        // assertion is self-consistent regardless of where the XDG dirs point.
+        const QString home = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
+        QVERIFY(!home.isEmpty());
+        QCOMPARE(FsmHelpers::folderTypeForPath(home), QString("home"));
+        // Trailing slash must not defeat the match.
+        QCOMPARE(FsmHelpers::folderTypeForPath(home + "/"), QString("home"));
+
+        // Documents only maps when it is a distinct directory from home (in
+        // test mode an unset XDG dir can collapse onto home).
+        const QString docs = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+        if (!docs.isEmpty() && QDir(docs) != QDir(home))
+            QCOMPARE(FsmHelpers::folderTypeForPath(docs), QString("documents"));
+
+        // A random directory is untyped; empty input is untyped.
+        TestDir dir;
+        QCOMPARE(FsmHelpers::folderTypeForPath(dir.path()), QString());
+        QCOMPARE(FsmHelpers::folderTypeForPath(QString()), QString());
     }
 
     // FileCategoryRole + FileExtensionRole population (local entries).
