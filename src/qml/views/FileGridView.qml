@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Effects
 import Heimdall
 import Quill as Q
 
@@ -482,6 +483,8 @@ GridView {
         required property string gitStatusIcon
         required property bool hasImagePreview
         required property bool hasVideoPreview
+        required property string fileCategory
+        required property string fileExtension
 
         readonly property bool isSelected: root.selectedIndices.indexOf(index) >= 0
         readonly property bool isCutPending: clipboard.isCut && clipboard.contains(delegateItem.filePath)
@@ -528,17 +531,47 @@ GridView {
             asynchronous: true
         }
 
-        Image {
+        // Glossy stone folder / type-tinted file page (handoff OsFolder/OsFile).
+        // Kept as an Item slot named `iconImg` so the cut/paste/git badges and
+        // the label keep anchoring to it exactly as before.
+        Item {
             id: iconImg
             visible: !delegateItem.hasThumbnail
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: parent.top
-            anchors.topMargin: 8
+            // Hover lifts the art 2px (handoff folder "hover" state).
+            anchors.topMargin: 8 + (ma.containsMouse && !delegateItem.isSelected ? -2 : 0)
             width: root.iconSize
             height: root.iconSize
-            source: "image://icon/" + delegateItem.fileIconName + "?theme=" + config.iconTheme + "&builtin=" + (config.builtinIcons ? "1" : "0")
-            sourceSize: Qt.size(root.iconRequestSize, root.iconRequestSize)
-            asynchronous: true
+
+            Behavior on anchors.topMargin {
+                NumberAnimation { duration: Theme.animDurationFast; easing.type: Theme.animEasingEnter; easing.bezierCurve: Theme.animBezierCurve }
+            }
+
+            OsFolder {
+                visible: delegateItem.isDir
+                anchors.centerIn: parent
+                size: root.iconSize
+            }
+            OsFile {
+                visible: !delegateItem.isDir
+                anchors.centerIn: parent
+                size: root.iconSize
+                variant: delegateItem.fileCategory === "code" ? "json"
+                       : (delegateItem.fileCategory === "image" || delegateItem.fileCategory === "video") ? "img"
+                       : "doc"
+                accent: FileTypeColors.colorForCategory(delegateItem.fileCategory)
+            }
+
+            // Soft gold halo behind the art when selected or hovered. Coexists
+            // with the pkt-11 selection outline drawn by selectionOverlay.
+            layer.enabled: delegateItem.isSelected || ma.containsMouse
+            layer.effect: MultiEffect {
+                autoPaddingEnabled: true
+                shadowEnabled: true
+                shadowColor: Theme.goldGlow
+                shadowBlur: delegateItem.isSelected ? 0.7 : 0.45
+            }
         }
 
         Rectangle {
