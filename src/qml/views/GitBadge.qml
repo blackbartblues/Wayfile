@@ -59,8 +59,8 @@ Item {
 
     Gradient {
         id: discGradient
-        GradientStop { position: 0.0; color: "#20222b" }
-        GradientStop { position: 1.0; color: "#111217" }
+        GradientStop { position: 0.0; color: Theme.raise2 }
+        GradientStop { position: 1.0; color: Theme.panel }
     }
 
     Loader {

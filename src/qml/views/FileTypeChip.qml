@@ -15,8 +15,8 @@ Rectangle {
     height: size
     radius: Math.max(3, Math.round(size * 0.27))
     gradient: Gradient {
-        GradientStop { position: 0.0; color: "#23242b" }
-        GradientStop { position: 1.0; color: "#16171c" }
+        GradientStop { position: 0.0; color: Theme.raise2 }
+        GradientStop { position: 1.0; color: Theme.panel2 }
     }
     border.width: 1
     border.color: Theme.line

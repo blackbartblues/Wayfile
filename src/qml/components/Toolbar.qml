@@ -101,8 +101,8 @@ Rectangle {
     implicitHeight: toolbarColumn.implicitHeight
     // Obsidian toolbar gradient (handoff .toolbar).
     gradient: Gradient {
-        GradientStop { position: 0.0; color: "#16171d" }
-        GradientStop { position: 1.0; color: "#131419" }
+        GradientStop { position: 0.0; color: Theme.panel2 }
+        GradientStop { position: 1.0; color: Theme.bgA }
     }
 
     // 1px bottom border line separating the toolbar from the content below.
@@ -202,9 +202,9 @@ Rectangle {
 
                     Gradient {
                         id: mergeArmedGrad
-                        GradientStop { position: 0.0; color: "#F0CE8F" }
-                        GradientStop { position: 0.6; color: "#E3A94B" }
-                        GradientStop { position: 1.0; color: "#C98F3C" }
+                        GradientStop { position: 0.0; color: Theme.goldLight }
+                        GradientStop { position: 0.6; color: Theme.gold }
+                        GradientStop { position: 1.0; color: Theme.goldMid }
                     }
 
                     IconLink { anchors.centerIn: parent; size: 18; color: Theme.gold; visible: !root.mergeWillUnmerge }

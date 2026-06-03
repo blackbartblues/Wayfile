@@ -107,7 +107,7 @@ Rectangle {
                 width: parent.width
                 height: 5
                 radius: 3
-                color: "#0a0b0e"
+                color: Theme.bgB
 
                 Rectangle {
                     width: model.mounted

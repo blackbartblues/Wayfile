@@ -47,8 +47,8 @@ Item {
         anchors.fill: parent
         // Obsidian vertical gradient (handoff .tabstrip).
         gradient: Gradient {
-            GradientStop { position: 0.0; color: "#0d0e12" }
-            GradientStop { position: 1.0; color: "#121318" }
+            GradientStop { position: 0.0; color: Theme.bgB }
+            GradientStop { position: 1.0; color: Theme.bgA }
         }
 
         // Bottom hairline divides the tab strip from the toolbar below.
@@ -603,8 +603,8 @@ Item {
 
                         Gradient {
                             id: activeTabGrad
-                            GradientStop { position: 0.0; color: "#1d1f27" }
-                            GradientStop { position: 1.0; color: "#16171d" }
+                            GradientStop { position: 0.0; color: Theme.raise }
+                            GradientStop { position: 1.0; color: Theme.panel2 }
                         }
 
                         // Inset top sheen.
@@ -757,8 +757,8 @@ Item {
                                     height: supertabRow.tileSize
                                     radius: 6
                                     gradient: Gradient {
-                                        GradientStop { position: 0.0; color: "#2a2c34" }
-                                        GradientStop { position: 1.0; color: "#17181d" }
+                                        GradientStop { position: 0.0; color: Theme.raise2 }
+                                        GradientStop { position: 1.0; color: Theme.panel2 }
                                     }
                                     border.width: 1
                                     border.color: stackTile.isActiveSubPane ? Theme.goldLine : Theme.line

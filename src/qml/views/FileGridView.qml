@@ -610,7 +610,7 @@ GridView {
                 width: Math.round(root.iconSize * 0.30)
                 height: width
                 radius: Math.round(width * 0.28)
-                color: Qt.rgba(12 / 255, 13 / 255, 17 / 255, 0.9)
+                color: Qt.rgba(Theme.mantle.r, Theme.mantle.g, Theme.mantle.b, 0.9)
                 border.width: 1
                 border.color: Theme.line
 

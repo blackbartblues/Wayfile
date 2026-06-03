@@ -23,8 +23,8 @@ Rectangle {
 
     // "Heimdall Unified" sidebar: obsidian vertical gradient + right hairline.
     gradient: Gradient {
-        GradientStop { position: 0.0; color: "#0f1015" }
-        GradientStop { position: 1.0; color: "#0c0d11" }
+        GradientStop { position: 0.0; color: Theme.panel }
+        GradientStop { position: 1.0; color: Theme.mantle }
     }
     clip: false
 
@@ -55,7 +55,7 @@ Rectangle {
         z: 1; width: Theme.radiusMedium; height: Theme.radiusMedium
         anchors.top: parent.top; anchors.left: parent.right
         ShapePath {
-            fillColor: "#0f1015"; strokeColor: "transparent"
+            fillColor: Theme.panel; strokeColor: "transparent"
             startX: 0; startY: 0
             PathLine { x: Theme.radiusMedium; y: 0 }
             PathArc {

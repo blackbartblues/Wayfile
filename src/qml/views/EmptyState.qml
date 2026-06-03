@@ -48,14 +48,14 @@ Item {
              : (btnMa.containsMouse ? Theme.raise2 : Theme.raise)
         Behavior on color { ColorAnimation { duration: 100 } }
 
-        // Primary gold gradient fill (handoff #F0CE8F→gold→goldMid), beneath
+        // Primary gold gradient fill (goldLight→gold→goldMid), beneath
         // the label so the dark ink stays legible.
         Rectangle {
             anchors.fill: parent
             radius: parent.radius
             visible: btn.isPrimary
             gradient: Gradient {
-                GradientStop { position: 0.0; color: "#F0CE8F" }
+                GradientStop { position: 0.0; color: Theme.goldLight }
                 GradientStop { position: 0.6; color: Theme.gold }
                 GradientStop { position: 1.0; color: Theme.goldMid }
             }

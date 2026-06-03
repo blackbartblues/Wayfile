@@ -134,7 +134,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         height: Math.min(parent.height, Math.round(32 * Theme.uiScale))
         visible: !root.editMode
-        color: "#0c0d11"
+        color: Theme.mantle
         radius: Theme.radiusTab
         border.width: 1
         border.color: Theme.lineSoft
