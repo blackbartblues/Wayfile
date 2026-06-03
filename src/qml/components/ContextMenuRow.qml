@@ -29,11 +29,9 @@ Loader {
         id: itemComponent
         Rectangle {
             height: 32
-            width: parent ? parent.width : 260
-            radius: Theme.radiusMedium
-            color: itemMa.containsMouse
-                ? Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.1)
-                : "transparent"
+            width: parent ? parent.width : 248
+            radius: Theme.radiusSm
+            color: itemMa.containsMouse ? Theme.raise2 : "transparent"
             Behavior on color {
                 ColorAnimation { duration: 100; easing.type: Theme.animEasingEnter; easing.bezierCurve: Theme.animBezierCurve }
             }
@@ -50,18 +48,19 @@ Loader {
                     source: (rowLoader.rowData && rowLoader.rowData.icon) ? "../icons/Icon" + rowLoader.rowData.icon + ".qml" : ""
                     onLoaded: {
                         item.size = 16
-                        item.color = Qt.binding(() => rowLoader.rowData && rowLoader.rowData.destructive ? Theme.error : Theme.muted)
+                        item.color = Qt.binding(() => rowLoader.rowData && rowLoader.rowData.destructive ? FileTypeColors.pdf : Theme.gold)
                     }
                 }
                 Text {
                     text: rowLoader.rowData ? rowLoader.rowData.text : ""
                     font.pointSize: Theme.fontNormal
-                    color: rowLoader.rowData && rowLoader.rowData.destructive ? Theme.error : Theme.text
+                    color: rowLoader.rowData && rowLoader.rowData.destructive ? FileTypeColors.pdf : Theme.text
                     Layout.fillWidth: true
                     verticalAlignment: Text.AlignVCenter
                 }
                 Text {
                     text: rowLoader.rowData ? (rowLoader.rowData.shortcut || "") : ""
+                    font.family: Fonts.mono
                     font.pointSize: Theme.fontSmall
                     color: Theme.muted
                     visible: text !== ""
@@ -88,13 +87,11 @@ Loader {
         Rectangle {
             id: submenuTrigger
             height: 32
-            width: parent ? parent.width : 260
-            radius: Theme.radiusMedium
+            width: parent ? parent.width : 248
+            radius: Theme.radiusSm
             readonly property bool isActive: rowLoader.submenuVisible
                 && rowLoader.activeSubmenuKey === rowLoader.menu.submenuKeyForItem(rowLoader.rowData)
-            color: (submenuMa.containsMouse || isActive)
-                ? Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.1)
-                : "transparent"
+            color: (submenuMa.containsMouse || isActive) ? Theme.raise2 : "transparent"
             Behavior on color {
                 ColorAnimation { duration: 100; easing.type: Theme.animEasingEnter; easing.bezierCurve: Theme.animBezierCurve }
             }
@@ -111,7 +108,7 @@ Loader {
                     source: (rowLoader.rowData && rowLoader.rowData.icon) ? "../icons/Icon" + rowLoader.rowData.icon + ".qml" : ""
                     onLoaded: {
                         item.size = 16
-                        item.color = Qt.binding(() => submenuTrigger.isActive ? Theme.text : Theme.muted)
+                        item.color = Qt.binding(() => submenuTrigger.isActive ? Theme.goldLight : Theme.gold)
                     }
                 }
                 Text {
@@ -123,6 +120,7 @@ Loader {
                 }
                 Text {
                     text: rowLoader.rowData ? (rowLoader.rowData.shortcut || "") : ""
+                    font.family: Fonts.mono
                     font.pointSize: Theme.fontSmall
                     color: Theme.muted
                     visible: text !== ""
@@ -130,7 +128,7 @@ Loader {
                 }
                 IconChevronRight {
                     size: 14
-                    color: submenuTrigger.isActive ? Theme.text : Theme.muted
+                    color: submenuTrigger.isActive ? Theme.gold : Theme.muted
                     Layout.alignment: Qt.AlignVCenter
                 }
             }
@@ -149,12 +147,12 @@ Loader {
         id: separatorComponent
         Item {
             height: 9
-            width: parent ? parent.width : 260
+            width: parent ? parent.width : 248
             Rectangle {
                 anchors.centerIn: parent
                 width: parent.width - 16
                 height: 1
-                color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.06)
+                color: Theme.line
             }
         }
     }

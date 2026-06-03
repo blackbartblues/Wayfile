@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Shapes
+import QtQuick.Effects
 import Heimdall
 
 // Custom context menu — Hyprland compositor handles blur via windowrule
@@ -19,8 +20,30 @@ Item {
     property var selectedPaths: []
     property var customItems: []
     property var contextData: ({})
-    property int menuWidth: 260
+    property int menuWidth: 248
     property bool isTrashView: false
+
+    // ── Target header (handoff §7: icon + target name + bottom hairline) ───
+    // Shown only on the real file/folder/empty-space menu, never on the
+    // custom-items sidebar menu. Anchors the menu to "what am I acting on".
+    readonly property bool showHeader: !hasCustomItems && (isEmptySpace || targetPath !== "")
+    readonly property bool headerIsDir: isEmptySpace || targetIsDir
+    function _basename(p) {
+        if (!p)
+            return ""
+        var s = p
+        if (s.length > 1 && s.charAt(s.length - 1) === "/")
+            s = s.substring(0, s.length - 1)
+        var i = s.lastIndexOf("/")
+        return i >= 0 ? s.substring(i + 1) : s
+    }
+    readonly property string headerTitle: {
+        if (effectivePaths.length > 1)
+            return effectivePaths.length + " items"
+        if (isEmptySpace)
+            return _basename(effectiveDir) || "/"
+        return _basename(targetPath)
+    }
 
     signal openRequested(string path, bool isDir)
     signal openWithRequested(string path, string desktopFile)
@@ -444,13 +467,52 @@ Item {
         property real yOffset: 0
         transform: Translate { y: menuContainer.yOffset }
 
-        // Background
+        // Faint gold ambient — a blurred gold rounded rect that bleeds past the
+        // body edges into a soft halo (handoff "faint gold ambient").
         Rectangle {
+            anchors.fill: menuBg
+            radius: menuBg.radius
+            color: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.10)
+            layer.enabled: true
+            layer.effect: MultiEffect {
+                blurEnabled: true
+                blur: 1.0
+                blurMax: 28
+                autoPaddingEnabled: true
+            }
+        }
+
+        // Body — obsidian vertical gradient (#1b1d24→#15161c) + 1px line border,
+        // 12px radius, heavy drop shadow, 1px top sheen.
+        Rectangle {
+            id: menuBg
             anchors.fill: parent
-            radius: Theme.radiusLarge
-            color: Theme.crust
-            border.color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.08)
+            radius: 12
+            border.color: Theme.line
             border.width: 1
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: Theme.raise }
+                GradientStop { position: 1.0; color: Theme.panel2 }
+            }
+            layer.enabled: true
+            layer.effect: MultiEffect {
+                shadowEnabled: true
+                shadowColor: Qt.rgba(0, 0, 0, 0.6)
+                shadowBlur: 0.9
+                shadowVerticalOffset: 8
+                autoPaddingEnabled: true
+            }
+
+            // 1px top sheen
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: 1
+                height: 1
+                radius: 1
+                color: Qt.rgba(1, 1, 1, 0.05)
+            }
         }
 
         // ── Menu items with staggered entrance ──────────────────────────
@@ -459,6 +521,49 @@ Item {
             anchors.centerIn: parent
             width: root.menuWidth
             spacing: 2
+
+            // Target header (icon + name + bottom hairline)
+            Item {
+                width: menuColumn.width
+                height: visible ? 34 : 0
+                visible: root.showHeader
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 12
+                    anchors.rightMargin: 12
+                    anchors.topMargin: 2
+                    anchors.bottomMargin: 7
+                    spacing: 8
+                    Loader {
+                        Layout.preferredWidth: 16
+                        Layout.preferredHeight: 16
+                        Layout.alignment: Qt.AlignVCenter
+                        source: root.headerIsDir ? "../icons/IconFolder.qml" : "../icons/IconFileText.qml"
+                        onLoaded: {
+                            item.size = 16
+                            item.color = Theme.gold
+                        }
+                    }
+                    Text {
+                        text: root.headerTitle
+                        font.pointSize: Theme.fontNormal
+                        font.weight: Font.DemiBold
+                        color: Theme.text
+                        elide: Text.ElideMiddle
+                        Layout.fillWidth: true
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                }
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    anchors.leftMargin: 8
+                    anchors.rightMargin: 8
+                    height: 1
+                    color: Theme.line
+                }
+            }
 
             Repeater {
                 model: root.visible ? root.buildModel() : []
@@ -506,8 +611,8 @@ Item {
             visible: root._submenuOpensRight
 
             ShapePath {
-                fillColor: Theme.crust
-                strokeColor: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.08)
+                fillColor: Theme.raise
+                strokeColor: Theme.line
                 strokeWidth: 1
                 joinStyle: ShapePath.MiterJoin
                 capStyle: ShapePath.FlatCap
@@ -553,8 +658,8 @@ Item {
             visible: !root._submenuOpensRight
 
             ShapePath {
-                fillColor: Theme.crust
-                strokeColor: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.08)
+                fillColor: Theme.raise
+                strokeColor: Theme.line
                 strokeWidth: 1
                 joinStyle: ShapePath.MiterJoin
                 capStyle: ShapePath.FlatCap

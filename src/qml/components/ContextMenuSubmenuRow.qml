@@ -18,13 +18,11 @@ Loader {
     Component {
         id: submenuItemComponent
         Rectangle {
-            width: parent ? parent.width : 260
+            width: parent ? parent.width : 248
             height: 30
-            radius: Theme.radiusMedium
+            radius: Theme.radiusSm
             opacity: 1
-            color: subItemMa.containsMouse
-                ? Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.1)
-                : "transparent"
+            color: subItemMa.containsMouse ? Theme.raise2 : "transparent"
             Behavior on color {
                 ColorAnimation { duration: 100; easing.type: Theme.animEasingEnter; easing.bezierCurve: Theme.animBezierCurve }
             }
@@ -51,7 +49,7 @@ Loader {
                     source: (subRowLoader.rowData && subRowLoader.rowData.icon) ? "../icons/Icon" + subRowLoader.rowData.icon + ".qml" : ""
                     onLoaded: {
                         item.size = 14
-                        item.color = Qt.binding(() => Theme.muted)
+                        item.color = Qt.binding(() => Theme.gold)
                     }
                 }
                 Text {
@@ -63,6 +61,7 @@ Loader {
                 }
                 Text {
                     text: subRowLoader.rowData ? (subRowLoader.rowData.shortcut || "") : ""
+                    font.family: Fonts.mono
                     font.pixelSize: 11
                     color: Theme.muted
                     visible: text !== ""
@@ -92,12 +91,12 @@ Loader {
         id: submenuSeparatorComponent
         Item {
             height: 9
-            width: parent ? parent.width : 260
+            width: parent ? parent.width : 248
             Rectangle {
                 anchors.centerIn: parent
                 width: parent.width - 32
                 height: 1
-                color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.06)
+                color: Theme.line
             }
         }
     }
