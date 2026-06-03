@@ -12,7 +12,9 @@
 #include <QStandardPaths>
 #include <QUrl>
 #include <QUuid>
+#include <QStorageInfo>
 #include <unistd.h>
+#include <sys/stat.h>
 #include "testdir.h"
 #include "services/fileoperations.h"
 
@@ -753,16 +755,54 @@ private slots:
         QDir(testPath).removeRecursively();
     }
 
+    // Returns true when two paths live on the same filesystem (same st_dev).
+    // Used to detect whether $HOME shares a device with "/", or whether it is
+    // a separately-mounted filesystem/subvolume (e.g. a btrfs @home subvolume).
+    static bool sameDevice(const QString &a, const QString &b)
+    {
+        struct stat sa{};
+        struct stat sb{};
+        if (::stat(a.toLocal8Bit().constData(), &sa) != 0)
+            return false;
+        if (::stat(b.toLocal8Bit().constData(), &sb) != 0)
+            return false;
+        return sa.st_dev == sb.st_dev;
+    }
+
     void testTrashHelpersForHomePath()
     {
         FileOperations ops;
 
-        const QString expectedTrashPath = QDir::cleanPath(QDir::homePath() + "/.local/share/Trash/files");
         const QString homeFilePath = QDir::homePath() + "/Documents/example.txt";
+        const QString result = ops.trashFilesPathFor(homeFilePath);
 
-        QCOMPARE(ops.trashFilesPathFor(homeFilePath), expectedTrashPath);
-        QVERIFY(!ops.isTrashPath(homeFilePath));
-        QVERIFY(ops.isTrashPath(expectedTrashPath + "/example.txt"));
+        // Contract that holds on every disk layout: a non-empty trash files
+        // root ending in "/files", with the helpers agreeing about it.
+        QVERIFY2(!result.isEmpty(), "trashFilesPathFor returned an empty path");
+        QVERIFY2(result.endsWith("/files"),
+                 qPrintable(QStringLiteral("trash files path should end with /files: ") + result));
+        QVERIFY2(ops.isTrashPath(result + "/example.txt"),
+                 qPrintable(QStringLiteral("a path under the trash files root should be a trash path: ")
+                            + result));
+        QVERIFY2(!ops.isTrashPath(homeFilePath),
+                 qPrintable(QStringLiteral("an ordinary home file should not be a trash path: ")
+                            + homeFilePath));
+
+        if (sameDevice(QDir::homePath(), QStringLiteral("/"))) {
+            // $HOME shares a device with "/": files trash to the XDG home trash.
+            const QString expectedHomeTrash =
+                QDir::cleanPath(QDir::homePath() + "/.local/share/Trash/files");
+            QCOMPARE(result, expectedHomeTrash);
+        } else {
+            // $HOME is a separately-mounted filesystem (e.g. /home is its own
+            // btrfs subvolume). Per the freedesktop trash spec, files there
+            // trash to that mount's top-directory trash:
+            //   <mount>/.Trash-<uid>/files
+            const QString mountRoot = QDir::cleanPath(QStorageInfo(QDir::homePath()).rootPath());
+            const QString expectedTopTrash = QDir::cleanPath(
+                mountRoot + "/.Trash-" + QString::number(geteuid()) + "/files");
+            QCOMPARE(result, expectedTopTrash);
+        }
     }
 
     void testTrashHelpersForMountedVolume()
