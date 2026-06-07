@@ -96,34 +96,114 @@ Item {
         return []
     }
 
-    Sidebar {
+    // Gallery mode swaps the sidebar's Places list for a folder navigator, with a
+    // Places/Folders toggle on top. Outside Gallery this is the normal sidebar.
+    readonly property bool galleryActive:
+        tabModel.activeTab ? tabModel.activeTab.viewMode === "gallery" : false
+    readonly property bool showFolderNav:
+        galleryActive && (host ? host.galleryFolderNavActive : false)
+
+    Column {
+        id: sidebarStack
         width: host ? host.sidebarWidth : 0
         height: parent.height
-        tooltipLayer: sidebarPane.sidebarTooltipLayer
-        currentPath: host ? host.activePanePath : ""
-        trashPath: host ? host.unifiedTrashPath : ""
-        isRecentsView: host ? host.isRecentsView : false
-        isHiddenView: host ? host.isHiddenView : false
-        onBookmarkClicked: (path) => {
-            host.navigateActivePaneTo(path)
+
+        // Places / Folders toggle — only while the Gallery view is active.
+        Item {
+            id: navToggle
+            width: parent.width
+            height: sidebarPane.galleryActive ? 34 : 0
+            visible: sidebarPane.galleryActive
+            clip: true
+
+            Row {
+                anchors.centerIn: parent
+                spacing: 4
+
+                Rectangle {
+                    id: placesSeg
+                    width: 74; height: 22; radius: Theme.radiusSmall
+                    readonly property bool on: !sidebarPane.showFolderNav
+                    color: on ? Theme.gold : "transparent"
+                    border.width: 1
+                    border.color: on ? Theme.gold : Theme.line
+                    Text {
+                        anchors.centerIn: parent
+                        text: "Places"
+                        color: placesSeg.on ? Theme.base : Theme.subtext
+                        font.pointSize: Theme.fontSmall
+                        font.weight: placesSeg.on ? Font.DemiBold : Font.Normal
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: if (host) host.galleryFolderNavActive = false
+                    }
+                }
+                Rectangle {
+                    id: foldersSeg
+                    width: 74; height: 22; radius: Theme.radiusSmall
+                    readonly property bool on: sidebarPane.showFolderNav
+                    color: on ? Theme.gold : "transparent"
+                    border.width: 1
+                    border.color: on ? Theme.gold : Theme.line
+                    Text {
+                        anchors.centerIn: parent
+                        text: "Folders"
+                        color: foldersSeg.on ? Theme.base : Theme.subtext
+                        font.pointSize: Theme.fontSmall
+                        font.weight: foldersSeg.on ? Font.DemiBold : Font.Normal
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: if (host) host.galleryFolderNavActive = true
+                    }
+                }
+            }
         }
-        onSidebarContextMenuRequested: (item, position) => {
-            sidebarPane.sidebarContextMenu.sidebarItem = item
-            sidebarPane.sidebarContextMenu.contextData = item
-            sidebarPane.sidebarContextMenu.customItems = sidebarPane.sidebarMenuItems(item)
-            sidebarPane.sidebarContextMenu.targetPath = item.path || ""
-            sidebarPane.sidebarContextMenu.targetIsDir = !!item.path
-            sidebarPane.sidebarContextMenu.isEmptySpace = false
-            sidebarPane.sidebarContextMenu.selectedPaths = item.path ? [item.path] : []
-            sidebarPane.sidebarContextMenu.popup(position.x, position.y)
+
+        Item {
+            id: sidebarContent
+            width: parent.width
+            height: parent.height - navToggle.height
+
+            Sidebar {
+                anchors.fill: parent
+                visible: !sidebarPane.showFolderNav
+                tooltipLayer: sidebarPane.sidebarTooltipLayer
+                currentPath: host ? host.activePanePath : ""
+                trashPath: host ? host.unifiedTrashPath : ""
+                isRecentsView: host ? host.isRecentsView : false
+                isHiddenView: host ? host.isHiddenView : false
+                onBookmarkClicked: (path) => {
+                    host.navigateActivePaneTo(path)
+                }
+                onSidebarContextMenuRequested: (item, position) => {
+                    sidebarPane.sidebarContextMenu.sidebarItem = item
+                    sidebarPane.sidebarContextMenu.contextData = item
+                    sidebarPane.sidebarContextMenu.customItems = sidebarPane.sidebarMenuItems(item)
+                    sidebarPane.sidebarContextMenu.targetPath = item.path || ""
+                    sidebarPane.sidebarContextMenu.targetIsDir = !!item.path
+                    sidebarPane.sidebarContextMenu.isEmptySpace = false
+                    sidebarPane.sidebarContextMenu.selectedPaths = item.path ? [item.path] : []
+                    sidebarPane.sidebarContextMenu.popup(position.x, position.y)
+                }
+                onRecentsClicked: {
+                    host.setPaneRecents(host.activePaneIndex, true)
+                }
+                onHiddenClicked: {
+                    host.setPaneHidden(host.activePaneIndex, true)
+                }
+                onFeatureHintRequested: (message) => sidebarPane.toast.show(message, "info")
+            }
+
+            GalleryFolderNav {
+                anchors.fill: parent
+                visible: sidebarPane.showFolderNav
+                host: sidebarPane.host
+            }
         }
-        onRecentsClicked: {
-            host.setPaneRecents(host.activePaneIndex, true)
-        }
-        onHiddenClicked: {
-            host.setPaneHidden(host.activePaneIndex, true)
-        }
-        onFeatureHintRequested: (message) => sidebarPane.toast.show(message, "info")
     }
 
     // Drag-to-resize handle on the sidebar's INNER edge (the one facing the
