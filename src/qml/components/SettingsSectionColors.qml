@@ -44,6 +44,18 @@ ColumnLayout {
         return { ok: false, color: Qt.color("transparent") }
     }
     function scheduleSave() { saveTimer.restart() }
+
+    // WCAG relative-luminance contrast ratio — used (non-destructively) to warn
+    // when the accent is too close to the background for selection outlines,
+    // status dots and the device meter to read. We warn rather than clamp:
+    // this is the power-user granular editor, the choice stays the user's.
+    function _lin(v) { return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
+    function relLum(c) { return 0.2126 * _lin(c.r) + 0.7152 * _lin(c.g) + 0.0722 * _lin(c.b) }
+    function contrastRatio(a, b) {
+        var hi = Math.max(relLum(a), relLum(b))
+        var lo = Math.min(relLum(a), relLum(b))
+        return (hi + 0.05) / (lo + 0.05)
+    }
     function applyToken(token, c) {
         theme.setColor(token, c)
         if (colorsRoot.linkGold && token === "accent")
@@ -174,6 +186,32 @@ ColumnLayout {
     // ── content ──────────────────────────────────────────────────────────────
     SettingDescription {
         text: "Edit the active palette token by token. Changes apply live and are saved as a \"custom\" theme in your config folder."
+    }
+
+    // Live low-contrast warning: gold-on-dark marks (selection outlines, status
+    // dots, the device meter) lose legibility when accent ≈ background.
+    Rectangle {
+        Layout.fillWidth: true
+        Layout.topMargin: 4
+        visible: colorsRoot.contrastRatio(Theme.accent, Theme.base) < 2.0
+        Layout.preferredHeight: visible ? contrastWarnLabel.implicitHeight + 14 : 0
+        radius: Theme.radiusSmall
+        color: Qt.rgba(Theme.warning.r, Theme.warning.g, Theme.warning.b, 0.12)
+        border.width: 1
+        border.color: Qt.rgba(Theme.warning.r, Theme.warning.g, Theme.warning.b, 0.40)
+
+        Text {
+            id: contrastWarnLabel
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.leftMargin: 8
+            anchors.rightMargin: 8
+            wrapMode: Text.WordWrap
+            text: "Low accent contrast against the background — selection outlines, status dots and the device meter may be hard to see."
+            color: Theme.warning
+            font.pointSize: Theme.fontSmall
+        }
     }
 
     RowLayout {
