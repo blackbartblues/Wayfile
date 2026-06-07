@@ -20,7 +20,7 @@ class DirFilterProxyModel : public QSortFilterProxyModel
     Q_PROPERTY(int count READ count NOTIFY countChanged)
 
 public:
-    enum Mode { FoldersOnly, FilesOnly };
+    enum Mode { FoldersOnly, FilesOnly, Media };
     Q_ENUM(Mode)
 
     explicit DirFilterProxyModel(QObject *parent = nullptr);

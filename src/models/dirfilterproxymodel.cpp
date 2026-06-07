@@ -92,5 +92,24 @@ bool DirFilterProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex &sou
         return false;
     const QModelIndex idx = sourceModel()->index(sourceRow, 0, sourceParent);
     const bool isDirectory = sourceModel()->data(idx, FileSystemModel::IsDirRole).toBool();
-    return m_mode == FoldersOnly ? isDirectory : !isDirectory;
+    switch (m_mode) {
+    case FoldersOnly:
+        return isDirectory;
+    case FilesOnly:
+        return !isDirectory;
+    case Media: {
+        if (isDirectory)
+            return false;
+        const QString cat =
+            sourceModel()->data(idx, FileSystemModel::FileCategoryRole).toString();
+        if (cat == QLatin1String("image") || cat == QLatin1String("video")
+            || cat == QLatin1String("audio"))
+            return true;
+        // PDFs are categorised as "document"; match them by extension instead.
+        const QString ext =
+            sourceModel()->data(idx, FileSystemModel::FileExtensionRole).toString();
+        return ext.compare(QLatin1String("pdf"), Qt::CaseInsensitive) == 0;
+    }
+    }
+    return false;
 }

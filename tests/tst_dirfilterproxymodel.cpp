@@ -164,6 +164,36 @@ private slots:
         QVERIFY(roles.values().contains(QByteArray("isDir")));
         QVERIFY(roles.values().contains(QByteArray("fileCategory")));
     }
+
+    void testMediaKeepsOnlyPreviewableMedia()
+    {
+        TestDir dir;
+        dir.createDir("sub");
+        dir.createFile("pic.png",   "d");   // image
+        dir.createFile("clip.mp4",  "d");   // video
+        dir.createFile("song.mp3",  "d");   // audio
+        dir.createFile("doc.pdf",   "d");   // pdf (category "document", matched by extension)
+        dir.createFile("notes.txt", "aaa"); // document -> excluded
+        dir.createFile("arch.zip",  "bb");  // archive -> excluded
+
+        FileSystemModel model; model.setSynchronousReload(true);
+        model.setRootPath(dir.path());
+
+        DirFilterProxyModel proxy;
+        proxy.setMode(DirFilterProxyModel::Media);
+        proxy.setSourceModel(&model);
+
+        QCOMPARE(proxy.rowCount(), 4);
+        QVERIFY(rowForName(proxy, "pic.png")  >= 0);
+        QVERIFY(rowForName(proxy, "doc.pdf")  >= 0);
+        QVERIFY(rowForName(proxy, "clip.mp4") >= 0);
+        QVERIFY(rowForName(proxy, "song.mp3") >= 0);
+        QCOMPARE(rowForName(proxy, "notes.txt"), -1);
+        QCOMPARE(rowForName(proxy, "arch.zip"),  -1);
+        QCOMPARE(rowForName(proxy, "sub"),       -1);
+        for (int r = 0; r < proxy.rowCount(); ++r)
+            QVERIFY(!proxy.isDir(r));
+    }
 };
 
 QTEST_MAIN(TestDirFilterProxyModel)
