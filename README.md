@@ -122,7 +122,7 @@ cmake --build build --parallel
 | | Packages |
 |---|---|
 | **Required (build)** | `cmake`, `ninja`, `qt6-base`, `qt6-declarative`, `qt6-svg` |
-| **Required (runtime)** | `qt6-base`, `qt6-declarative`, `qt6-svg`, `qt6-wayland`, `glib2`, `fd`, `rsync`, `xdg-utils` |
+| **Required (runtime)** | `qt6-base`, `qt6-declarative`, `qt6-svg`, `qt6-multimedia`, `qt6-wayland`, `glib2`, `fd`, `rsync`, `xdg-utils` |
 | **Optional** | `kwindowsystem` (native KDE blur), `wl-clipboard` (clipboard), `bat` (syntax highlighting), `gvfs` / `gvfs-smb` (remote filesystems), `ffmpeg` (video thumbnails), `udisks2` (device mounting), `poppler-qt6` (PDF previews) |
 
 ---

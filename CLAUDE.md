@@ -69,4 +69,4 @@ The AUR repo (`~/wayfile-aur/`) only contains `PKGBUILD` + `.SRCINFO` — build 
 
 ## Dependencies
 
-Qt6 modules: Core, Gui, Qml, Quick, QuickControls2, DBus, Widgets, Svg, SvgWidgets. TOML parsing via header-only `third_party/toml.hpp`. Runtime CLI tools: rsync, gio, xdg-open, wl-copy (optional; warns if missing).
+Qt6 modules: Core, Gui, Qml, Quick, QuickControls2, DBus, Widgets, Svg, SvgWidgets, Multimedia (`qt6-multimedia` — in-app video playback in the Gallery view). TOML parsing via header-only `third_party/toml.hpp`. Runtime CLI tools: rsync, gio, xdg-open, wl-copy (optional; warns if missing).
