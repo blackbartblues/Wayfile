@@ -553,6 +553,7 @@ ApplicationWindow {
         if (vm === "hybrid") return view.hybridViewItem
         if (vm === "grid") return view.gridViewItem
         if (vm === "miller") return view.millerViewItem
+        if (vm === "gallery") return view.galleryViewItem
         return view.detailedViewItem
     }
 

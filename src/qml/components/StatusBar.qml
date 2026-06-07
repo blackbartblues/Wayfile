@@ -179,6 +179,17 @@ Rectangle {
                     color: statusBar.viewMode === "detailed" ? Theme.accent : Theme.subtext
                 }
             }
+
+            HoverRect {
+                id: galleryViewBtn
+                width: 24; height: 24
+                onClicked: statusBar.viewModeRequested("gallery")
+                IconImage {
+                    anchors.centerIn: parent
+                    size: 15
+                    color: statusBar.viewMode === "gallery" ? Theme.accent : Theme.subtext
+                }
+            }
         }
     }
 }
