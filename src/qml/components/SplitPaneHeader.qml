@@ -40,7 +40,7 @@ Item {
     // Dark inset strip + bottom hairline glued to the content below.
     Rectangle {
         anchors.fill: parent
-        color: Qt.rgba(0, 0, 0, 0.22)
+        color: Qt.rgba(Theme.shadowInk.r, Theme.shadowInk.g, Theme.shadowInk.b, 0.22)
         topLeftRadius: splitPaneHeader.topRadius
         topRightRadius: splitPaneHeader.topRadius
 

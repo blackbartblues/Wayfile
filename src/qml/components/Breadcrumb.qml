@@ -148,7 +148,7 @@ Item {
             height: 3
             radius: parent.radius
             gradient: Gradient {
-                GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, 0.5) }
+                GradientStop { position: 0.0; color: Qt.rgba(Theme.shadowInk.r, Theme.shadowInk.g, Theme.shadowInk.b, 0.5) }
                 GradientStop { position: 1.0; color: "transparent" }
             }
         }

@@ -38,3 +38,10 @@ raise2 = "#22242c"
 line = "#25262e"
 lineSoft = "#1b1c22"
 hair = "#0e0f13"
+# Atmosphere (sheen/shadowInk are base colours — alpha applied at the use
+# site; scrim bakes its alpha into #aarrggbb).
+sheen = "#FFF0D6"      # warm-white highlight (tab/tile/badge sheens)
+shadowInk = "#000000"  # drop-shadows, inset shadows, faux depth
+scrim = "#C7080A0D"    # modal scrim dim (alpha 0.78)
+goldInk = "#1a1206"    # dark ink painted on gold fills
+knob = "#FFF3DF"       # warm-white control knob (Quill toggles/sliders)

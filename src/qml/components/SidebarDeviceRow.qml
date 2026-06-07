@@ -236,7 +236,7 @@ Rectangle {
             width: parent.width
             height: parent.height
             radius: parent.radius
-            color: Qt.rgba(0, 0, 0, 0.22)
+            color: Qt.rgba(Theme.shadowInk.r, Theme.shadowInk.g, Theme.shadowInk.b, 0.22)
         }
 
         Text {

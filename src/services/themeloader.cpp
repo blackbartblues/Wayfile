@@ -22,6 +22,11 @@ QMap<QString, QColor> ThemeLoader::s_defaults = {
     {"panel2", QColor("#15161c")}, {"raise", QColor("#1b1d24")},
     {"raise2", QColor("#22242c")}, {"line", QColor("#25262e")},
     {"lineSoft", QColor("#1b1c22")}, {"hair", QColor("#0e0f13")},
+    // Phase C2 atmosphere tokens (sheen/shadowInk are base colours, alpha is
+    // applied at the use site; scrim bakes its alpha into #aarrggbb).
+    {"sheen", QColor("#FFF0D6")}, {"shadowInk", QColor("#000000")},
+    {"scrim", QColor("#C7080A0D")}, {"goldInk", QColor("#1a1206")},
+    {"knob", QColor("#FFF3DF")},
 };
 
 ThemeLoader::ThemeLoader(QObject *parent) : QObject(parent), m_colors(s_defaults) {}

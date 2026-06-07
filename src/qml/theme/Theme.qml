@@ -34,6 +34,14 @@ QtObject {
     property color line: theme.line
     property color lineSoft: theme.lineSoft
     property color hair: theme.hair
+    // Atmosphere (C2): sheen/shadowInk are base colours — apply alpha at the
+    // use site; scrim carries its own alpha; goldInk = dark-on-gold ink;
+    // knob = warm-white control knob (bridged into Quill in C3).
+    property color sheen: theme.sheen
+    property color shadowInk: theme.shadowInk
+    property color scrim: theme.scrim
+    property color goldInk: theme.goldInk
+    property color knob: theme.knob
     // Gold-derived alpha helpers (track `gold`).
     readonly property color goldLine: Qt.rgba(gold.r, gold.g, gold.b, 0.45)
     readonly property color goldGlow: Qt.rgba(gold.r, gold.g, gold.b, 0.30)

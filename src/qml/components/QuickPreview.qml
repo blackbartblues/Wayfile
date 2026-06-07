@@ -274,7 +274,7 @@ Item {
     Rectangle {
         id: overlay
         anchors.fill: parent
-        color: Qt.rgba(0.03, 0.04, 0.05, 0.78)
+        color: Theme.scrim
         opacity: 0
 
         MouseArea {

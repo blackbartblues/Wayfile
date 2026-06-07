@@ -391,7 +391,7 @@ Item {
                                 : previewColumn.textPreview.content))
                     color: Theme.text
                     wrapMode: TextEdit.NoWrap
-                    font.family: "monospace"
+                    font.family: Fonts.mono
                     font.pointSize: Theme.fontSmall - 1
 
                     onCursorRectangleChanged: {

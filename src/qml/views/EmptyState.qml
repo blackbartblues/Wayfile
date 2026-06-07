@@ -81,7 +81,7 @@ Item {
                 source: btn.iconName !== "" ? "../icons/Icon" + btn.iconName + ".qml" : ""
                 onLoaded: {
                     item.size = 15
-                    item.color = Qt.binding(() => btn.isPrimary ? "#1a1206"
+                    item.color = Qt.binding(() => btn.isPrimary ? Theme.goldInk
                         : (btn.active ? Theme.gold : (btn.isGhost ? Theme.muted : Theme.gold)))
                 }
             }
@@ -89,7 +89,7 @@ Item {
                 text: btn.label
                 font.pointSize: Theme.fontSmall
                 font.weight: btn.isPrimary ? Font.DemiBold : Font.Medium
-                color: btn.isPrimary ? "#1a1206" : (btn.active ? Theme.goldLight : Theme.text)
+                color: btn.isPrimary ? Theme.goldInk : (btn.active ? Theme.goldLight : Theme.text)
                 verticalAlignment: Text.AlignVCenter
             }
         }

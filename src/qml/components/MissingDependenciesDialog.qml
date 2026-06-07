@@ -121,7 +121,7 @@ Q.Dialog {
                             delegate: DependencyRow {
                                 Layout.fillWidth: true
                                 dep: modelData
-                                severityColor: Qt.rgba(0.9, 0.3, 0.3, 1.0)
+                                severityColor: Theme.error
                             }
                         }
                     }
@@ -295,7 +295,7 @@ Q.Dialog {
                         anchors.margins: 7
                         text: depRow.dep ? depRow.dep.installCommand : ""
                         color: Theme.text
-                        font.family: "monospace"
+                        font.family: Fonts.mono
                         font.pointSize: Theme.fontSmall
                         readOnly: true
                         selectByMouse: true

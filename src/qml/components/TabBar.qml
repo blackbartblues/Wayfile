@@ -615,7 +615,7 @@ Item {
                             anchors.right: parent.right
                             anchors.margins: 1
                             height: 1
-                            color: Qt.rgba(1.0, 0.94, 0.84, 0.06)
+                            color: Qt.rgba(Theme.sheen.r, Theme.sheen.g, Theme.sheen.b, 0.06)
                         }
                     }
 
@@ -767,7 +767,7 @@ Item {
                                         anchors.top: parent.top; anchors.left: parent.left
                                         anchors.right: parent.right; anchors.margins: 1
                                         height: 1
-                                        color: Qt.rgba(1.0, 0.94, 0.84, 0.06)
+                                        color: Qt.rgba(Theme.sheen.r, Theme.sheen.g, Theme.sheen.b, 0.06)
                                     }
 
                                     IconFolder {

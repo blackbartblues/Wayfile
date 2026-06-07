@@ -409,7 +409,7 @@ Window {
                                         Rectangle {
                                             width: parent.width * (propertiesDialog.props.diskUsedPercent || 0)
                                             height: parent.height; radius: 3
-                                            color: (propertiesDialog.props.diskUsedPercent || 0) > 0.9 ? "#e74c3c" : Theme.accent
+                                            color: (propertiesDialog.props.diskUsedPercent || 0) > 0.9 ? Theme.error : Theme.accent
                                         }
                                     }
 

@@ -32,7 +32,7 @@ Item {
         anchors.fill: disc
         anchors.topMargin: Math.max(1, Math.round(badge.size * 0.08))
         radius: width / 2
-        color: Qt.rgba(0, 0, 0, 0.55)
+        color: Qt.rgba(Theme.shadowInk.r, Theme.shadowInk.g, Theme.shadowInk.b, 0.55)
     }
 
     Rectangle {
@@ -42,7 +42,8 @@ Item {
         color: badge.solid ? badge.statusColor : "transparent"
         gradient: badge.solid ? null : discGradient
         border.width: 1
-        border.color: badge.solid ? Qt.rgba(0, 0, 0, 0.4) : Qt.rgba(1, 1, 1, 0.16)
+        border.color: badge.solid ? Qt.rgba(Theme.shadowInk.r, Theme.shadowInk.g, Theme.shadowInk.b, 0.4)
+                                   : Qt.rgba(Theme.sheen.r, Theme.sheen.g, Theme.sheen.b, 0.16)
         clip: true
 
         // Top sheen — a thin highlight just inside the upper rim.
@@ -53,7 +54,8 @@ Item {
             width: parent.width * 0.55
             height: 1
             radius: 0.5
-            color: badge.solid ? Qt.rgba(1, 1, 1, 0.4) : Qt.rgba(1, 1, 1, 0.11)
+            color: badge.solid ? Qt.rgba(Theme.sheen.r, Theme.sheen.g, Theme.sheen.b, 0.4)
+                            : Qt.rgba(Theme.sheen.r, Theme.sheen.g, Theme.sheen.b, 0.11)
         }
     }
 

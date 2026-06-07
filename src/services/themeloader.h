@@ -35,6 +35,17 @@ class ThemeLoader : public QObject
     Q_PROPERTY(QColor line READ line NOTIFY themeChanged)
     Q_PROPERTY(QColor lineSoft READ lineSoft NOTIFY themeChanged)
     Q_PROPERTY(QColor hair READ hair NOTIFY themeChanged)
+    // Phase C2 atmosphere tokens. sheen/shadowInk are *base* colours — the
+    // various highlight/shadow strengths apply their own alpha at the use
+    // site (mirroring how alpha tints of `text` form the hairline language).
+    // scrim carries its alpha baked in (#aarrggbb). goldInk is the dark ink
+    // painted on gold fills; knob is the warm-white control knob (bridged
+    // into Quill in C3).
+    Q_PROPERTY(QColor sheen READ sheen NOTIFY themeChanged)
+    Q_PROPERTY(QColor shadowInk READ shadowInk NOTIFY themeChanged)
+    Q_PROPERTY(QColor scrim READ scrim NOTIFY themeChanged)
+    Q_PROPERTY(QColor goldInk READ goldInk NOTIFY themeChanged)
+    Q_PROPERTY(QColor knob READ knob NOTIFY themeChanged)
 
 public:
     explicit ThemeLoader(QObject *parent = nullptr);
@@ -66,6 +77,11 @@ public:
     QColor line() const { return color("line"); }
     QColor lineSoft() const { return color("lineSoft"); }
     QColor hair() const { return color("hair"); }
+    QColor sheen() const { return color("sheen"); }
+    QColor shadowInk() const { return color("shadowInk"); }
+    QColor scrim() const { return color("scrim"); }
+    QColor goldInk() const { return color("goldInk"); }
+    QColor knob() const { return color("knob"); }
 signals:
     void themeChanged();
 private:

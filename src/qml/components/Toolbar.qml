@@ -208,7 +208,7 @@ Rectangle {
                     }
 
                     IconLink { anchors.centerIn: parent; size: 18; color: Theme.gold; visible: !root.mergeWillUnmerge }
-                    IconUnlink { anchors.centerIn: parent; size: 18; color: "#1a1206"; visible: root.mergeWillUnmerge }
+                    IconUnlink { anchors.centerIn: parent; size: 18; color: Theme.goldInk; visible: root.mergeWillUnmerge }
                     Q.Tooltip { text: root.mergeTooltip; visible: mergeBtn.hovered && root.mergeTooltip.length > 0 }
                 }
 

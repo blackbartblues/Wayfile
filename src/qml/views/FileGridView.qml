@@ -592,9 +592,9 @@ GridView {
                 bottomRightRadius: 2
                 // Bottom-lit gold (handoff radial ellipse at 50% 120%).
                 gradient: Gradient {
-                    GradientStop { position: 0.0; color: "#7a4f1e" }
-                    GradientStop { position: 0.45; color: "#E3A94B" }
-                    GradientStop { position: 1.0; color: "#fff3d6" }
+                    GradientStop { position: 0.0; color: Theme.goldDeep }
+                    GradientStop { position: 0.45; color: Theme.gold }
+                    GradientStop { position: 1.0; color: Theme.goldLight }
                 }
             }
 
