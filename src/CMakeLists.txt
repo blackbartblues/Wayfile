@@ -125,6 +125,7 @@ list(APPEND wayfile_qml_module_args
         qml/components/SelectionController.qml
         qml/views/FileViewContainer.qml
         qml/views/HybridView.qml
+        qml/views/GalleryView.qml
         qml/views/EmptyState.qml
         qml/views/OsFolder.qml
         qml/views/OsFile.qml
