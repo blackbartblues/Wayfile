@@ -26,6 +26,7 @@ Item {
         if (viewMode === "hybrid") hybridView.selectAll()
         else if (viewMode === "grid") gridView.selectAll()
         else if (viewMode === "miller") millerView.selectAll()
+        else if (viewMode === "gallery") galleryView.selectAll()
         else detailedView.selectAll()
     }
 
@@ -34,6 +35,7 @@ Item {
         gridView.focusPath(path, reveal)
         detailedView.focusPath(path, reveal)
         millerView.focusPath(path, reveal)
+        galleryView.focusPath(path, reveal)
     }
 
     // Expose sub-views so main.qml can access selection state
@@ -41,6 +43,7 @@ Item {
     property alias gridViewItem: gridView
     property alias detailedViewItem: detailedView
     property alias millerViewItem: millerView
+    property alias galleryViewItem: galleryView
 
     HybridView {
         id: hybridView
@@ -99,6 +102,20 @@ Item {
         onTransferRequested: (paths, destinationPath, moveOperation) => root.transferRequested(paths, destinationPath, moveOperation)
     }
 
+    GalleryView {
+        id: galleryView
+        anchors.fill: parent
+        visible: root.viewMode === "gallery"
+        viewModel: visible ? root.fileModel : null
+        currentPath: root.currentPath
+
+        onFileActivated: (fp, isDir) => root.fileActivated(fp, isDir)
+        onContextMenuRequested: (fp, isDir, pos) => root.contextMenuRequested(fp, isDir, pos)
+        onSelectionChanged: root.selectionChanged()
+        onInteractionStarted: root.interactionStarted()
+        onTransferRequested: (paths, destinationPath, moveOperation) => root.transferRequested(paths, destinationPath, moveOperation)
+    }
+
     // Empty-folder hero overlay (handoff §8). One instance covers whichever flat
     // view is active (grid / detailed / hybrid). Shown when the directory lists
     // zero visible items AND this is a normal, browsable local directory — so it
@@ -115,7 +132,8 @@ Item {
 
     EmptyState {
         anchors.fill: parent
-        visible: root.viewMode !== "miller" && root._dirEmpty && root._canCreate
+        visible: root.viewMode !== "miller" && root.viewMode !== "gallery"
+                 && root._dirEmpty && root._canCreate
         hiddenShown: root.fileModel ? root.fileModel.showHidden : false
         onNewFolderClicked: root.createItemRequested("folder", root.currentPath)
         onNewFileClicked: root.createItemRequested("file", root.currentPath)
