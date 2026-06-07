@@ -13,7 +13,7 @@
 
 </div>
 
-> **Heimdall is a fork of [HyprFM](https://github.com/soyeb-jim285/hyprfm)** by Soyeb Pervez Jim — re-skinned with the obsidian + gold *Bifröst* theme and extended with a hybrid view, merged tabs, and an in-app palette editor. All credit for the original file manager goes to the upstream project.
+> **Heimdall is a fork of [HyprFM](https://github.com/soyeb-jim285/hyprfm)** by Soyeb Pervez Jim — re-skinned with the obsidian + gold *Bifröst* theme and extended with a hybrid view, merged tabs, and an in-app palette editor. The fork lands **167 commits** on top of HyprFM — 64 features, **41 bug fixes**, 38 refactors and perf work — squashing a long tail of bugs and hardening the app for the 1.0.0 release. All credit for the original file manager goes to the upstream project.
 
 ---
 
