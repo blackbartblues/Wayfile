@@ -341,7 +341,10 @@ GridView {
     }
 
     Connections {
-        target: root.model
+        // Coalesce undefined -> null: a bare `root.model` momentarily resolves to
+        // undefined during construction/teardown, which QML rejects for a QObject*
+        // target and surfaces as an intermittent warning (flaky qml smoke).
+        target: root.model || null
         ignoreUnknownSignals: true
 
         function onModelReset() {
