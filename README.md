@@ -4,7 +4,7 @@
 
 # Heimdall
 
-**A fast, keyboard-friendly file manager for Hyprland and Wayland desktops.**
+**An obsidian-and-gold file manager for Hyprland and Wayland — fast, keyboard-driven, and deeply themeable.**
 
 [![License](https://img.shields.io/github/license/blackbartblues/Heimdall?style=flat-square)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/blackbartblues/Heimdall?style=flat-square)](https://github.com/blackbartblues/Heimdall/releases)
@@ -15,12 +15,12 @@
 
 ---
 
-Heimdall is a Qt6/QML file manager designed to feel native on Hyprland: lightweight, themeable, and built around fast keyboard navigation. It pairs a polished UI with the practical features power users expect — Miller column view, kinetic scrolling, drag & drop, async operations, rich previews, and a TOML-based theme system.
+Heimdall is a Qt6/QML file manager built to feel native on Hyprland: lightweight, fast, and unapologetically keyboard-driven. Its signature look is **Bifröst** — a deep obsidian surface with a warm gate-glow gold accent — and its default layout is the **hybrid view**, a folder grid stacked over a sortable file list with one shared selection. Underneath the polish sit the features power users actually reach for: Miller columns, split panes, merged tabs, async file operations, rich previews, git status, and a live TOML theme system with a built-in, granular palette editor.
 
 <div align="center">
 
-![Grid view](docs/screenshots/grid-view.png)
-*Grid view with built-in icon set, themed sidebar, and live preview blur*
+![Hybrid view](docs/screenshots/hybrid-view.png)
+*The default **hybrid** view — a folder grid over a sortable file list, themed sidebar with a live disk meter, and the obsidian + gold Bifröst skin.*
 
 </div>
 
@@ -30,62 +30,67 @@ Heimdall is a Qt6/QML file manager designed to feel native on Hyprland: lightwei
 
 ### Views
 
-- **Grid view** with adjustable column count (`Ctrl+Scroll` to zoom)
-- **Detailed view** with sortable columns, image/video thumbnails, and folder item counts
-- **Miller columns** (`Ctrl+2`) — parent · current · live preview, the macOS Finder favorite
-- **Image and video thumbnails** in detailed and Miller views
-- **Quick preview** (`Space`) — full-screen overlay for images, video, PDFs, text, with metadata sidebar
-- **Split pane** (`F3`) — work in two directories side by side
+- **Hybrid** (default) — a folder grid stacked over a sortable file list, with one unified selection across both halves; the file list sorts independently.
+- **Grid** (`Ctrl+1`) — `Ctrl+Scroll` to zoom; the icon size stays constant while columns reflow to fill the width.
+- **Detailed** (`Ctrl+3`) — sortable `Name · Modified · Type · Size` columns, folder item counts, image/video thumbnails.
+- **Miller columns** (`Ctrl+2`) — parent · current · live preview, with a metadata panel for the focused item.
+- **Quick preview** (`Space`) — a full-screen overlay for images, video, PDFs, and text with a rich metadata sidebar; `←/→` browse neighbours.
+- **Split panes** (`F3`) — up to four directories side by side, each with its own path strip and item count.
 
 <div align="center">
 
+![Grid view](docs/screenshots/grid-view.png)
+*Grid view — gold folder glyphs, metallic file-type chips, and inline thumbnails.*
+
 ![Miller view](docs/screenshots/miller-view.png)
-*Miller column view with rich text preview and syntax highlighting*
+*Miller columns with a live preview column and per-item metadata.*
 
 </div>
 
 ### Navigation & input
 
-- **Full keyboard navigation** — arrows, vim-friendly shortcuts, type-ahead search
-- **Tabs** with independent history per pane
-- **Path bar** with breadcrumbs and inline editing (`Ctrl+L`)
-- **Bookmarks sidebar** with drag-to-reorder and udisks2 device mounting
+- **Full keyboard navigation** — arrows, history, type-ahead jump-to-file
+- **Tabs** with independent per-pane history; **merge tabs** into a split "supertab" (the merge button joins the active tab with its right-hand neighbour)
+- **Breadcrumb path bar** with inline editing (`Ctrl+L`) and suggestions
+- **Bookmarks sidebar** with drag-to-reorder, typed-folder emblems, and udisks2 device mounting with live capacity meters
 - **Kinetic wheel scrolling** with momentum and rubber-band overscroll
-- **Rubber-band selection** in all views
+- **Rubber-band selection**; contiguous selections render as one rounded outline
 
 ### File operations
 
 - **Async copy / move** via `rsync` and `gio` with live progress, speed, ETA, and pause
 - **Drag & drop** between panes, tabs, and external apps (Wayland-native)
-- **Trash** with restore (XDG-compliant)
-- **Bulk rename** with regex find/replace
-- **Compress / extract** archives
-- **Open With** dialog populated from `.desktop` entries
-- **Undo/redo** for file operations
-
-### Look & feel
-
-- **TOML themes** with live reload (Catppuccin Mocha by default)
-- **Built-in SVG icon set** (60+ Lucide-style icons rendered via Qt Shapes)
-- **Configurable corner radius**, fonts, animation duration
-- **Wayland compositor blur** on Hyprland plus native KWin blur on KDE Plasma
-
-### Integrations
-
-- **udisks2** mount/unmount of removable drives
-- **gvfs / gio** for SFTP, SMB, MTP, trash, etc.
-- **Git status overlays** in file lists (modified, staged, untracked, …)
-- **wl-clipboard** for system clipboard
-- **bat** for syntax-highlighted text previews
-- **ffmpeg** for video poster thumbnails
-- **Poppler** for PDF page previews
+- **Trash** with restore (XDG-compliant) · **Bulk rename** with regex find/replace
+- **Compress / extract** archives · **Open With** from `.desktop` entries · **Undo / redo**
 
 <div align="center">
 
 ![Quick preview](docs/screenshots/quick-preview.png)
-*Quick preview overlay (Space) — image preview with full metadata sidebar*
+*Quick preview (`Space`) — image preview with a full metadata sidebar and EXIF hints.*
 
 </div>
+
+### Look & feel
+
+- **Bifröst**, the signature obsidian + gold theme, plus bundled Catppuccin Mocha & Latte
+- **In-app palette editor** — a granular *Colours* settings page edits the live theme token by token (swatch + hex), saves it as a writable `custom` theme, and warns on low accent contrast
+- **TOML themes with live reload** — drop a file in `themes/`, pick it in Settings, no restart
+- **Built-in SVG icon set** (Lucide-style, rendered via Qt Shapes) and the *Cinzel* / *JetBrains Mono* type pairing
+- **Configurable** corner radius, fonts, animation timing, transparency
+- **Compositor blur** on Hyprland, plus native KWin blur on KDE Plasma
+
+<div align="center">
+
+![Colours editor](docs/screenshots/colours-editor.png)
+*The built-in Colours editor — edit the active palette token by token; it saves as a live "custom" theme.*
+
+</div>
+
+### Integrations
+
+- **udisks2** mount/unmount of removable drives · **gvfs / gio** for SFTP, SMB, MTP, trash
+- **Git status overlays** in every view (modified, staged, untracked, …)
+- **wl-clipboard** clipboard · **bat** syntax highlighting · **ffmpeg** video posters · **Poppler** PDF previews
 
 ---
 
@@ -97,62 +102,30 @@ Heimdall is a Qt6/QML file manager designed to feel native on Hyprland: lightwei
 yay -S heimdall-git
 ```
 
-The PKGBUILD pulls latest `main`, builds with Ninja + parallel jobs + tests disabled, and installs to `/usr/bin/heimdall`.
-
-### Flatpak (self-hosted)
-
-Heimdall publishes a signed Flatpak repository at `heimdall.soyebjim.me`. Because Heimdall depends on the KDE Platform runtime from Flathub, the Flathub remote must exist at the **same scope** you install into — for `--user` installs, that means a `--user` Flathub remote. Add both remotes once and install:
-
-```bash
-# Flathub at user scope (provides org.kde.Platform)
-flatpak remote-add --user --if-not-exists \
-    flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-
-# Heimdall repo
-flatpak remote-add --user --if-not-exists \
-    heimdall https://flatpak.heimdall.soyebjim.me/heimdall.flatpakrepo
-flatpak install --user heimdall io.github.blackbartblues.Heimdall
-```
-
-If you'd rather install system-wide, drop every `--user` flag and prefix with `sudo`; system Flathub is already configured on most distros.
-
-Updates arrive via the usual `flatpak update`. The repo is signed with a GPG key committed at [`public-key.asc`](https://github.com/blackbartblues/Heimdall-flatpak-repo/blob/main/public-key.asc); Flatpak verifies every download against it automatically.
-
-Each tagged release also attaches an `Heimdall-vX.Y.Z-x86_64.flatpak` bundle to the GitHub release for users who want a single-file install without adding a remote.
-
-### Debian / Ubuntu (.deb)
-
-Grab `heimdall_*_amd64.deb` from the latest [release](https://github.com/blackbartblues/Heimdall/releases) and install:
-
-```bash
-sudo apt install ./heimdall_*_amd64.deb
-```
-
-Tested on Ubuntu 24.04. May work on other recent Debian-based distributions.
+The PKGBUILD clones the latest `main`, builds with Ninja, and installs to `/usr/bin/heimdall`.
 
 ### AppImage (any distro)
 
+Grab the latest self-contained AppImage from the [releases page](https://github.com/blackbartblues/Heimdall/releases):
+
 ```bash
-wget https://github.com/blackbartblues/Heimdall/releases/latest/download/Heimdall-v0.4.20-x86_64.AppImage
-chmod +x Heimdall-*.AppImage
-./Heimdall-*.AppImage
+chmod +x Heimdall-*-x86_64.AppImage
+./Heimdall-*-x86_64.AppImage
 ```
 
-The AppImage is fully self-contained — no system Qt installation required.
+No system Qt installation required. AppImages are built automatically on every `v*` tag.
 
 ### Build from source
 
 ```bash
 git clone --recursive https://github.com/blackbartblues/Heimdall.git
 cd Heimdall
-cmake -B build -G Ninja \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DBUILD_TESTS=OFF
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF
 cmake --build build --parallel
 ./build/src/heimdall
 ```
 
-> **Note:** the `--recursive` flag is important — Heimdall uses Git submodules for the [Quill](https://github.com/soyeb-jim285/quill) component library and the [quill-icons](https://github.com/soyeb-jim285/quill-icons) icon set.
+> **Note:** `--recursive` pulls the [quill-icons](https://github.com/soyeb-jim285/quill-icons) icon submodule. (The Quill control library is vendored directly in `src/qml/Quill/`, so it is not a submodule.)
 
 #### Dependencies
 
@@ -160,14 +133,13 @@ cmake --build build --parallel
 |---|---|
 | **Required (build)** | `cmake`, `ninja`, `qt6-base`, `qt6-declarative`, `qt6-svg` |
 | **Required (runtime)** | `qt6-base`, `qt6-declarative`, `qt6-svg`, `qt6-wayland`, `glib2`, `fd`, `rsync`, `xdg-utils` |
-| **Optional** | `kwindowsystem` / `KF6WindowSystem` (native KDE blur), `wl-clipboard` (clipboard), `bat` (syntax highlighting), `gvfs` (remote filesystems), `gvfs-smb` (SMB), `ffmpeg` (video thumbnails), `udisks2` (device mounting), `poppler-qt6` (PDF previews) |
+| **Optional** | `kwindowsystem` (native KDE blur), `wl-clipboard` (clipboard), `bat` (syntax highlighting), `gvfs` / `gvfs-smb` (remote filesystems), `ffmpeg` (video thumbnails), `udisks2` (device mounting), `poppler-qt6` (PDF previews) |
 
 ---
 
 ## ⌨️ Keyboard shortcuts
 
 ### Navigation
-
 | Shortcut | Action |
 |----------|--------|
 | `Return` / `Double-click` | Open file or directory |
@@ -178,101 +150,105 @@ cmake --build build --parallel
 | `Type any letter` | Type-ahead jump to file |
 
 ### Views
-
 | Shortcut | Action |
 |----------|--------|
 | `Ctrl+1` | Grid view |
 | `Ctrl+2` | Miller column view |
 | `Ctrl+3` | Detailed view |
-| `Ctrl+Scroll` | Zoom (icon size or row height) |
+| `Ctrl+Scroll` | Zoom |
 | `Space` | Quick preview |
 | `F3` | Toggle split pane |
 | `F9` | Toggle sidebar |
 | `Ctrl+H` | Toggle hidden files |
 
-### Tabs
+> The **hybrid** view is the default and is reachable from the view switcher in the status bar.
 
+### Tabs
 | Shortcut | Action |
 |----------|--------|
-| `Ctrl+T` | New tab |
-| `Ctrl+W` | Close tab |
+| `Ctrl+T` / `Ctrl+W` | New / Close tab |
 | `Ctrl+Shift+T` | Reopen closed tab |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Cycle tabs |
 
 ### File operations
-
 | Shortcut | Action |
 |----------|--------|
 | `Ctrl+C` / `Ctrl+X` / `Ctrl+V` | Copy / Cut / Paste |
 | `Ctrl+A` | Select all |
 | `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / Redo |
 | `F2` | Rename |
-| `Delete` | Move to trash |
-| `Shift+Delete` | Permanent delete |
-| `Ctrl+Shift+N` | New folder |
-| `Ctrl+N` | New file |
+| `Delete` / `Shift+Delete` | Trash / Permanent delete |
+| `Ctrl+Shift+N` / `Ctrl+N` | New folder / New file |
 
-All shortcuts can be remapped in `~/.config/heimdall/config.toml` under the `[shortcuts]` section.
+All shortcuts can be remapped in `~/.config/heimdall/config.toml` under `[shortcuts]`.
 
 ---
 
 ## ⚙️ Configuration
 
-Config lives at `~/.config/heimdall/config.toml` and is created with sensible defaults on first run.
+Config lives at `~/.config/heimdall/config.toml`, created with sensible defaults on first run.
 
 ```toml
 [general]
-theme = "catppuccin-mocha"     # filename in themes/ without .toml
-icon_theme = "Adwaita"         # system icon theme fallback
-builtin_icons = true           # use bundled SVG icons
-default_view = "grid"          # grid | detailed | miller
+theme = "bifrost"              # filename in themes/ without .toml ("custom" = your edited palette)
+icon_theme = "Heimdall"        # system icon theme fallback
+builtin_icons = true           # use the bundled SVG icons
+default_view = "hybrid"        # hybrid | grid | detailed | miller
 show_hidden = false
 sort_by = "name"               # name | size | modified | type
 sort_ascending = true
 
 [sidebar]
 position = "left"
-width = 200
+width = 236
 visible = true
 
 [appearance]
 radius_small = 4
 radius_medium = 8
 radius_large = 12
+transparency_enabled = true
+transparency_level = 1.0
 
 [bookmarks]
 paths = ["~/Documents", "~/Downloads", "~/Pictures", "~/Projects"]
 
 [shortcuts]
-# Override any shortcut. Examples:
-# rename       = "F2"
-# new_tab      = "Ctrl+T"
-# miller_view  = "Ctrl+2"
+# Override any shortcut, e.g.:
+# rename      = "F2"
+# miller_view = "Ctrl+2"
 ```
 
 ---
 
 ## 🎨 Theming
 
-Themes are TOML files in `themes/`. Drop a new file there or in `~/.config/heimdall/themes/` and reference it from config:
+A theme is a TOML file with a single `[colors]` table. Drop one in `themes/` (or your config folder) and pick it in **Settings → Look & Feel → Theme** — it applies live, no restart. Almost the entire UI is token-driven, so a complete theme recolours the whole app.
+
+There are two token families. The **semantic** layer drives dialogs, menus, and every control:
 
 ```toml
 [colors]
-base    = "#1e1e2e"
-mantle  = "#181825"
-crust   = "#11111b"
-surface = "#313244"
-overlay = "#45475a"
-text    = "#cdd6f4"
-subtext = "#bac2de"
-muted   = "#6c7086"
-accent  = "#89b4fa"
-success = "#a6e3a1"
-warning = "#f9e2af"
-error   = "#f38ba8"
+base = "#111217"; mantle = "#0c0d11"; crust = "#050609"; surface = "#1b1d24"; overlay = "#22242c"
+text = "#ECE7DC"; subtext = "#9CA0A8"; muted = "#62666e"
+accent = "#E3A94B"; success = "#7ab87a"; warning = "#c9956a"; error = "#c97070"
 ```
 
-Themes reload live on save.
+The **obsidian + gold** layer drives the signature chrome (tabs, toolbar, sidebar, breadcrumb, views, badges) and the atmosphere (sheens, shadows, scrim):
+
+```toml
+gold = "#E3A94B"; goldMid = "#C98F3C"; goldDeep = "#9a6e2e"; goldLight = "#FFE7B6"
+page = "#050609"; bgA = "#121318"; bgB = "#0a0b0e"
+panel = "#111217"; panel2 = "#15161c"; raise = "#1b1d24"; raise2 = "#22242c"
+line = "#25262e"; lineSoft = "#1b1c22"; hair = "#0e0f13"
+sheen = "#FFF0D6"; shadowInk = "#000000"; scrim = "#C7080A0D"; goldInk = "#1a1206"; knob = "#FFF3DF"
+```
+
+> Keep `accent` and `gold` equal (or deliberately compatible) — the chrome reads `gold` while controls read `accent`, and Bifröst unifies them by making the two identical.
+
+**Don't want to hand-edit TOML?** The **Colours** settings page edits the live palette token by token (swatch + hex field), saves it to a writable `~/.config/heimdall/custom.toml`, and selects it as the `custom` theme. A "Reset to Bifröst" button reverts, and a live warning flags an accent that's too low-contrast against the background.
+
+The shipped `themes/catppuccin-mocha.toml` and `themes/catppuccin-latte.toml` are the best templates for mapping a foreign palette onto both token families.
 
 ---
 
@@ -280,27 +256,27 @@ Themes reload live on save.
 
 Heimdall is a three-layer Qt6 application:
 
-- **QML frontend** (`src/qml/`) — all rendering. `Main.qml` wires tab state, selection, and shortcuts. Views (`FileGridView`, `FileDetailedView`, `FileMillerView`) are switched by `FileViewContainer`. The [Quill](https://github.com/soyeb-jim285/quill) component library provides themed Buttons, TextFields, Cards, etc.
-- **C++ backend** (`src/models/`, `src/services/`, `src/providers/`) — `QAbstractListModel` subclasses for files, tabs, bookmarks, devices. Async services for clipboard, file operations, search, disk usage, previews. Exposed to QML via `setContextProperty`.
-- **System layer** — `rsync` / `gio` via `QProcess` for transfers, UDisks2 over DBus for devices, `wl-copy` for clipboard.
+- **QML frontend** (`src/qml/`) — all rendering. `Main.qml` wires tab state, selection, and shortcuts. `FileViewContainer` switches between `HybridView`, `FileGridView`, `FileDetailedView`, and `FileMillerView`. Theme tokens come from the `Theme` / `Fonts` / `FileTypeColors` / `GitColors` QML singletons; the vendored [Quill](https://github.com/soyeb-jim285/quill) library (in `src/qml/Quill/`) provides themed controls, bridged onto Heimdall's tokens in `Main.qml`.
+- **C++ backend** (`src/models/`, `src/services/`, `src/providers/`) — `QAbstractListModel` subclasses for files, tabs, bookmarks, devices; async services for config, theming, clipboard, file operations, search, disk usage, and previews. `ThemeLoader` parses the active TOML into the live `Theme` singleton. Exposed to QML via `setContextProperty`.
+- **System layer** — `rsync` / `gio` via `QProcess`, UDisks2 over DBus, `wl-copy` for the clipboard.
 
-See [`CLAUDE.md`](CLAUDE.md) for the full architecture notes used by AI coding assistants.
+See [`CLAUDE.md`](CLAUDE.md) for the full architecture notes.
 
 ---
 
 ## 🤝 Contributing
 
-Issues and PRs welcome! A few notes:
+Issues and PRs welcome. A few notes:
 
-- Run tests with `ctest --test-dir build` after changes
-- Match the existing code style (4-space indent for QML and C++)
-- The project uses Git submodules — `git submodule update --init --recursive` after pulling
-- AppImage builds are produced automatically on `v*` tags by the GitHub Actions workflow
+- Run the tests with `ctest --test-dir build` after changes (Qt6::Test).
+- Match the existing 4-space-indent style for QML and C++.
+- Initialise submodules after pulling: `git submodule update --init --recursive`.
+- AppImages build automatically on `v*` tags via GitHub Actions.
 
 ---
 
-## 📜 License
+## 📜 License & credits
 
-[MIT](LICENSE) © Soyeb Pervez Jim
+[MIT](LICENSE). Heimdall is a fork maintained by **blackbartblues**, building on the original **HyprFM** by **Soyeb Pervez Jim**.
 
-Built with [Qt 6](https://www.qt.io/) · Icons from [Lucide](https://lucide.dev/) · Inspired by macOS Finder, Nautilus, and Dolphin.
+Built with [Qt 6](https://www.qt.io/) · icons from [Lucide](https://lucide.dev/) · type by [Cinzel](https://github.com/NDISCOVER/Cinzel) & [JetBrains Mono](https://www.jetbrains.com/lp/mono/) · inspired by macOS Finder, Nautilus, and Dolphin.

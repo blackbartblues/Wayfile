@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(heimdall VERSION 0.4.25 LANGUAGES CXX)
+project(heimdall VERSION 1.0.0 LANGUAGES CXX)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GIO REQUIRED IMPORTED_TARGET gio-2.0 gio-unix-2.0)
