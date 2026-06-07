@@ -2,6 +2,7 @@
 #include <QObject>
 #include <QColor>
 #include <QMap>
+#include <QStringList>
 
 class ThemeLoader : public QObject
 {
@@ -51,6 +52,16 @@ public:
     explicit ThemeLoader(QObject *parent = nullptr);
     void loadTheme(const QString &nameOrPath, const QString &themesDir);
     QColor color(const QString &name) const;
+
+    // Phase C4 live colour editing (the "Colours" settings section). setColor
+    // mutates one token in-place and re-emits themeChanged for instant preview;
+    // currentColor reads the active value to seed an editor; saveThemeFile
+    // serialises every token to a TOML [colors] table so the edited palette can
+    // persist as `custom.toml`. colorKeys lists the canonical token set.
+    Q_INVOKABLE void setColor(const QString &name, const QColor &c);
+    Q_INVOKABLE QColor currentColor(const QString &name) const { return color(name); }
+    Q_INVOKABLE bool saveThemeFile(const QString &path) const;
+    Q_INVOKABLE QStringList colorKeys() const { return s_defaults.keys(); }
     QColor base() const { return color("base"); }
     QColor mantle() const { return color("mantle"); }
     QColor crust() const { return color("crust"); }

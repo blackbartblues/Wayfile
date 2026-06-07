@@ -208,7 +208,19 @@ QStringList ConfigManager::availableThemes() const
     themes.reserve(files.size());
     for (const QString &fileName : files)
         themes.append(QFileInfo(fileName).completeBaseName());
+
+    // Surface the user's editable palette (config dir, not the read-only
+    // install themes dir) as a selectable theme once it has been created.
+    if (!themes.contains(QStringLiteral("custom"))
+        && QFile::exists(customThemePath()))
+        themes.append(QStringLiteral("custom"));
+
     return themes;
+}
+
+QString ConfigManager::customThemePath() const
+{
+    return QFileInfo(m_configPath).dir().filePath(QStringLiteral("custom.toml"));
 }
 
 QStringList ConfigManager::availableFonts() const

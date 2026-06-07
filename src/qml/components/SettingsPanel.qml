@@ -147,6 +147,7 @@ Window {
     readonly property string systemFontLabel: "System Default"
 
     Component { id: paletteSectionIcon; IconSettings {} }
+    Component { id: coloursSectionIcon; IconPalette {} }
     Component { id: layoutSectionIcon; IconPanelLeft {} }
     Component { id: motionSectionIcon; IconClock {} }
     Component { id: toolsSectionIcon; IconFolder {} }
@@ -155,12 +156,14 @@ Window {
     readonly property bool compactNavigation: dialogWidth < 860
     readonly property var sectionNavItems: [
         { title: "Look & Feel", iconComponent: paletteSectionIcon },
+        { title: "Colours", iconComponent: coloursSectionIcon },
         { title: "Layout", iconComponent: layoutSectionIcon },
         { title: "Motion", iconComponent: motionSectionIcon },
         { title: "Tools", iconComponent: toolsSectionIcon }
     ]
     readonly property var sectionItems: [
         { title: "Look & Feel", subtitle: "Theme, typography, icons, and surface styling.", iconComponent: paletteSectionIcon },
+        { title: "Colours", subtitle: "Edit the palette token by token; saved as a custom theme.", iconComponent: coloursSectionIcon },
         { title: "Layout", subtitle: "Sidebar behavior, file visibility, and toolbar controls.", iconComponent: layoutSectionIcon },
         { title: "Motion", subtitle: "Animation timing and easing across the interface.", iconComponent: motionSectionIcon },
         { title: "Tools", subtitle: "Shortcuts, remote locations, and config behavior.", iconComponent: toolsSectionIcon }
@@ -459,6 +462,7 @@ Window {
     // Each settings page lives in its own SettingsSection*.qml; these thin
     // wrappers feed it the typed `panel` (reactive) and the loader width.
     Component { id: lookPageComponent; SettingsSectionLook { width: pageLoader.width; panel: root } }
+    Component { id: coloursPageComponent; SettingsSectionColors { width: pageLoader.width; panel: root } }
     Component { id: layoutPageComponent; SettingsSectionLayout { width: pageLoader.width; panel: root } }
     Component { id: motionPageComponent; SettingsSectionMotion { width: pageLoader.width; panel: root } }
     Component { id: toolsPageComponent; SettingsSectionTools { width: pageLoader.width; panel: root } }
@@ -621,10 +625,12 @@ Window {
                                     sourceComponent: root.currentSectionIndex === 0
                                         ? lookPageComponent
                                         : root.currentSectionIndex === 1
-                                            ? layoutPageComponent
+                                            ? coloursPageComponent
                                             : root.currentSectionIndex === 2
-                                                ? motionPageComponent
-                                                : toolsPageComponent
+                                                ? layoutPageComponent
+                                                : root.currentSectionIndex === 3
+                                                    ? motionPageComponent
+                                                    : toolsPageComponent
                                 }
                             }
                         }

@@ -217,6 +217,66 @@ private slots:
         QCOMPARE(loader.page(), QColor("#050609"));
         QCOMPARE(loader.hair(), QColor("#0e0f13"));
     }
+
+    // Phase C4: live colour editing for the Colours settings section.
+    void testSetColorEmitsAndUpdates()
+    {
+        ThemeLoader loader;
+        loader.loadTheme("bifrost", THEMES_DIR);
+        QSignalSpy spy(&loader, &ThemeLoader::themeChanged);
+
+        loader.setColor("accent", QColor("#ff0000"));
+        QCOMPARE(loader.color("accent"), QColor("#ff0000"));
+        QCOMPARE(spy.count(), 1);
+
+        // Same value -> no-op, no extra signal.
+        loader.setColor("accent", QColor("#ff0000"));
+        QCOMPARE(spy.count(), 1);
+
+        // Empty name / invalid colour are ignored.
+        loader.setColor("", QColor("#00ff00"));
+        loader.setColor("accent", QColor());
+        QCOMPARE(spy.count(), 1);
+        QCOMPARE(loader.color("accent"), QColor("#ff0000"));
+    }
+
+    void testSaveThemeFileRoundTrips()
+    {
+        ThemeLoader loader;
+        loader.loadTheme("bifrost", THEMES_DIR);
+        loader.setColor("accent", QColor("#123456"));
+        loader.setColor("text", QColor("#abcdef"));
+
+        QTemporaryDir dir;
+        const QString path = dir.path() + "/custom.toml";
+        QVERIFY(loader.saveThemeFile(path));
+        QVERIFY(QFile::exists(path));
+
+        // Reload the written file: edited tokens survive, untouched tokens too.
+        ThemeLoader reloaded;
+        reloaded.loadTheme(path, "");
+        QCOMPARE(reloaded.color("accent"), QColor("#123456"));
+        QCOMPARE(reloaded.color("text"), QColor("#abcdef"));
+        QCOMPARE(reloaded.color("gold"), QColor("#E3A94B"));
+        QCOMPARE(reloaded.color("page"), QColor("#050609"));
+    }
+
+    void testSaveThemeFilePreservesAlpha()
+    {
+        // scrim carries alpha; it must round-trip through #aarrggbb.
+        ThemeLoader loader;
+        loader.loadTheme("bifrost", THEMES_DIR);
+        const QColor scrim = loader.color("scrim");
+        QVERIFY(scrim.alpha() < 255);
+
+        QTemporaryDir dir;
+        const QString path = dir.path() + "/custom.toml";
+        QVERIFY(loader.saveThemeFile(path));
+
+        ThemeLoader reloaded;
+        reloaded.loadTheme(path, "");
+        QCOMPARE(reloaded.color("scrim"), scrim);
+    }
 };
 
 QTEST_MAIN(TestThemeLoader)

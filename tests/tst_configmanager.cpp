@@ -66,6 +66,30 @@ private slots:
         QCOMPARE(mgr.availableThemes(), QStringList({"dark", "light"}));
     }
 
+    // Phase C4: the editable "custom" theme lives next to config.toml (the
+    // writable config dir) and is surfaced in availableThemes once written.
+    void testCustomThemePathAndDiscovery()
+    {
+        QTemporaryDir dir;
+        QDir().mkpath(dir.path() + "/themes");
+        QFile darkTheme(dir.path() + "/themes/dark.toml");
+        QVERIFY(darkTheme.open(QIODevice::WriteOnly));
+        darkTheme.write("[colors]\ntext = \"#ffffff\"\n");
+        darkTheme.close();
+
+        ConfigManager mgr(dir.path() + "/config.toml", nullptr, dir.path() + "/themes");
+
+        QCOMPARE(mgr.customThemePath(), QDir(dir.path()).filePath("custom.toml"));
+        QVERIFY(!mgr.availableThemes().contains("custom"));
+
+        QFile custom(mgr.customThemePath());
+        QVERIFY(custom.open(QIODevice::WriteOnly));
+        custom.write("[colors]\naccent = \"#123456\"\n");
+        custom.close();
+
+        QVERIFY(mgr.availableThemes().contains("custom"));
+    }
+
     void testDefaultRadius()
     {
         QTemporaryDir dir;

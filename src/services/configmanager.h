@@ -53,6 +53,10 @@ public:
     QStringList availableFonts() const;
     QStringList availableIconThemes() const;
     QStringList availableThemes() const;
+    // Phase C4: absolute path of the user's editable theme, in the (writable)
+    // config dir — the install themes dir is read-only. The Colours settings
+    // section writes here and selects theme "custom".
+    Q_INVOKABLE QString customThemePath() const;
     QString theme() const;
     QString iconTheme() const;
     bool builtinIcons() const;

@@ -190,6 +190,7 @@ list(APPEND heimdall_qml_module_args
         qml/icons/IconGlobe.qml
         qml/icons/IconRocket.qml
         qml/icons/IconSettings.qml
+        qml/icons/IconPalette.qml
         qml/icons/IconFilter.qml
         qml/icons/IconHardDrive.qml
         qml/icons/IconHardDriveOff.qml
@@ -225,6 +226,7 @@ list(APPEND heimdall_qml_module_args
         qml/components/SettingsPanel.qml
         qml/components/SettingsDropdown.qml
         qml/components/SettingsSectionLook.qml
+        qml/components/SettingsSectionColors.qml
         qml/components/SettingsSectionLayout.qml
         qml/components/SettingsSectionMotion.qml
         qml/components/SettingsSectionTools.qml
