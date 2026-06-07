@@ -35,14 +35,14 @@ RowLayout {
             visible: root.checked
             gradient: Gradient {
                 orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: "#F0CE8F" }
-                GradientStop { position: 0.55; color: Theme.primary }
-                GradientStop { position: 1.0; color: "#C98F3C" }
+                GradientStop { position: 0.0; color: Theme.goldLight }
+                GradientStop { position: 0.55; color: Theme.gold }
+                GradientStop { position: 1.0; color: Theme.goldMid }
             }
             layer.enabled: root.checked
             layer.effect: MultiEffect {
                 shadowEnabled: true
-                shadowColor: Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.40)
+                shadowColor: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.40)
                 shadowBlur: 0.5
                 autoPaddingEnabled: true
             }
@@ -51,13 +51,13 @@ RowLayout {
             width: 18; height: 18; radius: 9
             anchors.verticalCenter: parent.verticalCenter
             x: root.checked ? parent.width - width - 2 : 2
-            color: root.checked ? "#fff3df" : Theme.textTertiary
+            color: root.checked ? Theme.knob : Theme.textTertiary
             Behavior on x { NumberAnimation { duration: Theme.animDuration; easing.type: Easing.OutCubic } }
             Behavior on color { ColorAnimation { duration: Theme.animDurationFast } }
             layer.enabled: root.checked
             layer.effect: MultiEffect {
                 shadowEnabled: true
-                shadowColor: Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.5)
+                shadowColor: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.5)
                 shadowBlur: 0.4
                 autoPaddingEnabled: true
             }

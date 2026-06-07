@@ -77,7 +77,7 @@ Rectangle {
         }
     }
 
-    // Primary: gold gradient fill (#F0CE8F→gold→#C98F3C) + soft gold glow.
+    // Primary: gold gradient fill (goldLight→gold→goldMid) + soft gold glow.
     Rectangle {
         anchors.fill: parent
         radius: parent.radius
@@ -85,14 +85,14 @@ Rectangle {
         opacity: mouse.pressed ? 0.85 : (mouse.containsMouse ? 1.0 : 0.96)
         Behavior on opacity { NumberAnimation { duration: Theme.animDurationFast } }
         gradient: Gradient {
-            GradientStop { position: 0.0; color: "#F0CE8F" }
-            GradientStop { position: 0.6; color: Theme.primary }
-            GradientStop { position: 1.0; color: "#C98F3C" }
+            GradientStop { position: 0.0; color: Theme.goldLight }
+            GradientStop { position: 0.6; color: Theme.gold }
+            GradientStop { position: 1.0; color: Theme.goldMid }
         }
         layer.enabled: visible
         layer.effect: MultiEffect {
             shadowEnabled: true
-            shadowColor: Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.35)
+            shadowColor: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.35)
             shadowBlur: 0.6
             autoPaddingEnabled: true
         }

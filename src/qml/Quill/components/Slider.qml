@@ -47,7 +47,7 @@ RowLayout {
             height: 4; radius: 2
             gradient: Gradient {
                 orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: "#C98F3C" }
+                GradientStop { position: 0.0; color: Theme.goldMid }
                 GradientStop { position: 1.0; color: root.trackColor }
             }
         }
@@ -56,7 +56,7 @@ RowLayout {
             anchors.verticalCenter: parent.verticalCenter
             x: parent.width * parent.ratio - 7
             width: 14; height: 14; radius: 7
-            color: sliderMouse.pressed ? "#ffffff" : "#fff3df"
+            color: sliderMouse.pressed ? "#ffffff" : Theme.knob
             Behavior on color { ColorAnimation { duration: 80 } }
             layer.enabled: true
             layer.effect: MultiEffect {

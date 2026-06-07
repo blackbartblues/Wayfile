@@ -249,6 +249,19 @@ ApplicationWindow {
         Q.Theme.animDurationSlow = Qt.binding(() => Theme.animDurationSlow)
         Q.Theme.transparencyEnabled = Qt.binding(() => Theme.transparencyEnabled)
         Q.Theme.transparencyLevel = Qt.binding(() => Theme.transparencyLevel)
+        // Heimdall obsidian+gold accent layer -> the gold-skinned Quill controls.
+        Q.Theme.gold = Qt.binding(() => Theme.gold)
+        Q.Theme.goldMid = Qt.binding(() => Theme.goldMid)
+        Q.Theme.goldLight = Qt.binding(() => Theme.goldLight)
+        Q.Theme.knob = Qt.binding(() => Theme.knob)
+        // overlay0/overlay1 are rendered (settings-nav inactive icons) but were
+        // never bridged -> stuck Catppuccin grey under any theme. Route them and
+        // the remaining stale Quill semantic tokens onto Heimdall equivalents.
+        Q.Theme.overlay0 = Qt.binding(() => Theme.muted)
+        Q.Theme.overlay1 = Qt.binding(() => Theme.subtext)
+        Q.Theme.secondary = Qt.binding(() => Theme.subtext)
+        Q.Theme.accent = Qt.binding(() => Theme.accent)
+        Q.Theme.info = Qt.binding(() => Theme.accent)
 
         root.scheduleActivePaneFocus()
         // Heimdall: dependency check is opt-in via Settings -> "Check Optional

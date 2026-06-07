@@ -29,6 +29,15 @@ QtObject {
     property color error: "#f38ba8"
     property color info: "#89dceb"
 
+    // Heimdall obsidian+gold accent layer (bridged from Heimdall's Theme in
+    // Main.qml; defaults match Bifröst so Quill renders coherently before the
+    // bridge runs). The gold-skinned controls (Button/Toggle/Slider) consume
+    // these; `primary` stays the generic accent for the rest of the library.
+    property color gold: "#E3A94B"
+    property color goldMid: "#C98F3C"
+    property color goldLight: "#FFE7B6"
+    property color knob: "#fff3df"
+
     // Catppuccin aliases (readonly bindings for migration ease)
     readonly property color blue: primary
     readonly property color lavender: secondary
