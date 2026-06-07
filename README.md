@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="dist/heimdall.svg" width="96" alt="Heimdall logo"/>
+<img src="dist/io.github.blackbartblues.Heimdall.svg" width="96" alt="Heimdall logo"/>
 
 # Heimdall
 
@@ -12,6 +12,8 @@
 [![Build](https://img.shields.io/github/actions/workflow/status/blackbartblues/Heimdall/build.yml?style=flat-square)](https://github.com/blackbartblues/Heimdall/actions)
 
 </div>
+
+> **Heimdall is a fork of [HyprFM](https://github.com/soyeb-jim285/hyprfm)** by Soyeb Pervez Jim — re-skinned with the obsidian + gold *Bifröst* theme and extended with a hybrid view, merged tabs, and an in-app palette editor. All credit for the original file manager goes to the upstream project.
 
 ---
 
@@ -277,6 +279,6 @@ Issues and PRs welcome. A few notes:
 
 ## 📜 License & credits
 
-[MIT](LICENSE). Heimdall is a fork maintained by **blackbartblues**, building on the original **HyprFM** by **Soyeb Pervez Jim**.
+[MIT](LICENSE). Heimdall is a fork maintained by **blackbartblues**, building on the original **[HyprFM](https://github.com/soyeb-jim285/hyprfm)** by **Soyeb Pervez Jim**.
 
 Built with [Qt 6](https://www.qt.io/) · icons from [Lucide](https://lucide.dev/) · type by [Cinzel](https://github.com/NDISCOVER/Cinzel) & [JetBrains Mono](https://www.jetbrains.com/lp/mono/) · inspired by macOS Finder, Nautilus, and Dolphin.

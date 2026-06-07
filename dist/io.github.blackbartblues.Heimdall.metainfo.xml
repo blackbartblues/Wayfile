@@ -13,6 +13,11 @@
       It is designed for tiling Wayland compositors like Hyprland but works on
       any Wayland desktop session.
     </p>
+    <p>
+      Heimdall is a fork of HyprFM by Soyeb Pervez Jim, re-skinned with the
+      obsidian and gold Bifrost theme and extended with a hybrid
+      folders-and-files view and an in-app palette editor.
+    </p>
     <p>Features:</p>
     <ul>
       <li>Grid, detailed and Miller column views with image and video thumbnails</li>
@@ -36,21 +41,29 @@
   <url type="vcs-browser">https://github.com/blackbartblues/Heimdall</url>
 
   <developer id="io.github.blackbartblues">
-    <name>Soyeb Pervez Jim</name>
+    <name>blackbartblues</name>
   </developer>
 
   <screenshots>
     <screenshot type="default">
-      <caption>Grid view with file preview</caption>
-      <image>https://raw.githubusercontent.com/blackbartblues/Heimdall/v0.4.25/docs/screenshots/grid-view.png</image>
+      <caption>Hybrid view — folder grid over a sortable file list</caption>
+      <image>https://raw.githubusercontent.com/blackbartblues/Heimdall/v1.0.0/docs/screenshots/hybrid-view.png</image>
     </screenshot>
     <screenshot>
-      <caption>Miller column view</caption>
-      <image>https://raw.githubusercontent.com/blackbartblues/Heimdall/v0.4.25/docs/screenshots/miller-view.png</image>
+      <caption>Grid view with gold folder glyphs and file-type chips</caption>
+      <image>https://raw.githubusercontent.com/blackbartblues/Heimdall/v1.0.0/docs/screenshots/grid-view.png</image>
     </screenshot>
     <screenshot>
-      <caption>Quick preview overlay</caption>
-      <image>https://raw.githubusercontent.com/blackbartblues/Heimdall/v0.4.25/docs/screenshots/quick-preview.png</image>
+      <caption>Miller column view with live preview</caption>
+      <image>https://raw.githubusercontent.com/blackbartblues/Heimdall/v1.0.0/docs/screenshots/miller-view.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Quick preview overlay with metadata</caption>
+      <image>https://raw.githubusercontent.com/blackbartblues/Heimdall/v1.0.0/docs/screenshots/quick-preview.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Built-in Colours palette editor</caption>
+      <image>https://raw.githubusercontent.com/blackbartblues/Heimdall/v1.0.0/docs/screenshots/colours-editor.png</image>
     </screenshot>
   </screenshots>
 
@@ -66,6 +79,11 @@
   </provides>
 
   <releases>
+    <release version="1.0.0" date="2026-06-07">
+      <description>
+        <p>First stable release of the obsidian and gold rework: the Bifrost signature theme across the whole UI, a hybrid default view (folder grid over a sortable file list), an in-app granular Colours palette editor saved as a live custom theme, merged split-pane tabs, fully tokenised chrome, and the Quill control library bridged onto the theme.</p>
+      </description>
+    </release>
     <release version="0.4.25" date="2026-04-15">
       <description>
         <p>Distinct USB icon for removable media, sidebar partitions sorted with removables on top, and settings panel reworked as a floating Hyprland-styled window.</p>

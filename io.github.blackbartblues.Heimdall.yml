@@ -145,7 +145,7 @@ modules:
       # ── FLATHUB SUBMISSION ──
       - type: git
         url: https://github.com/blackbartblues/Heimdall.git
-        tag: v0.4.25
+        tag: v1.0.0
 
       # ── LOCAL ITERATION ──
       # For testing uncommitted changes locally, comment out the git
