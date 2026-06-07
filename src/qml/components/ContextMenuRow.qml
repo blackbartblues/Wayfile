@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import Heimdall
+import Wayfile
 
 // One row of the main context menu — resolves to an action item, a submenu
 // trigger, or a separator based on rowData. Extracted from ContextMenu.qml.

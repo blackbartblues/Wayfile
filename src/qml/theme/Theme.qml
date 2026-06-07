@@ -17,7 +17,7 @@ QtObject {
     property color warning: theme.warning
     property color error: theme.error
 
-    // ── "Heimdall Unified" obsidian + gold token layer ─────────────
+    // ── "Wayfile Unified" obsidian + gold token layer ─────────────
     // Gold ramp.
     property color gold: theme.gold
     property color goldMid: theme.goldMid

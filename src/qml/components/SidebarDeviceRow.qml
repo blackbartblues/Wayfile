@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Effects
-import Heimdall
+import Wayfile
 import Quill as Quill
 
 // One device row in the sidebar's DEVICES section (extracted from Sidebar.qml).

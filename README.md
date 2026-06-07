@@ -1,23 +1,22 @@
 <div align="center">
 
-<img src="dist/io.github.blackbartblues.Heimdall.svg" width="96" alt="Heimdall logo"/>
+<img src="dist/io.github.blackbartblues.Wayfile.svg" width="96" alt="Wayfile logo"/>
 
-# Heimdall
+# Wayfile
 
 **An obsidian-and-gold file manager for Hyprland and Wayland — fast, keyboard-driven, and deeply themeable.**
 
-[![License](https://img.shields.io/github/license/blackbartblues/Heimdall?style=flat-square)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/blackbartblues/Heimdall?style=flat-square)](https://github.com/blackbartblues/Heimdall/releases)
-[![AUR](https://img.shields.io/aur/version/heimdall-git?style=flat-square&logo=arch-linux)](https://aur.archlinux.org/packages/heimdall-git)
-[![Build](https://img.shields.io/github/actions/workflow/status/blackbartblues/Heimdall/build.yml?style=flat-square)](https://github.com/blackbartblues/Heimdall/actions)
+[![License](https://img.shields.io/github/license/blackbartblues/Wayfile?style=flat-square)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/blackbartblues/Wayfile?style=flat-square)](https://github.com/blackbartblues/Wayfile/releases)
+[![AUR](https://img.shields.io/aur/version/wayfile-git?style=flat-square&logo=arch-linux)](https://aur.archlinux.org/packages/wayfile-git)
 
 </div>
 
-> **Heimdall is a fork of [HyprFM](https://github.com/soyeb-jim285/hyprfm)** by Soyeb Pervez Jim — re-skinned with the obsidian + gold *Bifröst* theme and extended with a hybrid view, merged tabs, and an in-app palette editor. The fork lands **167 commits** on top of HyprFM — 64 features, **41 bug fixes**, 38 refactors and perf work — squashing a long tail of bugs and hardening the app for the 1.0.0 release. All credit for the original file manager goes to the upstream project.
+> **Wayfile is a fork of [HyprFM](https://github.com/soyeb-jim285/hyprfm)** by Soyeb Pervez Jim — re-skinned with the obsidian + gold *Bifröst* theme and extended with a hybrid view, merged tabs, and an in-app palette editor. The fork lands **167 commits** on top of HyprFM — 64 features, **41 bug fixes**, 38 refactors and perf work — squashing a long tail of bugs and hardening the app for the 1.0.0 release. All credit for the original file manager goes to the upstream project.
 
 ---
 
-Heimdall is a Qt6/QML file manager built to feel native on Hyprland: lightweight, fast, and unapologetically keyboard-driven. Its signature look is **Bifröst** — a deep obsidian surface with a warm gate-glow gold accent — and its default layout is the **hybrid view**, a folder grid stacked over a sortable file list with one shared selection. Underneath the polish sit the features power users actually reach for: Miller columns, split panes, merged tabs, async file operations, rich previews, git status, and a live TOML theme system with a built-in, granular palette editor.
+Wayfile is a Qt6/QML file manager built to feel native on Hyprland: lightweight, fast, and unapologetically keyboard-driven. Its signature look is **Bifröst** — a deep obsidian surface with a warm gate-glow gold accent — and its default layout is the **hybrid view**, a folder grid stacked over a sortable file list with one shared selection. Underneath the polish sit the features power users actually reach for: Miller columns, split panes, merged tabs, async file operations, rich previews, git status, and a live TOML theme system with a built-in, granular palette editor.
 
 <div align="center">
 
@@ -101,30 +100,19 @@ Heimdall is a Qt6/QML file manager built to feel native on Hyprland: lightweight
 ### Arch Linux (AUR)
 
 ```bash
-yay -S heimdall-git
+yay -S wayfile-git
 ```
 
-The PKGBUILD clones the latest `main`, builds with Ninja, and installs to `/usr/bin/heimdall`.
-
-### AppImage (any distro)
-
-Grab the latest self-contained AppImage from the [releases page](https://github.com/blackbartblues/Heimdall/releases):
-
-```bash
-chmod +x Heimdall-*-x86_64.AppImage
-./Heimdall-*-x86_64.AppImage
-```
-
-No system Qt installation required. AppImages are built automatically on every `v*` tag.
+The PKGBUILD clones the latest `main`, builds with Ninja, and installs to `/usr/bin/wayfile`.
 
 ### Build from source
 
 ```bash
-git clone --recursive https://github.com/blackbartblues/Heimdall.git
-cd Heimdall
+git clone --recursive https://github.com/blackbartblues/Wayfile.git
+cd Wayfile
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF
 cmake --build build --parallel
-./build/src/heimdall
+./build/src/wayfile
 ```
 
 > **Note:** `--recursive` pulls the [quill-icons](https://github.com/soyeb-jim285/quill-icons) icon submodule. (The Quill control library is vendored directly in `src/qml/Quill/`, so it is not a submodule.)
@@ -182,18 +170,18 @@ cmake --build build --parallel
 | `Delete` / `Shift+Delete` | Trash / Permanent delete |
 | `Ctrl+Shift+N` / `Ctrl+N` | New folder / New file |
 
-All shortcuts can be remapped in `~/.config/heimdall/config.toml` under `[shortcuts]`.
+All shortcuts can be remapped in `~/.config/wayfile/config.toml` under `[shortcuts]`.
 
 ---
 
 ## ⚙️ Configuration
 
-Config lives at `~/.config/heimdall/config.toml`, created with sensible defaults on first run.
+Config lives at `~/.config/wayfile/config.toml`, created with sensible defaults on first run.
 
 ```toml
 [general]
 theme = "bifrost"              # filename in themes/ without .toml ("custom" = your edited palette)
-icon_theme = "Heimdall"        # system icon theme fallback
+icon_theme = "Wayfile"        # system icon theme fallback
 builtin_icons = true           # use the bundled SVG icons
 default_view = "hybrid"        # hybrid | grid | detailed | miller
 show_hidden = false
@@ -248,7 +236,7 @@ sheen = "#FFF0D6"; shadowInk = "#000000"; scrim = "#C7080A0D"; goldInk = "#1a120
 
 > Keep `accent` and `gold` equal (or deliberately compatible) — the chrome reads `gold` while controls read `accent`, and Bifröst unifies them by making the two identical.
 
-**Don't want to hand-edit TOML?** The **Colours** settings page edits the live palette token by token (swatch + hex field), saves it to a writable `~/.config/heimdall/custom.toml`, and selects it as the `custom` theme. A "Reset to Bifröst" button reverts, and a live warning flags an accent that's too low-contrast against the background.
+**Don't want to hand-edit TOML?** The **Colours** settings page edits the live palette token by token (swatch + hex field), saves it to a writable `~/.config/wayfile/custom.toml`, and selects it as the `custom` theme. A "Reset to Bifröst" button reverts, and a live warning flags an accent that's too low-contrast against the background.
 
 The shipped `themes/catppuccin-mocha.toml` and `themes/catppuccin-latte.toml` are the best templates for mapping a foreign palette onto both token families.
 
@@ -256,9 +244,9 @@ The shipped `themes/catppuccin-mocha.toml` and `themes/catppuccin-latte.toml` ar
 
 ## 🧱 Architecture
 
-Heimdall is a three-layer Qt6 application:
+Wayfile is a three-layer Qt6 application:
 
-- **QML frontend** (`src/qml/`) — all rendering. `Main.qml` wires tab state, selection, and shortcuts. `FileViewContainer` switches between `HybridView`, `FileGridView`, `FileDetailedView`, and `FileMillerView`. Theme tokens come from the `Theme` / `Fonts` / `FileTypeColors` / `GitColors` QML singletons; the vendored [Quill](https://github.com/soyeb-jim285/quill) library (in `src/qml/Quill/`) provides themed controls, bridged onto Heimdall's tokens in `Main.qml`.
+- **QML frontend** (`src/qml/`) — all rendering. `Main.qml` wires tab state, selection, and shortcuts. `FileViewContainer` switches between `HybridView`, `FileGridView`, `FileDetailedView`, and `FileMillerView`. Theme tokens come from the `Theme` / `Fonts` / `FileTypeColors` / `GitColors` QML singletons; the vendored [Quill](https://github.com/soyeb-jim285/quill) library (in `src/qml/Quill/`) provides themed controls, bridged onto Wayfile's tokens in `Main.qml`.
 - **C++ backend** (`src/models/`, `src/services/`, `src/providers/`) — `QAbstractListModel` subclasses for files, tabs, bookmarks, devices; async services for config, theming, clipboard, file operations, search, disk usage, and previews. `ThemeLoader` parses the active TOML into the live `Theme` singleton. Exposed to QML via `setContextProperty`.
 - **System layer** — `rsync` / `gio` via `QProcess`, UDisks2 over DBus, `wl-copy` for the clipboard.
 
@@ -273,12 +261,11 @@ Issues and PRs welcome. A few notes:
 - Run the tests with `ctest --test-dir build` after changes (Qt6::Test).
 - Match the existing 4-space-indent style for QML and C++.
 - Initialise submodules after pulling: `git submodule update --init --recursive`.
-- AppImages build automatically on `v*` tags via GitHub Actions.
 
 ---
 
 ## 📜 License & credits
 
-[MIT](LICENSE). Heimdall is a fork maintained by **blackbartblues**, building on the original **[HyprFM](https://github.com/soyeb-jim285/hyprfm)** by **Soyeb Pervez Jim**.
+[MIT](LICENSE). Wayfile is a fork maintained by **blackbartblues**, building on the original **[HyprFM](https://github.com/soyeb-jim285/hyprfm)** by **Soyeb Pervez Jim**.
 
 Built with [Qt 6](https://www.qt.io/) · icons from [Lucide](https://lucide.dev/) · type by [Cinzel](https://github.com/NDISCOVER/Cinzel) & [JetBrains Mono](https://www.jetbrains.com/lp/mono/) · inspired by macOS Finder, Nautilus, and Dolphin.

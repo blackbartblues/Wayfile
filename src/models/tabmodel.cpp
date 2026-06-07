@@ -90,7 +90,7 @@ QString TabModel::title() const
     const QString name0 = displayNameForPath(m_panes[0].currentPath);
 
     // Merged supertab — every pane is live, join names with ' · ' per the
-    // Heimdall design canvas. With the legacy split-view system gone, a
+    // Wayfile design canvas. With the legacy split-view system gone, a
     // multi-pane tab is always a supertab (paneCount > 1 ⟺ isSupertab), so
     // this is the only multi-name case.
     if (m_isSupertab) {

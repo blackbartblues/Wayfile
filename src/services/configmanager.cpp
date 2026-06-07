@@ -256,10 +256,10 @@ void ConfigManager::setDefaults()
     m_theme = m_defaultThemeName.trimmed().isEmpty()
         ? QStringLiteral("catppuccin-mocha")
         : m_defaultThemeName.trimmed();
-    // Heimdall fork: default to the bundled Bifröst-tinted theme. IconProvider
+    // Wayfile fork: default to the bundled Bifröst-tinted theme. IconProvider
     // falls back to Adwaita / breeze / Papirus / hicolor automatically when an
-    // icon isn't found in the Heimdall set, so partial coverage is fine.
-    m_iconTheme = "Heimdall";
+    // icon isn't found in the Wayfile set, so partial coverage is fine.
+    m_iconTheme = "Wayfile";
     m_builtinIcons = true;
     m_fontFamily.clear();
     m_defaultView = "hybrid";

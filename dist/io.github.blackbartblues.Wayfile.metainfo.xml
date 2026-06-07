@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>io.github.blackbartblues.Heimdall</id>
+  <id>io.github.blackbartblues.Wayfile</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
 
-  <name>Heimdall</name>
+  <name>Wayfile</name>
   <summary>Lightweight Qt6/QML file manager for Hyprland</summary>
 
   <description>
     <p>
-      Heimdall is a fast, keyboard-driven file manager built with Qt6 and QML.
+      Wayfile is a fast, keyboard-driven file manager built with Qt6 and QML.
       It is designed for tiling Wayland compositors like Hyprland but works on
       any Wayland desktop session.
     </p>
     <p>
-      Heimdall is a fork of HyprFM by Soyeb Pervez Jim, re-skinned with the
+      Wayfile is a fork of HyprFM by Soyeb Pervez Jim, re-skinned with the
       obsidian and gold Bifrost theme and extended with a hybrid
       folders-and-files view and an in-app palette editor.
     </p>
@@ -34,11 +34,11 @@
     </ul>
   </description>
 
-  <launchable type="desktop-id">io.github.blackbartblues.Heimdall.desktop</launchable>
+  <launchable type="desktop-id">io.github.blackbartblues.Wayfile.desktop</launchable>
 
-  <url type="homepage">https://github.com/blackbartblues/Heimdall</url>
-  <url type="bugtracker">https://github.com/blackbartblues/Heimdall/issues</url>
-  <url type="vcs-browser">https://github.com/blackbartblues/Heimdall</url>
+  <url type="homepage">https://github.com/blackbartblues/Wayfile</url>
+  <url type="bugtracker">https://github.com/blackbartblues/Wayfile/issues</url>
+  <url type="vcs-browser">https://github.com/blackbartblues/Wayfile</url>
 
   <developer id="io.github.blackbartblues">
     <name>blackbartblues</name>
@@ -47,23 +47,23 @@
   <screenshots>
     <screenshot type="default">
       <caption>Hybrid view — folder grid over a sortable file list</caption>
-      <image>https://raw.githubusercontent.com/blackbartblues/Heimdall/v1.0.0/docs/screenshots/hybrid-view.png</image>
+      <image>https://raw.githubusercontent.com/blackbartblues/Wayfile/v1.0.1/docs/screenshots/hybrid-view.png</image>
     </screenshot>
     <screenshot>
       <caption>Grid view with gold folder glyphs and file-type chips</caption>
-      <image>https://raw.githubusercontent.com/blackbartblues/Heimdall/v1.0.0/docs/screenshots/grid-view.png</image>
+      <image>https://raw.githubusercontent.com/blackbartblues/Wayfile/v1.0.1/docs/screenshots/grid-view.png</image>
     </screenshot>
     <screenshot>
       <caption>Miller column view with live preview</caption>
-      <image>https://raw.githubusercontent.com/blackbartblues/Heimdall/v1.0.0/docs/screenshots/miller-view.png</image>
+      <image>https://raw.githubusercontent.com/blackbartblues/Wayfile/v1.0.1/docs/screenshots/miller-view.png</image>
     </screenshot>
     <screenshot>
       <caption>Quick preview overlay with metadata</caption>
-      <image>https://raw.githubusercontent.com/blackbartblues/Heimdall/v1.0.0/docs/screenshots/quick-preview.png</image>
+      <image>https://raw.githubusercontent.com/blackbartblues/Wayfile/v1.0.1/docs/screenshots/quick-preview.png</image>
     </screenshot>
     <screenshot>
       <caption>Built-in Colours palette editor</caption>
-      <image>https://raw.githubusercontent.com/blackbartblues/Heimdall/v1.0.0/docs/screenshots/colours-editor.png</image>
+      <image>https://raw.githubusercontent.com/blackbartblues/Wayfile/v1.0.1/docs/screenshots/colours-editor.png</image>
     </screenshot>
   </screenshots>
 
@@ -75,10 +75,15 @@
   </categories>
 
   <provides>
-    <binary>heimdall</binary>
+    <binary>wayfile</binary>
   </provides>
 
   <releases>
+    <release version="1.0.1" date="2026-06-07">
+      <description>
+        <p>Rebrand from Heimdall to Wayfile. The project was renamed to avoid a clash with the existing heimdall package (a Samsung firmware flasher that owns the heimdall binary), freeing the wayfile binary name, application id and AUR slot. The brand wordmark has been removed from the tab strip. No functional changes from 1.0.0.</p>
+      </description>
+    </release>
     <release version="1.0.0" date="2026-06-07">
       <description>
         <p>First stable release of the obsidian and gold rework: the Bifrost signature theme across the whole UI, a hybrid default view (folder grid over a sortable file list), an in-app granular Colours palette editor saved as a live custom theme, merged split-pane tabs, fully tokenised chrome, and the Quill control library bridged onto the theme.</p>
@@ -172,7 +177,7 @@
     </release>
     <release version="0.4.6" date="2026-04-08">
       <description>
-        <p>Documentation polish: correct the feature list in the AppStream metadata to match the three views Heimdall actually ships (grid, detailed and Miller columns) and expand it to mention git status overlays, remote access, quick preview and archive support.</p>
+        <p>Documentation polish: correct the feature list in the AppStream metadata to match the three views Wayfile actually ships (grid, detailed and Miller columns) and expand it to mention git status overlays, remote access, quick preview and archive support.</p>
       </description>
     </release>
     <release version="0.4.5" date="2026-04-08">

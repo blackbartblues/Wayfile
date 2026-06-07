@@ -20,7 +20,7 @@ inline constexpr int kMaxPanes = 4;
 // milestones flip readers, drop the mirror fields, and switch QML to access
 // panes by index.
 //
-// Per Heimdall design canvas: path, viewMode, sortBy, sortAscending are all
+// Per Wayfile design canvas: path, viewMode, sortBy, sortAscending are all
 // per-pane concepts.  Selection / focused row / scrollTop already live in the
 // QML FileViewContainer (per-pane by virtue of instance separation), so they
 // are not duplicated here.

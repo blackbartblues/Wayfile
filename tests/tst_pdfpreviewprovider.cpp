@@ -23,7 +23,7 @@ private:
         QPainter painter(&writer);
         painter.setPen(Qt::black);
         painter.setFont(QFont(QStringLiteral("Sans"), 18));
-        painter.drawText(QPointF(96.0, 120.0), QStringLiteral("Heimdall PDF Preview"));
+        painter.drawText(QPointF(96.0, 120.0), QStringLiteral("Wayfile PDF Preview"));
         painter.end();
         return filePath;
     }

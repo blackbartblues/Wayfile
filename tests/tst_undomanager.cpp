@@ -77,7 +77,7 @@ private slots:
             QSKIP("gio not found in PATH");
 
         const QString uniqueId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-        const QString dirPath = QDir::homePath() + "/.cache/heimdall-undo-test-" + uniqueId;
+        const QString dirPath = QDir::homePath() + "/.cache/wayfile-undo-test-" + uniqueId;
         QVERIFY(QDir().mkpath(dirPath));
 
         QStringList files;
@@ -133,7 +133,7 @@ private slots:
             QSKIP("gio not found in PATH");
 
         const QString uniqueId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-        const QString dirPath = QDir::homePath() + "/.cache/heimdall-undo-test-" + uniqueId;
+        const QString dirPath = QDir::homePath() + "/.cache/wayfile-undo-test-" + uniqueId;
         QVERIFY(QDir().mkpath(dirPath));
         const QString filePath = dirPath + "/dup.txt";
 
@@ -202,7 +202,7 @@ private slots:
             QSKIP("gio not found in PATH");
 
         const QString uniqueId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-        const QString dirPath = QDir::homePath() + "/.cache/heimdall-undo-test-" + uniqueId;
+        const QString dirPath = QDir::homePath() + "/.cache/wayfile-undo-test-" + uniqueId;
         QVERIFY(QDir().mkpath(dirPath));
         const QString filePath = dirPath + "/gone.txt";
         {
@@ -270,7 +270,7 @@ private slots:
         if (mountPath.isEmpty())
             QSKIP("No writable mounted volume found under /run/media/$USER");
 
-        const QString testDirPath = mountPath + "/heimdall-undo-test-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
+        const QString testDirPath = mountPath + "/wayfile-undo-test-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
         if (!QDir().mkpath(testDirPath))
             QSKIP("Could not create test directory on mounted volume");
 

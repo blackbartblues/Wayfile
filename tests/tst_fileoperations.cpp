@@ -634,7 +634,7 @@ private slots:
             QSKIP("gio not found in PATH");
 
         // Use a dir under home so gio trash can find the Trash directory
-        QString testPath = QDir::homePath() + "/.cache/heimdall-test-trash";
+        QString testPath = QDir::homePath() + "/.cache/wayfile-test-trash";
         QDir().mkpath(testPath);
         QString filePath = testPath + "/trash_me.txt";
         {
@@ -666,7 +666,7 @@ private slots:
             QSKIP("gio not found in PATH");
 
         const QString uniqueId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-        const QString testPath = QDir::homePath() + "/.cache/heimdall-test-restore-trash-" + uniqueId;
+        const QString testPath = QDir::homePath() + "/.cache/wayfile-test-restore-trash-" + uniqueId;
         QDir().mkpath(testPath);
 
         const QString filePath = testPath + "/restore_me.txt";
@@ -715,7 +715,7 @@ private slots:
             QSKIP("gio not found in PATH");
 
         const QString uniqueId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-        const QString testPath = QDir::homePath() + "/.cache/heimdall-test-restore-trash-uri-" + uniqueId;
+        const QString testPath = QDir::homePath() + "/.cache/wayfile-test-restore-trash-uri-" + uniqueId;
         QDir().mkpath(testPath);
 
         const QString filePath = testPath + "/restore_uri_me.txt";

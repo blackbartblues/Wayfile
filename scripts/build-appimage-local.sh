@@ -69,7 +69,7 @@ ln -sf "$(basename "$LINUXDEPLOY_QT")" "$TOOLS_DIR/linuxdeploy-plugin-qt.AppImag
 
 VERSION_LABEL="$(git -C "$ROOT_DIR" describe --tags --always --dirty 2>/dev/null || printf 'local')"
 VERSION_LABEL="$(printf '%s' "$VERSION_LABEL" | tr -cs 'A-Za-z0-9._-' '-')"
-APPIMAGE_NAME="${APPIMAGE_NAME:-Heimdall-${VERSION_LABEL}-x86_64.AppImage}"
+APPIMAGE_NAME="${APPIMAGE_NAME:-Wayfile-${VERSION_LABEL}-x86_64.AppImage}"
 
 GENERATOR_ARGS=()
 if command -v ninja >/dev/null 2>&1; then
@@ -82,8 +82,8 @@ rm -f "$ROOT_DIR/$APPIMAGE_NAME"
 cmake -S "$ROOT_DIR" -B "$BUILD_DIR" "${GENERATOR_ARGS[@]}" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
-    -DHEIMDALL_DATA_DIR=/usr/share/heimdall \
-    -DHEIMDALL_ENABLE_QML_CACHEGEN=ON \
+    -DWAYFILE_DATA_DIR=/usr/share/wayfile \
+    -DWAYFILE_ENABLE_QML_CACHEGEN=ON \
     -DBUILD_TESTS=OFF
 
 cmake --build "$BUILD_DIR" --parallel
@@ -174,8 +174,8 @@ pushd "$ROOT_DIR" >/dev/null
 "$LINUXDEPLOY" \
     --appdir "$APPDIR" \
     --plugin qt \
-    --desktop-file "$ROOT_DIR/dist/io.github.blackbartblues.Heimdall.desktop" \
-    --icon-file "$ROOT_DIR/dist/io.github.blackbartblues.Heimdall.svg"
+    --desktop-file "$ROOT_DIR/dist/io.github.blackbartblues.Wayfile.desktop" \
+    --icon-file "$ROOT_DIR/dist/io.github.blackbartblues.Wayfile.svg"
 
 deploy_deps_args=()
 for plugin_dir in \

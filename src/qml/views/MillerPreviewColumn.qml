@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Controls
-import Heimdall
+import Wayfile
 
 // Miller view preview column — owns its PreviewState and renders the
 // per-kind preview (directory/archive/image/video/PDF/text/font/fallback)

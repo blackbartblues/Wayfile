@@ -4,10 +4,10 @@
 #include <QLoggingCategory>
 #include <QUrl>
 
-// Turn on with QT_LOGGING_RULES="heimdall.transfer.debug=true" to trace every
-// item. Warnings/errors go out unconditionally under heimdall.transfer so the
+// Turn on with QT_LOGGING_RULES="wayfile.transfer.debug=true" to trace every
+// item. Warnings/errors go out unconditionally under wayfile.transfer so the
 // user sees failure reasons in the terminal.
-Q_LOGGING_CATEGORY(lcTransfer, "heimdall.transfer")
+Q_LOGGING_CATEGORY(lcTransfer, "wayfile.transfer")
 
 namespace {
 

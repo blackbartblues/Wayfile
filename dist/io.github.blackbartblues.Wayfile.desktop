@@ -1,13 +1,13 @@
 [Desktop Entry]
-Name=Heimdall
+Name=Wayfile
 GenericName=File Manager
 Comment=A lightweight Qt6/QML file manager for Hyprland
-Exec=heimdall %F
-Icon=io.github.blackbartblues.Heimdall
+Exec=wayfile %F
+Icon=io.github.blackbartblues.Wayfile
 Terminal=false
 Type=Application
 Categories=System;FileManager;Qt;
 MimeType=inode/directory;
 StartupNotify=true
-StartupWMClass=io.github.blackbartblues.Heimdall
+StartupWMClass=io.github.blackbartblues.Wayfile
 Keywords=files;explorer;manager;browser;filesystem;

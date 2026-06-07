@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Effects
-import Heimdall
+import Wayfile
 
 // Empty-folder hero state (handoff §8 / system jsx 162-175). A big glossy
 // OsFolder over a soft radial gold halo, a title + subtitle, and three actions:

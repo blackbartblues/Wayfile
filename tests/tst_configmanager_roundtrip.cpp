@@ -199,7 +199,7 @@ private slots:
         QVERIFY(dir.isValid());
         const QString path = dir.path() + "/config.toml";
 
-        const QStringList bookmarks { "~/Music", "/tmp", "~/Code/heimdall" };
+        const QStringList bookmarks { "~/Music", "/tmp", "~/Code/wayfile" };
         {
             ConfigManager mgr(path);
             mgr.saveBookmarks(bookmarks);

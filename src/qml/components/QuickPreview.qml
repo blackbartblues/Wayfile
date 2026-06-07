@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import Heimdall
+import Wayfile
 
 Item {
     id: root

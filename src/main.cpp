@@ -23,7 +23,7 @@
 #include <QLocalServer>
 #include <QLocalSocket>
 #include <unistd.h>
-#ifdef HEIMDALL_HAS_KWINDOWSYSTEM
+#ifdef WAYFILE_HAS_KWINDOWSYSTEM
 #include <KWindowEffects>
 #endif
 
@@ -69,12 +69,12 @@ int main(int argc, char *argv[])
         "qt.svg.warning=false");
 
     // Keep the default path fast. Full-window MSAA is expensive on many
-    // Wayland/compositor stacks; opt in with HEIMDALL_MSAA=2/4 if wanted.
+    // Wayland/compositor stacks; opt in with WAYFILE_MSAA=2/4 if wanted.
     QSurfaceFormat fmt;
-    fmt.setSamples(qMax(0, qEnvironmentVariableIntValue("HEIMDALL_MSAA")));
+    fmt.setSamples(qMax(0, qEnvironmentVariableIntValue("WAYFILE_MSAA")));
     QSurfaceFormat::setDefaultFormat(fmt);
 
-    // Heimdall is a Wayland-only application (wl-copy clipboard, Hyprland
+    // Wayfile is a Wayland-only application (wl-copy clipboard, Hyprland
     // integration, KWin blur effects). Detect a non-Wayland session before
     // Qt tries to load the wayland QPA plugin so users see an actionable
     // message instead of the cryptic "Failed to create wl_display" error.
@@ -83,12 +83,12 @@ int main(int argc, char *argv[])
         const char *session = sessionType.isEmpty() ? "unknown" : sessionType.constData();
         fprintf(stderr,
                 "\n"
-                "Heimdall: no Wayland display available (XDG_SESSION_TYPE=%s).\n"
+                "Wayfile: no Wayland display available (XDG_SESSION_TYPE=%s).\n"
                 "\n"
-                "Heimdall only supports Wayland sessions. Your current session\n"
+                "Wayfile only supports Wayland sessions. Your current session\n"
                 "appears to be X11 or does not expose $WAYLAND_DISPLAY.\n"
                 "\n"
-                "To run Heimdall:\n"
+                "To run Wayfile:\n"
                 "  * Log out and pick a Wayland session at the login screen\n"
                 "    (e.g. Hyprland, Niri, Sway, GNOME on Wayland, KDE Plasma Wayland).\n"
                 "\n",
@@ -115,16 +115,16 @@ int main(int argc, char *argv[])
     }
 
     QGuiApplication app(argc, argv);
-    app.setApplicationName("Heimdall");
-    app.setOrganizationName("Heimdall");
-    app.setDesktopFileName("io.github.blackbartblues.Heimdall");
+    app.setApplicationName("Wayfile");
+    app.setOrganizationName("Wayfile");
+    app.setDesktopFileName("io.github.blackbartblues.Wayfile");
     // Window icon (task switchers, server-side decorations). Bundled via qrc so
     // it resolves without depending on an installed theme icon.
-    app.setWindowIcon(QIcon(QStringLiteral(":/assets/heimdall-logo.png")));
+    app.setWindowIcon(QIcon(QStringLiteral(":/assets/wayfile-logo.png")));
 
-    // Startup timing: opt-in via HEIMDALL_TIMING=1 so normal runs stay quiet.
+    // Startup timing: opt-in via WAYFILE_TIMING=1 so normal runs stay quiet.
     // Prints milliseconds from QGuiApplication construction at each phase.
-    const bool timingEnabled = qEnvironmentVariableIntValue("HEIMDALL_TIMING") != 0;
+    const bool timingEnabled = qEnvironmentVariableIntValue("WAYFILE_TIMING") != 0;
     QElapsedTimer startupTimer;
     startupTimer.start();
     auto mark = [&](const char *label) {
@@ -134,14 +134,14 @@ int main(int argc, char *argv[])
     };
     mark("QGuiApplication ready");
 
-    // Single-instance: if another Heimdall is already running for this user,
+    // Single-instance: if another Wayfile is already running for this user,
     // forward our arg over a per-uid unix domain socket and exit. The
     // running instance spawns a new tab for the path. Mirrors how browsers
     // handle `firefox <url>` when a window is already open.
-    const QString heimdallSocketName = QStringLiteral("heimdall-%1").arg(static_cast<uint>(getuid()));
+    const QString wayfileSocketName = QStringLiteral("wayfile-%1").arg(static_cast<uint>(getuid()));
     {
         QLocalSocket probe;
-        probe.connectToServer(heimdallSocketName);
+        probe.connectToServer(wayfileSocketName);
         if (probe.waitForConnected(150)) {
             QJsonObject msg;
             if (!initialOpenPath.isEmpty())
@@ -175,11 +175,11 @@ int main(int argc, char *argv[])
     };
 
     // Ensure config directory exists
-    // User-visible config lives at ~/.config/heimdall. The CMake install-time
-    // data dir macros (HEIMDALL_DATA_DIR, HEIMDALL_SOURCE_DIR) are rebuild-time
+    // User-visible config lives at ~/.config/wayfile. The CMake install-time
+    // data dir macros (WAYFILE_DATA_DIR, WAYFILE_SOURCE_DIR) are rebuild-time
     // paths for finding shipped themes and QML, not user config.
     const QString configDir = QStandardPaths::writableLocation(QStandardPaths::HomeLocation)
-                              + "/.config/heimdall";
+                              + "/.config/wayfile";
     QDir().mkpath(configDir);
     const QString configPath = configDir + "/config.toml";
 
@@ -194,28 +194,28 @@ int main(int argc, char *argv[])
 
     const QString appDir = QCoreApplication::applicationDirPath();
     const QString dataDir = firstExistingDir({
-        QDir(appDir).filePath("../share/heimdall"),
-        QDir(appDir).filePath("../../share/heimdall"),
-        QStringLiteral(HEIMDALL_DATA_DIR),
-        QStringLiteral(HEIMDALL_SOURCE_DIR),
+        QDir(appDir).filePath("../share/wayfile"),
+        QDir(appDir).filePath("../../share/wayfile"),
+        QStringLiteral(WAYFILE_DATA_DIR),
+        QStringLiteral(WAYFILE_SOURCE_DIR),
     });
 
     QStringList themeSearchPaths = {
         QDir(appDir).filePath("../themes"),
         QDir(appDir).filePath("../../themes"),
-        QStringLiteral(HEIMDALL_DATA_DIR) + "/themes",
-        QStringLiteral(HEIMDALL_SOURCE_DIR) + "/themes",
+        QStringLiteral(WAYFILE_DATA_DIR) + "/themes",
+        QStringLiteral(WAYFILE_SOURCE_DIR) + "/themes",
     };
     if (!dataDir.isEmpty())
         themeSearchPaths.prepend(QDir(dataDir).filePath("themes"));
 
     const QString themesDir = firstExistingDir(themeSearchPaths);
     if (dataDir.isEmpty())
-        qWarning() << "Heimdall: unable to locate data directory";
+        qWarning() << "Wayfile: unable to locate data directory";
     if (themesDir.isEmpty())
-        qWarning() << "Heimdall: unable to locate themes directory";
+        qWarning() << "Wayfile: unable to locate themes directory";
 
-    // Heimdall fork: Bifröst is the signature theme. There's no Bifröst-light
+    // Wayfile fork: Bifröst is the signature theme. There's no Bifröst-light
     // variant yet, so we ignore the system colorScheme hint on first launch
     // and always seed bifrost. Once a light Bifröst token set ships, restore
     // the colorScheme-aware branch and pick between bifrost / bifrost-light.
@@ -377,13 +377,13 @@ int main(int argc, char *argv[])
 
     // Prefer the installed data layout, but keep source-tree fallbacks for dev builds.
     if (!dataDir.isEmpty()) {
-        engine.addImportPath(dataDir);                           // Heimdall module
+        engine.addImportPath(dataDir);                           // Wayfile module
         engine.addImportPath(QDir(dataDir).filePath("src/qml")); // Quill module
     }
-    engine.addImportPath(QStringLiteral(HEIMDALL_DATA_DIR));
-    engine.addImportPath(QStringLiteral(HEIMDALL_DATA_DIR "/src/qml"));
-    engine.addImportPath(QStringLiteral(HEIMDALL_SOURCE_DIR));
-    engine.addImportPath(QStringLiteral(HEIMDALL_SOURCE_DIR "/src/qml"));
+    engine.addImportPath(QStringLiteral(WAYFILE_DATA_DIR));
+    engine.addImportPath(QStringLiteral(WAYFILE_DATA_DIR "/src/qml"));
+    engine.addImportPath(QStringLiteral(WAYFILE_SOURCE_DIR));
+    engine.addImportPath(QStringLiteral(WAYFILE_SOURCE_DIR "/src/qml"));
 
     // Set icon theme so QIcon::fromTheme() works (e.g. for drag pixmaps)
     QIcon::setThemeName(config->iconTheme());
@@ -403,7 +403,7 @@ int main(int argc, char *argv[])
 
     // Creatable QML type: each HybridView instantiates its own folders/files
     // filter proxies over its pane's source model (Phase 8).
-    qmlRegisterType<DirFilterProxyModel>("Heimdall", 1, 0, "DirFilterProxyModel");
+    qmlRegisterType<DirFilterProxyModel>("Wayfile", 1, 0, "DirFilterProxyModel");
 
     // Register context properties
     engine.rootContext()->setContextProperty("config", config);
@@ -444,7 +444,7 @@ int main(int argc, char *argv[])
 
     const QString installedMainQml = dataDir.isEmpty()
         ? QString()
-        : QDir(dataDir).filePath(QStringLiteral("Heimdall/qml/Main.qml"));
+        : QDir(dataDir).filePath(QStringLiteral("Wayfile/qml/Main.qml"));
 
     // Prefer the installed on-disk module when it exists so deployed bundles
     // keep working even if Qt's embedded qrc payload is incomplete.
@@ -452,7 +452,7 @@ int main(int argc, char *argv[])
     if (!installedMainQml.isEmpty() && QFile::exists(installedMainQml)) {
         engine.load(QUrl::fromLocalFile(installedMainQml));
     } else {
-        engine.loadFromModule("Heimdall", "Main");
+        engine.loadFromModule("Wayfile", "Main");
     }
     mark("engine.load done");
 
@@ -476,7 +476,7 @@ int main(int argc, char *argv[])
         if (!window)
             return;
 
-#ifdef HEIMDALL_HAS_KWINDOWSYSTEM
+#ifdef WAYFILE_HAS_KWINDOWSYSTEM
         // KWin blur only shows through translucent content; Hyprland keeps
         // using compositor rules against the same transparent window surface.
         const bool blurRequested = config->transparencyEnabled();
@@ -592,11 +592,11 @@ int main(int argc, char *argv[])
     };
 
     // Stale socket from a crashed previous instance would block listen().
-    QLocalServer::removeServer(heimdallSocketName);
+    QLocalServer::removeServer(wayfileSocketName);
     QLocalServer *ipcServer = new QLocalServer(&app);
     ipcServer->setSocketOptions(QLocalServer::UserAccessOption);
-    if (!ipcServer->listen(heimdallSocketName)) {
-        qWarning() << "Heimdall: single-instance IPC listen failed:" << ipcServer->errorString();
+    if (!ipcServer->listen(wayfileSocketName)) {
+        qWarning() << "Wayfile: single-instance IPC listen failed:" << ipcServer->errorString();
     }
     QObject::connect(ipcServer, &QLocalServer::newConnection, &app, [ipcServer, openPathInNewTab]() {
         while (QLocalSocket *conn = ipcServer->nextPendingConnection()) {

@@ -1,7 +1,7 @@
 import QtQuick
-import Heimdall
+import Wayfile
 
-// Modal overlays for Heimdall's main window — extracted from Main.qml (Faza 5,
+// Modal overlays for Wayfile's main window — extracted from Main.qml (Faza 5,
 // B7). Holds the 13 dialog instances + the file and sidebar context menus as
 // one cohesive unit so the orchestrator no longer carries them inline.
 //
@@ -87,7 +87,7 @@ Item {
         onClosed: host.scheduleActivePaneFocus()
     }
 
-    // (Heimdall: the startup auto-popup was removed. Trigger via Settings ->
+    // (Wayfile: the startup auto-popup was removed. Trigger via Settings ->
     // "Check Optional Dependencies" instead.)
 
     // ── Rename dialog ───────────────────────────────────────────────────────

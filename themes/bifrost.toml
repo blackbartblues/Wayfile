@@ -1,5 +1,5 @@
-# Bifröst — Heimdall's signature dark theme.
-# "Heimdall Unified" obsidian + gold skin (hi-fi design handoff, 2026-06).
+# Bifröst — Wayfile's signature dark theme.
+# "Wayfile Unified" obsidian + gold skin (hi-fi design handoff, 2026-06).
 # Deep obsidian surfaces with a warm gate-glow gold accent.
 #
 # The semantic tokens (base/mantle/crust/surface/overlay/text/...) are aliased
@@ -21,7 +21,7 @@ warning = "#c9956a"
 error = "#c97070"
 purple = "#b89be0"
 
-# ── "Heimdall Unified" obsidian + gold token layer ─────────────────
+# ── "Wayfile Unified" obsidian + gold token layer ─────────────────
 # Gold ramp.
 gold = "#E3A94B"
 goldMid = "#C98F3C"

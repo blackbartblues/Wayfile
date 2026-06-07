@@ -9,7 +9,7 @@
 // model, so QML delegates see the same role set as the underlying model.
 //
 // Registered as a creatable QML type in main.cpp (qmlRegisterType into the
-// "Heimdall" module) so each HybridView can create its own folders/files proxy
+// "Wayfile" module) so each HybridView can create its own folders/files proxy
 // pair over the pane's source model. (Kept QtQml-free here so the unit test
 // targets, which don't link Qt6::Qml, still compile against this header.)
 class DirFilterProxyModel : public QSortFilterProxyModel

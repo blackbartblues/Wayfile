@@ -1,5 +1,5 @@
 import QtQuick
-import Heimdall
+import Wayfile
 
 // Metallic file-type chip — a small rounded tile carrying a short mono type
 // label tinted by the file's category/extension (handoff file-row chip).

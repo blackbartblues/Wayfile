@@ -3,7 +3,7 @@
 # FileOperations is split across several translation units (one class, one
 # header). Test targets that link FileOperations must compile all of them; keep
 # this list in sync with the services/fileoperations*.cpp entries in
-# src/CMakeLists.txt HEIMDALL_SOURCES.
+# src/CMakeLists.txt WAYFILE_SOURCES.
 set(FILEOPERATIONS_SRCS
     ${CMAKE_SOURCE_DIR}/src/services/fileoperations.cpp
     ${CMAKE_SOURCE_DIR}/src/services/fileoperations_helpers.cpp
@@ -239,5 +239,5 @@ set_tests_properties(tst_giotransferworker PROPERTIES
 # used during the Faza 5 QML splits; catches type/registration/binding
 # regressions that compile but break the QML tree at load. See qml-smoke.sh.
 add_test(NAME tst_qml_smoke
-    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/qml-smoke.sh $<TARGET_FILE:heimdall>)
+    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/qml-smoke.sh $<TARGET_FILE:wayfile>)
 set_tests_properties(tst_qml_smoke PROPERTIES TIMEOUT 30)

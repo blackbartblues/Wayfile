@@ -1,15 +1,15 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Effects
-import Heimdall
+import Wayfile
 
-// Heimdall browser-style tab bar.
+// Wayfile browser-style tab bar.
 //
 // Placement: at the very top of the window, spanning full width above the
 // sidebar (Chrome/Firefox layout). Lifted out of Toolbar.qml when tabs were
 // moved above the breadcrumb row.
 //
-// Always visible — even with a single tab — per Heimdall design canvas.
+// Always visible — even with a single tab — per Wayfile design canvas.
 //
 // Width policy: each tab caps at maxTabWidth so they don't stretch into giant
 // banners when only one tab is open. With many tabs they shrink toward the
@@ -38,7 +38,7 @@ Item {
     readonly property int minTabWidth: 128
     readonly property int maxTabWidth: 210
 
-    // "Heimdall Unified" tab strip: 44px tall, tabs bottom-aligned with a 9px
+    // "Wayfile Unified" tab strip: 44px tall, tabs bottom-aligned with a 9px
     // gap above so their rounded top corners read against the strip gradient.
     implicitHeight: Math.round(44 * Theme.uiScale)
     readonly property int tabTopGap: Math.round(9 * Theme.uiScale)
@@ -66,43 +66,8 @@ Item {
         // the rest once the strip overflows.  The old anchored-right
         // version pinned it to the bar edge regardless of tab count.
 
-        // App wordmark — relocated here from the sidebar header (#8). Sits at
-        // the far left of the tab bar, before the tab strip.
-        Item {
-            id: appTitle
-            anchors.left: parent.left
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 1
-            width: wordmark.width + Theme.spacing * 2
-
-            // "HEIMDALL" wordmark — Cinzel in warm gold. Rendered as a plain
-            // antialiased Text (no gradient mask): the earlier MultiEffect
-            // text-mask hard-stepped the glyph edges and looked jagged.
-            Text {
-                id: wordmark
-                anchors.left: parent.left
-                anchors.leftMargin: Theme.spacing + Math.round(2 * Theme.uiScale)
-                anchors.verticalCenter: parent.verticalCenter
-                text: "HEIMDALL"
-                color: Theme.gold
-                font.family: Fonts.display
-                font.pixelSize: Math.round(18 * Theme.uiScale)
-                font.weight: Font.DemiBold
-                font.letterSpacing: Math.round(18 * Theme.uiScale) * 0.12
-            }
-        }
-
-        // 1px divider between the brand and the tab strip (handoff .tab-brand__div).
-        Rectangle {
-            id: brandDivider
-            anchors.left: appTitle.right
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.leftMargin: Math.round(4 * Theme.uiScale)
-            width: 1
-            height: Math.round(24 * Theme.uiScale)
-            color: Theme.line
-        }
+        // App wordmark removed in the rebrand — no brand text in the tab
+        // strip. Tabs now start flush at the left edge of the bar.
 
         // Flickable scroll area for tabs. When the strip can hold every tab at
         // minTabWidth or wider, contentWidth == flickable.width and there's
@@ -110,7 +75,7 @@ Item {
         // overflow scrolls horizontally via drag or mouse wheel.
         Flickable {
             id: tabScroll
-            anchors.left: brandDivider.right
+            anchors.left: parent.left
             anchors.leftMargin: Math.round(8 * Theme.uiScale)
             anchors.top: parent.top
             anchors.topMargin: root.tabTopGap   // tabs sit 9px below the strip top

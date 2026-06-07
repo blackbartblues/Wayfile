@@ -23,7 +23,7 @@ private slots:
         ConfigManager mgr(dir.path() + "/config.toml");
 
         QCOMPARE(mgr.theme(), QString("catppuccin-mocha"));
-        QCOMPARE(mgr.iconTheme(), QString("Heimdall"));
+        QCOMPARE(mgr.iconTheme(), QString("Wayfile"));
         QCOMPARE(mgr.builtinIcons(), true);
         QCOMPARE(mgr.fontFamily(), QString());
         QCOMPARE(mgr.defaultView(), QString("hybrid"));

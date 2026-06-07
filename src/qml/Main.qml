@@ -3,7 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Shapes
 import QtQuick.Window
-import Heimdall
+import Wayfile
 import "components" as Components
 import Quill as Q
 
@@ -14,9 +14,9 @@ ApplicationWindow {
     minimumWidth: 760
     minimumHeight: 520
     visibility: Window.Windowed
-    title: "Heimdall"
+    title: "Wayfile"
     color: "transparent"
-    // Heimdall fork: always frameless on Linux. Compositor (Hyprland) handles
+    // Wayfile fork: always frameless on Linux. Compositor (Hyprland) handles
     // close/minimize/maximize via keybinds; in-app controls are intentionally
     // dropped (see Toolbar.qml — showWindowControls is hardcoded false below).
     flags: Qt.platform.os === "linux"
@@ -212,7 +212,7 @@ ApplicationWindow {
         }
         root.refreshActivePanePath()
 
-        // Bridge Heimdall theme into Quill theme singleton
+        // Bridge Wayfile theme into Quill theme singleton
         Q.Theme.background = Qt.binding(() => Theme.base)
         Q.Theme.backgroundAlt = Qt.binding(() => Theme.mantle)
         Q.Theme.backgroundDeep = Qt.binding(() => Theme.crust)
@@ -249,14 +249,14 @@ ApplicationWindow {
         Q.Theme.animDurationSlow = Qt.binding(() => Theme.animDurationSlow)
         Q.Theme.transparencyEnabled = Qt.binding(() => Theme.transparencyEnabled)
         Q.Theme.transparencyLevel = Qt.binding(() => Theme.transparencyLevel)
-        // Heimdall obsidian+gold accent layer -> the gold-skinned Quill controls.
+        // Wayfile obsidian+gold accent layer -> the gold-skinned Quill controls.
         Q.Theme.gold = Qt.binding(() => Theme.gold)
         Q.Theme.goldMid = Qt.binding(() => Theme.goldMid)
         Q.Theme.goldLight = Qt.binding(() => Theme.goldLight)
         Q.Theme.knob = Qt.binding(() => Theme.knob)
         // overlay0/overlay1 are rendered (settings-nav inactive icons) but were
         // never bridged -> stuck Catppuccin grey under any theme. Route them and
-        // the remaining stale Quill semantic tokens onto Heimdall equivalents.
+        // the remaining stale Quill semantic tokens onto Wayfile equivalents.
         Q.Theme.overlay0 = Qt.binding(() => Theme.muted)
         Q.Theme.overlay1 = Qt.binding(() => Theme.subtext)
         Q.Theme.secondary = Qt.binding(() => Theme.subtext)
@@ -264,7 +264,7 @@ ApplicationWindow {
         Q.Theme.info = Qt.binding(() => Theme.accent)
 
         root.scheduleActivePaneFocus()
-        // Heimdall: dependency check is opt-in via Settings -> "Check Optional
+        // Wayfile: dependency check is opt-in via Settings -> "Check Optional
         // Dependencies", not a startup popup. The dialog is still present, but
         // we don't auto-open it.
     }
@@ -372,8 +372,8 @@ ApplicationWindow {
     }
 
     // SplitPaneHeader moved to components/SplitPaneHeader.qml so PaneFrame
-    // (which also lives in the Heimdall module) can reach it via plain
-    // `import Heimdall` rather than depending on this inline-component scope.
+    // (which also lives in the Wayfile module) can reach it via plain
+    // `import Wayfile` rather than depending on this inline-component scope.
 
     function parentDirForPath(path) {
         var slashIndex = path.lastIndexOf("/")
@@ -1812,7 +1812,7 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     itemCount: root.activeItemCount()
                     folderCount: root.activeFolderCount()
-                    // Heimdall design-canvas: active-pane absolute path in mono.
+                    // Wayfile design-canvas: active-pane absolute path in mono.
                     // Hidden during search (the result-count message replaces it)
                     // and for virtual views (recents) where there's no real path.
                     activePath: (root.searchMode || root.isRecentsView || root.isHiddenView)

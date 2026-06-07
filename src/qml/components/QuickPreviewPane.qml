@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import Heimdall
+import Wayfile
 
 // The left-hand preview content of QuickPreview — renders whichever per-kind
 // pane (image/video poster, PDF, text, directory/archive, font, or the

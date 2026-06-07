@@ -185,7 +185,7 @@ private slots:
             QSKIP("gio not found in PATH");
 
         const QString uniqueId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-        const QString dirPath = QDir::homePath() + "/.cache/heimdall-test-preview-service-" + uniqueId;
+        const QString dirPath = QDir::homePath() + "/.cache/wayfile-test-preview-service-" + uniqueId;
         QDir().mkpath(dirPath);
 
         const QString filePath = dirPath + "/preview.txt";
@@ -228,7 +228,7 @@ private slots:
             QSKIP("gio not found in PATH");
 
         const QString uniqueId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-        const QString dirPath = QDir::homePath() + "/.cache/heimdall-test-preview-service-" + uniqueId;
+        const QString dirPath = QDir::homePath() + "/.cache/wayfile-test-preview-service-" + uniqueId;
         QDir().mkpath(dirPath);
 
         const QString filePath = dirPath + "/async-preview.txt";
@@ -280,7 +280,7 @@ private slots:
             QSKIP("gio not found in PATH");
 
         const QString uniqueId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-        const QString dirPath = QDir::homePath() + "/.cache/heimdall-test-preview-service-" + uniqueId;
+        const QString dirPath = QDir::homePath() + "/.cache/wayfile-test-preview-service-" + uniqueId;
         QDir().mkpath(dirPath);
 
         const QString filePath = dirPath + "/dup-preview.txt";
@@ -321,7 +321,7 @@ private slots:
             QSKIP("gio not found in PATH");
 
         const QString uniqueId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-        const QString dirPath = QDir::homePath() + "/.cache/heimdall-test-preview-service-" + uniqueId;
+        const QString dirPath = QDir::homePath() + "/.cache/wayfile-test-preview-service-" + uniqueId;
         QDir().mkpath(dirPath);
 
         const QString innerDir = dirPath + "/trashed-folder";

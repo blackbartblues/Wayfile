@@ -19,7 +19,7 @@ class ThemeLoader : public QObject
     Q_PROPERTY(QColor success READ success NOTIFY themeChanged)
     Q_PROPERTY(QColor warning READ warning NOTIFY themeChanged)
     Q_PROPERTY(QColor error READ error NOTIFY themeChanged)
-    // "Heimdall Unified" obsidian + gold token layer (handoff design).
+    // "Wayfile Unified" obsidian + gold token layer (handoff design).
     // Gold ramp.
     Q_PROPERTY(QColor gold READ gold NOTIFY themeChanged)
     Q_PROPERTY(QColor goldMid READ goldMid NOTIFY themeChanged)

@@ -3,7 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Shapes
 import QtQuick.Effects
-import Heimdall
+import Wayfile
 
 // Custom context menu — Hyprland compositor handles blur via windowrule
 Item {

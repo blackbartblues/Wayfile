@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Effects
-import Heimdall
+import Wayfile
 import Quill as Q
 
 Rectangle {
@@ -115,7 +115,7 @@ Rectangle {
         z: 5
     }
 
-    // Heimdall fork: window is always frameless on Linux, so the toolbar is
+    // Wayfile fork: window is always frameless on Linux, so the toolbar is
     // the only drag region. Enable the handler whenever a window is present
     // rather than gating it on the now-removed in-app window controls.
     DragHandler {

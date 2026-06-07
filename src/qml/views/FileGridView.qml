@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
-import Heimdall
+import Wayfile
 import Quill as Q
 
 GridView {

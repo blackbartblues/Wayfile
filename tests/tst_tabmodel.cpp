@@ -380,7 +380,7 @@ private slots:
 
         QJsonArray tabs;
         QJsonObject tab;
-        tab["path"] = "/definitely/missing/path/for/heimdall";
+        tab["path"] = "/definitely/missing/path/for/wayfile";
         tab["viewMode"] = "grid";
         tab["sortBy"] = "name";
         tab["sortAscending"] = true;

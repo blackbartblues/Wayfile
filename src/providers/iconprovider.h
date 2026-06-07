@@ -183,12 +183,12 @@ private:
     {
         m_searchDirs.clear();
 
-        // Heimdall ships its own icon theme alongside the app data. Prefer
+        // Wayfile ships its own icon theme alongside the app data. Prefer
         // the bundled location so the Bifröst-tinted icons render even when
         // the user hasn't done `make install` (dev/run-from-build flow). The
         // macro is defined by the CMake target.
-#ifdef HEIMDALL_DATA_DIR
-        m_searchDirs.append(QStringLiteral(HEIMDALL_DATA_DIR) + "/themes/icons");
+#ifdef WAYFILE_DATA_DIR
+        m_searchDirs.append(QStringLiteral(WAYFILE_DATA_DIR) + "/themes/icons");
 #endif
 
         const QString home = QDir::homePath();

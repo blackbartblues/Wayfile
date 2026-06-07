@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Effects
-import Heimdall
+import Wayfile
 
 // 26 px path strip drawn at the top of each pane in split view.  Shows a status
 // dot, the pane's current path (mono, tilde-collapsed) and a right-aligned item
@@ -9,7 +9,7 @@ import Heimdall
 // `.pane__strip` / `.pane__strip--active`.
 //
 // Phase 1 M6: lifted out of Main.qml's inline `component SplitPaneHeader`
-// declaration so PaneFrame.qml (which lives in the Heimdall module) can
+// declaration so PaneFrame.qml (which lives in the Wayfile module) can
 // instantiate it without falling outside its own scope.
 // Phase 7 (handoff): re-skinned from a 34 px title strip to the 26 px obsidian
 // path strip with status dot + item count.

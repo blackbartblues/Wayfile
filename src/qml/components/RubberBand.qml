@@ -1,5 +1,5 @@
 import QtQuick
-import Heimdall
+import Wayfile
 
 // Semi-transparent rubber-band selection rectangle.
 // Usage:

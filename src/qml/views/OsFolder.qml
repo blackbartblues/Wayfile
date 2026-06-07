@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Shapes
 
 // Glossy dark-stone folder — matte, top-lit, flat front with a back lip + tab.
-// Translated from the handoff OsFolder (reference/app/heimdall-os-icons.jsx):
+// Translated from the handoff OsFolder (reference/app/wayfile-os-icons.jsx):
 // authored in a 100×78 viewBox and uniformly scaled to `size`. Rendered width
 // is `size`, height is `size * 0.78`.
 Item {

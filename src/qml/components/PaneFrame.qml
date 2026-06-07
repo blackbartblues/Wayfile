@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import Heimdall
+import Wayfile
 
 // One file-browser pane.  Wraps SplitPaneHeader + FileViewContainer with a
 // rounded background, accent border for the active pane, and the splitTrans-

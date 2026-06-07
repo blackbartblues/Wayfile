@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Window
-import Heimdall
+import Wayfile
 import Quill as Q
 
 // File properties dialog (General + Permissions tabs, rich metadata, disk

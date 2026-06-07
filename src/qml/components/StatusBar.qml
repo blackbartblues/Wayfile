@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Shapes
-import Heimdall
+import Wayfile
 
 Rectangle {
     id: statusBar
@@ -22,7 +22,7 @@ Rectangle {
     property bool selectedSizePending: false
     property string searchStatus: ""
 
-    // Heimdall design-canvas: active pane absolute path shown in mono font,
+    // Wayfile design-canvas: active pane absolute path shown in mono font,
     // middle-truncated. Empty hides the segment so trash/recents/search views
     // (which don't have a meaningful path) don't render a stale label.
     property string activePath: ""

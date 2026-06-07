@@ -464,7 +464,7 @@ QString FileOperations::conflictBackupPath(const QString &targetPath) const
 {
     QString cacheRoot = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
     if (cacheRoot.isEmpty())
-        cacheRoot = QDir::homePath() + "/.cache/heimdall";
+        cacheRoot = QDir::homePath() + "/.cache/wayfile";
 
     QDir backupDir(cacheRoot + "/conflict-backups");
     backupDir.mkpath(".");

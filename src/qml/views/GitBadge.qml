@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Shapes
-import Heimdall
+import Wayfile
 
 // Shared git-status badge (handoff re-skin): an obsidian disc with a 1px ring,
 // a top sheen, a faint drop-shadow, and a status-tinted glyph. Three variants
@@ -9,7 +9,7 @@ import Heimdall
 //   • solid        — disc filled with the status colour + dark glyph (conflicts)
 //   • dim          — the whole badge at 0.72 opacity (ignored)
 // The glyphs are inlined here (NOT the quill-icons submodule) so the re-skin
-// lives entirely in Heimdall's own repo.
+// lives entirely in Wayfile's own repo.
 Item {
     id: badge
 

@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 cmake -B build && cmake --build build
 
 # Run
-./build/src/heimdall
+./build/src/wayfile
 
 # Run all tests
 ctest --test-dir build
@@ -22,7 +22,7 @@ Tests use Qt6::Test (QCOMPARE, QSignalSpy). Test sources are in `tests/tst_*.cpp
 
 ## Architecture
 
-Heimdall is a Qt6/QML file manager with three layers:
+Wayfile is a Qt6/QML file manager with three layers:
 
 **QML Frontend** (`src/qml/`) — All rendering. `Main.qml` is the root that wires tab state, selection, and keyboard shortcuts. `FileViewContainer.qml` switches between grid/list/detailed views. `Theme.qml` is a QML singleton providing colors from the active TOML theme.
 
@@ -38,7 +38,7 @@ QML action → Q_INVOKABLE C++ method → model property change → QML property
 
 - Models expose data via `roleNames()` mapping enums to QML-accessible names (e.g., `FileNameRole` → `"fileName"`)
 - QML components communicate upward via signals (fileActivated, contextMenuRequested), downward via property bindings
-- Config lives at `~/.config/heimdall/config.toml` (TOML format); theme files in `themes/`
+- Config lives at `~/.config/wayfile/config.toml` (TOML format); theme files in `themes/`
 - All async file I/O through QProcess to avoid blocking the GUI thread
 
 ## Commit Rules
@@ -50,21 +50,22 @@ Never add Co-Authored-By lines to commits.
 - `src/qml/icons/` → [quill-icons](https://github.com/soyeb-jim285/quill-icons) **submodule** — 60 PathSvg icons (Lucide-derived, ISC/MIT). No push access; do not edit in place (inline glyphs in the main repo instead — see GitBadge.qml).
 - `src/qml/Quill/` → **vendored** (forked) from [quill](https://github.com/soyeb-jim285/quill) @ `e3a7d99` — Themed QML component library (Button, TextField, Card, Tabs, Dropdown, etc.). Un-submoduled so its components can be re-skinned (obsidian+gold) directly in this repo. Edit these files freely.
 
-Quill's `Theme.qml` singleton is bridged from Heimdall's theme in `Main.qml` `Component.onCompleted`. The directory must be uppercase `Quill/` to match the QML module name. Quill is loaded from disk at runtime via `engine.addImportPath(.../src/qml)` (not the rcc resource), so edits to Quill components take effect on relaunch without a rebuild.
+Quill's `Theme.qml` singleton is bridged from Wayfile's theme in `Main.qml` `Component.onCompleted`. The directory must be uppercase `Quill/` to match the QML module name. Quill is loaded from disk at runtime via `engine.addImportPath(.../src/qml)` (not the rcc resource), so edits to Quill components take effect on relaunch without a rebuild.
 
 ## Packaging & Distribution
 
-- **AUR**: `PKGBUILD` in repo root, also maintained at `~/heimdall-aur/` (ssh://aur@aur.archlinux.org/heimdall-git.git)
-- **AppImage**: GitHub Actions builds on `v*` tags (`.github/workflows/build.yml`)
-- **Desktop entry + icon**: `dist/heimdall.desktop`, `dist/heimdall.svg`
+- **AUR**: `PKGBUILD` in repo root, also maintained at `~/wayfile-aur/` (ssh://aur@aur.archlinux.org/wayfile-git.git)
+- **AppImage**: not currently published — there is no CI workflow yet. A `.github/workflows/build.yml` would be needed to build AppImages on `v*` tags. (`scripts/build-appimage-local.sh` builds one locally.)
+- **Flatpak**: manifest `io.github.blackbartblues.Wayfile.yml` in repo root (org.kde.Platform 6.9), pins a release tag for Flathub submission.
+- **Desktop entry, icon & metainfo**: `dist/io.github.blackbartblues.Wayfile.{desktop,svg,metainfo.xml}` (named to the app-id)
 
 ### AUR vs GitHub repo
 
-The AUR repo (`~/heimdall-aur/`) only contains `PKGBUILD` + `.SRCINFO` — build instructions, not source code. The PKGBUILD clones from GitHub at build time, so `yay -S heimdall-git` always gets the latest `main`. Only update the AUR repo when dependencies, build steps, or install paths change — not for code changes.
+The AUR repo (`~/wayfile-aur/`) only contains `PKGBUILD` + `.SRCINFO` — build instructions, not source code. The PKGBUILD clones from GitHub at build time, so `yay -S wayfile-git` always gets the latest `main`. Only update the AUR repo when dependencies, build steps, or install paths change — not for code changes.
 
-### HEIMDALL_DATA_DIR
+### WAYFILE_DATA_DIR
 
-`HEIMDALL_DATA_DIR` (CMake cache var) controls where the binary finds themes and QML at runtime. Defaults to `CMAKE_SOURCE_DIR` for dev. PKGBUILD sets it to `/usr/share/heimdall`. Separate from `HEIMDALL_SOURCE_DIR` which is always the build source dir (needed for `loadFromModule`).
+`WAYFILE_DATA_DIR` (CMake cache var) controls where the binary finds themes and QML at runtime. Defaults to `CMAKE_SOURCE_DIR` for dev. PKGBUILD sets it to `/usr/share/wayfile`. Separate from `WAYFILE_SOURCE_DIR` which is always the build source dir (needed for `loadFromModule`).
 
 ## Dependencies
 

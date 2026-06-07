@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import Heimdall
+import Wayfile
 import Quill as Q
 
 // Look & Feel settings page — theme, typography, icons, surface styling.
@@ -108,7 +108,7 @@ ColumnLayout {
     }
 
     SettingDescription {
-        text: "Fall back to Heimdall's bundled icons when the icon pack has no match."
+        text: "Fall back to Wayfile's bundled icons when the icon pack has no match."
     }
 
     Text {

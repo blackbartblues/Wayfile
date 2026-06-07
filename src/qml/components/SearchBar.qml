@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import Heimdall
+import Wayfile
 
 Item {
     id: root

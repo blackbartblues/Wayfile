@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import Heimdall
+import Wayfile
 
 // Sidebar region: the animated layout host, the Sidebar widget, and the
 // drag-to-resize handle. The sidebar's shared state (visible / width / resize)

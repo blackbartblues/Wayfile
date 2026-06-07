@@ -1,6 +1,6 @@
 [Icon Theme]
-Name=Heimdall
-Comment=Bifröst-tinted icon set for the Heimdall file manager
+Name=Wayfile
+Comment=Bifröst-tinted icon set for the Wayfile file manager
 Inherits=Adwaita,hicolor
 Directories=scalable/places,scalable/actions,scalable/mimetypes
 

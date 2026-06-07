@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import Heimdall
+import Wayfile
 import Quill as Q
 
 // Motion settings page — animation timing and easing curves.

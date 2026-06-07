@@ -89,7 +89,7 @@ QString RuntimeFeaturesService::installHint(const QString &feature) const
     if (feature == QStringLiteral("videoPreview"))
         return QStringLiteral("Install ffmpeg to enable video poster previews.");
     if (feature == QStringLiteral("pdfPreview"))
-        return QStringLiteral("Install poppler-qt6 and rebuild Heimdall to enable PDF previews.");
+        return QStringLiteral("Install poppler-qt6 and rebuild Wayfile to enable PDF previews.");
     if (feature == QStringLiteral("remoteAccess"))
         return QStringLiteral("Install gvfs to browse remote filesystems through Connect to Server.");
     if (feature == QStringLiteral("smbRemoteAccess"))

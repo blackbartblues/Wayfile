@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Shapes
 import QtQuick.Effects
-import Heimdall
+import Wayfile
 import Quill as Quill
 
 Rectangle {
@@ -21,7 +21,7 @@ Rectangle {
     signal hiddenClicked()
     signal featureHintRequested(string message)
 
-    // "Heimdall Unified" sidebar: obsidian vertical gradient + right hairline.
+    // "Wayfile Unified" sidebar: obsidian vertical gradient + right hairline.
     gradient: Gradient {
         GradientStop { position: 0.0; color: Theme.panel }
         GradientStop { position: 1.0; color: Theme.mantle }
@@ -88,7 +88,7 @@ Rectangle {
         anchors.fill: parent
         spacing: 0
 
-        // Top breathing room — the "Heimdall" wordmark + action icons moved
+        // Top breathing room — the "Wayfile" wordmark + action icons moved
         // out of the sidebar (#8); the full-width toolbar now sits above this
         // panel, so the list just needs a little padding from the top edge.
         Item {
@@ -96,7 +96,7 @@ Rectangle {
             height: Theme.spacing
         }
 
-        // Heimdall section header: PLACES — Linux home + common folders.
+        // Wayfile section header: PLACES — Linux home + common folders.
         // Style follows design canvas overline spec (11px uppercase, soft
         // letter-spacing). Kept tight so it doesn't dominate the row stack.
         Text {
@@ -276,8 +276,8 @@ Rectangle {
             color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.08)
         }
 
-        // Heimdall section header: FAVORITES — user-curated bookmarks.
-        // Drag a folder onto the section to pin it (existing Heimdall logic).
+        // Wayfile section header: FAVORITES — user-curated bookmarks.
+        // Drag a folder onto the section to pin it (existing Wayfile logic).
         Text {
             Layout.fillWidth: true
             Layout.leftMargin: Theme.spacing
@@ -677,7 +677,7 @@ Rectangle {
             }
         }
 
-        // Heimdall section header: DEVICES — mount points and USB.
+        // Wayfile section header: DEVICES — mount points and USB.
         Text {
             Layout.fillWidth: true
             Layout.leftMargin: Theme.spacing

@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import Heimdall
+import Wayfile
 import Quill as Q
 
 // Tools settings page — utilities and bookmark guidance.
@@ -41,7 +41,7 @@ ColumnLayout {
         text: "View the keyboard shortcut reference, or mount an SMB, SFTP, or other network share."
     }
 
-    // Heimdall: dependency check moved off the startup auto-popup
+    // Wayfile: dependency check moved off the startup auto-popup
     // path and into a manual trigger here. Click only when you want
     // to see what extra tools the file manager can use.
     RowLayout {

@@ -13,7 +13,7 @@ warning = "#f9e2af"
 error = "#f38ba8"
 purple = "#cba6f7"
 
-# "Heimdall Unified" obsidian + gold token layer, mapped to the Mocha palette.
+# "Wayfile Unified" obsidian + gold token layer, mapped to the Mocha palette.
 gold = "#f9e2af"
 goldMid = "#d9bf85"
 goldDeep = "#b89a5e"

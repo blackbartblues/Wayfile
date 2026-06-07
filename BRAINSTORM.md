@@ -1,4 +1,4 @@
-# Heimdall — File Manager for Hyprland
+# Wayfile — File Manager for Hyprland
 
 ## Vision
 A lightweight, keyboard-driven file manager built with Qt6/QML. No GNOME, KDE, or XFCE dependencies. Designed for Hyprland and the Wayland ecosystem.
@@ -49,4 +49,4 @@ Every file manager available today pulls in a full desktop environment's librari
 | Clipboard | wl-copy / wl-paste |
 
 ## Discussion
-<!-- Start a new conversation in ~/heimdall to brainstorm further -->
+<!-- Start a new conversation in ~/wayfile to brainstorm further -->

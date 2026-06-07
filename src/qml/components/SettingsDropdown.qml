@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import Heimdall
+import Wayfile
 
 // In-scene replacement for Quill's Q.Dropdown, used on the Settings pages.
 //

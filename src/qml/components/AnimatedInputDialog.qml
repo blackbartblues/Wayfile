@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import Heimdall
+import Wayfile
 import Quill as Q
 
 // Reusable modal single-input dialog with the shared scale/opacity/slide

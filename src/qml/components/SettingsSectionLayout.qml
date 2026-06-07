@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import Heimdall
+import Wayfile
 import Quill as Q
 
 // Layout settings page — browsing, sidebar, window controls.

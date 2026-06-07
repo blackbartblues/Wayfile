@@ -1,10 +1,10 @@
 # Maintainer: blackbartblues <wojciechsulocki@gmail.com>
-pkgname=heimdall-git
+pkgname=wayfile-git
 pkgver=r447.g78a2fec
 pkgrel=1
 pkgdesc="A lightweight Qt6/QML file manager for Hyprland"
 arch=('x86_64' 'aarch64')
-url="https://github.com/blackbartblues/Heimdall"
+url="https://github.com/blackbartblues/Wayfile"
 license=('MIT')
 depends=(
     'glib2'
@@ -35,10 +35,10 @@ optdepends=(
     'perl-image-exiftool: EXIF metadata for images (via exiftool)'
     'udisks2: mount/unmount devices from sidebar'
 )
-provides=('heimdall')
-conflicts=('heimdall')
+provides=('wayfile')
+conflicts=('wayfile')
 source=(
-    "${pkgname}::git+https://github.com/blackbartblues/Heimdall.git"
+    "${pkgname}::git+https://github.com/blackbartblues/Wayfile.git"
     "quill-icons::git+https://github.com/soyeb-jim285/quill-icons.git"
     "quill::git+https://github.com/soyeb-jim285/quill.git"
 )
@@ -62,36 +62,36 @@ build() {
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DBUILD_TESTS=OFF \
-        -DHEIMDALL_DATA_DIR=/usr/share/heimdall
+        -DWAYFILE_DATA_DIR=/usr/share/wayfile
     cmake --build build --parallel
 }
 
 package() {
     # Install the compiled binary
-    install -Dm755 "build/src/heimdall" "${pkgdir}/usr/bin/heimdall"
+    install -Dm755 "build/src/wayfile" "${pkgdir}/usr/bin/wayfile"
 
-    # Install themes — loaded via applicationDirPath()/../themes → /usr/share/heimdall/themes
-    install -dm755 "${pkgdir}/usr/share/heimdall/themes"
+    # Install themes — loaded via applicationDirPath()/../themes → /usr/share/wayfile/themes
+    install -dm755 "${pkgdir}/usr/share/wayfile/themes"
     install -Dm644 "${pkgname}/themes/"*.toml \
-        -t "${pkgdir}/usr/share/heimdall/themes/"
+        -t "${pkgdir}/usr/share/wayfile/themes/"
 
-    # Install QML module metadata (needed for loadFromModule to find Heimdall)
-    install -Dm644 "build/src/Heimdall/qmldir" \
-        "${pkgdir}/usr/share/heimdall/Heimdall/qmldir"
-    install -Dm644 "build/src/Heimdall/heimdall.qmltypes" \
-        "${pkgdir}/usr/share/heimdall/Heimdall/heimdall.qmltypes" 2>/dev/null || true
+    # Install QML module metadata (needed for loadFromModule to find Wayfile)
+    install -Dm644 "build/src/Wayfile/qmldir" \
+        "${pkgdir}/usr/share/wayfile/Wayfile/qmldir"
+    install -Dm644 "build/src/Wayfile/wayfile.qmltypes" \
+        "${pkgdir}/usr/share/wayfile/Wayfile/wayfile.qmltypes" 2>/dev/null || true
 
     # Install QML sources for Quill module
-    install -dm755 "${pkgdir}/usr/share/heimdall/src"
-    cp -r "${pkgname}/src/qml" "${pkgdir}/usr/share/heimdall/src/qml"
+    install -dm755 "${pkgdir}/usr/share/wayfile/src"
+    cp -r "${pkgname}/src/qml" "${pkgdir}/usr/share/wayfile/src/qml"
 
     # Install desktop entry, icon and AppStream metainfo
-    install -Dm644 "${pkgname}/dist/io.github.blackbartblues.Heimdall.desktop" \
-        "${pkgdir}/usr/share/applications/io.github.blackbartblues.Heimdall.desktop"
-    install -Dm644 "${pkgname}/dist/io.github.blackbartblues.Heimdall.svg" \
-        "${pkgdir}/usr/share/icons/hicolor/scalable/apps/io.github.blackbartblues.Heimdall.svg"
-    install -Dm644 "${pkgname}/dist/io.github.blackbartblues.Heimdall.metainfo.xml" \
-        "${pkgdir}/usr/share/metainfo/io.github.blackbartblues.Heimdall.metainfo.xml"
+    install -Dm644 "${pkgname}/dist/io.github.blackbartblues.Wayfile.desktop" \
+        "${pkgdir}/usr/share/applications/io.github.blackbartblues.Wayfile.desktop"
+    install -Dm644 "${pkgname}/dist/io.github.blackbartblues.Wayfile.svg" \
+        "${pkgdir}/usr/share/icons/hicolor/scalable/apps/io.github.blackbartblues.Wayfile.svg"
+    install -Dm644 "${pkgname}/dist/io.github.blackbartblues.Wayfile.metainfo.xml" \
+        "${pkgdir}/usr/share/metainfo/io.github.blackbartblues.Wayfile.metainfo.xml"
 
     # Install license
     install -Dm644 "${pkgname}/LICENSE" \

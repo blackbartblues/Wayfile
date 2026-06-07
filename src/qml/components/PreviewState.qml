@@ -1,5 +1,5 @@
 import QtQuick
-import Heimdall
+import Wayfile
 
 // Shared, non-visual preview state + loaders for the two file-preview surfaces
 // (the QuickPreview overlay and FileMillerView's preview column). Both used to

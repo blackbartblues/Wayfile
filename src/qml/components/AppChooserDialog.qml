@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import Heimdall
+import Wayfile
 import Quill as Q
 
 // "Choose Application" dialog. Extracted from Main.qml (inline Q.Dialog).

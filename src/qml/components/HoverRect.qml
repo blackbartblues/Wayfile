@@ -1,5 +1,5 @@
 import QtQuick
-import Heimdall
+import Wayfile
 
 Rectangle {
     id: root

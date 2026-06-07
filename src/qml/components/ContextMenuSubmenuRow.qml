@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import Heimdall
+import Wayfile
 
 // One row of an open submenu — an action item or a separator, based on
 // rowData. Extracted from ContextMenu.qml. Imperative calls go through `menu`.

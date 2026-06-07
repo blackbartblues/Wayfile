@@ -12,7 +12,7 @@ success = "#40a02b"
 warning = "#df8e1d"
 error = "#d20f39"
 
-# "Heimdall Unified" obsidian + gold token layer, mapped to the Latte palette.
+# "Wayfile Unified" obsidian + gold token layer, mapped to the Latte palette.
 gold = "#df8e1d"
 goldMid = "#c97e15"
 goldDeep = "#a8660f"

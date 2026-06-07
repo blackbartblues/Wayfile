@@ -126,8 +126,8 @@ private slots:
         if (QStandardPaths::findExecutable("gio").isEmpty())
             QSKIP("gio not found in PATH");
 
-        const QString fileName = "heimdall-trash-model-" + QUuid::createUuid().toString(QUuid::WithoutBraces) + ".txt";
-        const QString dirPath = QDir::homePath() + "/.cache/heimdall-test-trash-model";
+        const QString fileName = "wayfile-trash-model-" + QUuid::createUuid().toString(QUuid::WithoutBraces) + ".txt";
+        const QString dirPath = QDir::homePath() + "/.cache/wayfile-test-trash-model";
         QDir().mkpath(dirPath);
         const QString filePath = dirPath + "/" + fileName;
 

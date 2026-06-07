@@ -1,8 +1,8 @@
 pragma Singleton
 import QtQuick
 
-// Self-hosted bundled fonts for the "Heimdall Unified" look (both OFL):
-//   • Cinzel       — the "HEIMDALL" display wordmark only.
+// Self-hosted bundled fonts for the "Wayfile Unified" look (both OFL):
+//   • Cinzel       — the "WAYFILE" display wordmark only.
 //   • JetBrains Mono — paths, sizes, type chips, keycaps.
 // Both are variable fonts; pick a weight via `font.weight` at the call site.
 // The exposed `display`/`mono` families fall back to a generic family until

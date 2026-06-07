@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import Heimdall
+import Wayfile
 
 // Hybrid view (Phase 8 — the new default). A "Folders" grid on top + a "Files"
 // detailed list below, in two stacked sections (handoff screenshots/01).

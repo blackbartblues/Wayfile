@@ -1,7 +1,7 @@
 pragma Singleton
 import QtQuick
 
-// Fixed git-status palette + badge-variant map for the "Heimdall Unified"
+// Fixed git-status palette + badge-variant map for the "Wayfile Unified"
 // re-skin (handoff GIT map). Immutable per design decision D3 — git status
 // identity stays consistent across themes. Gold is reserved for "modified".
 QtObject {

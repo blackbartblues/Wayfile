@@ -1,9 +1,9 @@
 import QtQuick
 import QtQuick.Shapes
-import Heimdall
+import Wayfile
 
 // Glossy document page with a folded corner and a type-tinted glyph.
-// Translated from the handoff OsFile (reference/app/heimdall-os-icons.jsx):
+// Translated from the handoff OsFile (reference/app/wayfile-os-icons.jsx):
 // authored in a 64×80 viewBox and uniformly scaled to `size`. Rendered width
 // is `size * 0.8`, height is `size`.
 //   variant: "doc" (ruled lines) | "json" (braces) | "img" (picture)

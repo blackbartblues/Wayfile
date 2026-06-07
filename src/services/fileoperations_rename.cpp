@@ -111,7 +111,7 @@ QString temporaryRenamePathFor(const QString &sourcePath)
     QString tempPath;
     do {
         tempPath = joinLocation(parentLocation(sourcePath),
-                                QStringLiteral(".heimdall-rename-%1.tmp")
+                                QStringLiteral(".wayfile-rename-%1.tmp")
                                     .arg(QUuid::createUuid().toString(QUuid::WithoutBraces)));
     } while (pathExistsSync(tempPath));
 

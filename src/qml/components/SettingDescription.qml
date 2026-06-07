@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import Heimdall
+import Wayfile
 
 // One-line (wrapping) helper text shown directly beneath a setting control.
 // Keeps description styling consistent across SettingsPanel without touching

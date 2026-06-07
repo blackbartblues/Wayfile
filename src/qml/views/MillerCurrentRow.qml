@@ -1,5 +1,5 @@
 import QtQuick
-import Heimdall
+import Wayfile
 import Quill as Q
 
 // One row of the Miller middle (current) column, extracted from

@@ -1,5 +1,5 @@
 import QtQuick
-import Heimdall
+import Wayfile
 import Quill as Q
 
 // One row of the detailed (table) file view, extracted from FileDetailedView.qml

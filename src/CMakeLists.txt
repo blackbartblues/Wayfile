@@ -1,4 +1,4 @@
-set(HEIMDALL_SOURCES
+set(WAYFILE_SOURCES
     main.cpp
     services/configmanager.cpp
     services/themeloader.cpp
@@ -44,13 +44,13 @@ set(HEIMDALL_SOURCES
     providers/pdfpreviewprovider.cpp
 )
 
-qt_add_executable(heimdall ${HEIMDALL_SOURCES})
+qt_add_executable(wayfile ${WAYFILE_SOURCES})
 
-option(HEIMDALL_ENABLE_PCH "Enable precompiled headers (faster builds)" ON)
-option(HEIMDALL_ENABLE_UNITY_BUILD "Enable unity builds (faster clean builds)" ON)
+option(WAYFILE_ENABLE_PCH "Enable precompiled headers (faster builds)" ON)
+option(WAYFILE_ENABLE_UNITY_BUILD "Enable unity builds (faster clean builds)" ON)
 
-if(HEIMDALL_ENABLE_PCH)
-    target_precompile_headers(heimdall PRIVATE
+if(WAYFILE_ENABLE_PCH)
+    target_precompile_headers(wayfile PRIVATE
         <QtCore/QObject>
         <QtCore/QString>
         <QtCore/QStringList>
@@ -63,8 +63,8 @@ if(HEIMDALL_ENABLE_PCH)
     )
 endif()
 
-if(HEIMDALL_ENABLE_UNITY_BUILD)
-    set_target_properties(heimdall PROPERTIES
+if(WAYFILE_ENABLE_UNITY_BUILD)
+    set_target_properties(wayfile PROPERTIES
         UNITY_BUILD ON
         UNITY_BUILD_BATCH_SIZE 8
     )
@@ -93,18 +93,18 @@ set_source_files_properties(qml/theme/Fonts.qml PROPERTIES QT_QML_SINGLETON_TYPE
 set_source_files_properties(qml/theme/FileTypeColors.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 set_source_files_properties(qml/theme/GitColors.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
-option(HEIMDALL_ENABLE_QML_CACHEGEN "Enable Qt QML cache compilation (faster startup, slower builds)" OFF)
+option(WAYFILE_ENABLE_QML_CACHEGEN "Enable Qt QML cache compilation (faster startup, slower builds)" OFF)
 
-set(heimdall_qml_module_args
-    URI Heimdall
+set(wayfile_qml_module_args
+    URI Wayfile
     VERSION 1.0
 )
 
-if(NOT HEIMDALL_ENABLE_QML_CACHEGEN)
-    list(APPEND heimdall_qml_module_args NO_CACHEGEN)
+if(NOT WAYFILE_ENABLE_QML_CACHEGEN)
+    list(APPEND wayfile_qml_module_args NO_CACHEGEN)
 endif()
 
-list(APPEND heimdall_qml_module_args
+list(APPEND wayfile_qml_module_args
     QML_FILES
         qml/Main.qml
         qml/theme/Theme.qml
@@ -233,26 +233,26 @@ list(APPEND heimdall_qml_module_args
         qml/components/SettingDescription.qml
 )
 
-qt_add_qml_module(heimdall ${heimdall_qml_module_args})
+qt_add_qml_module(wayfile ${wayfile_qml_module_args})
 
 # Bundle binary assets (app logo) into the executable so the header logo and
-# window icon resolve via qrc regardless of HEIMDALL_DATA_DIR (dev loads QML
+# window icon resolve via qrc regardless of WAYFILE_DATA_DIR (dev loads QML
 # from source, but qrc resources are always compiled into the binary).
-qt_add_resources(heimdall "heimdall_assets"
+qt_add_resources(wayfile "wayfile_assets"
     PREFIX "/"
     FILES
-        assets/heimdall-logo.png
+        assets/wayfile-logo.png
         assets/noise-grain.png
         assets/fonts/Cinzel-VF.ttf
         assets/fonts/JetBrainsMono-VF.ttf
 )
 
 # Make Quill module discoverable at runtime
-set_target_properties(heimdall PROPERTIES
+set_target_properties(wayfile PROPERTIES
     QT_QML_IMPORT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/qml"
 )
 
-target_link_libraries(heimdall PRIVATE
+target_link_libraries(wayfile PRIVATE
     Qt6::Core
     Qt6::Gui
     Qt6::Qml
@@ -267,29 +267,29 @@ target_link_libraries(heimdall PRIVATE
 )
 
 if(KF6WindowSystem_FOUND)
-    target_link_libraries(heimdall PRIVATE KF6::WindowSystem)
+    target_link_libraries(wayfile PRIVATE KF6::WindowSystem)
 endif()
 
-target_include_directories(heimdall PRIVATE
+target_include_directories(wayfile PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party
 )
 
-set(HEIMDALL_DATA_DIR "${CMAKE_SOURCE_DIR}" CACHE STRING "Runtime data directory for themes and QML")
+set(WAYFILE_DATA_DIR "${CMAKE_SOURCE_DIR}" CACHE STRING "Runtime data directory for themes and QML")
 
-target_compile_definitions(heimdall PRIVATE
-    HEIMDALL_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
-    HEIMDALL_DATA_DIR="${HEIMDALL_DATA_DIR}"
+target_compile_definitions(wayfile PRIVATE
+    WAYFILE_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+    WAYFILE_DATA_DIR="${WAYFILE_DATA_DIR}"
 )
 
 if(KF6WindowSystem_FOUND)
-    target_compile_definitions(heimdall PRIVATE HEIMDALL_HAS_KWINDOWSYSTEM=1)
+    target_compile_definitions(wayfile PRIVATE WAYFILE_HAS_KWINDOWSYSTEM=1)
 endif()
 
-install(TARGETS heimdall DESTINATION bin)
-install(FILES "${CMAKE_SOURCE_DIR}/dist/io.github.blackbartblues.Heimdall.desktop"
+install(TARGETS wayfile DESTINATION bin)
+install(FILES "${CMAKE_SOURCE_DIR}/dist/io.github.blackbartblues.Wayfile.desktop"
     DESTINATION share/applications)
-install(FILES "${CMAKE_SOURCE_DIR}/dist/io.github.blackbartblues.Heimdall.svg"
+install(FILES "${CMAKE_SOURCE_DIR}/dist/io.github.blackbartblues.Wayfile.svg"
     DESTINATION share/icons/hicolor/scalable/apps)
-install(FILES "${CMAKE_SOURCE_DIR}/dist/io.github.blackbartblues.Heimdall.metainfo.xml"
+install(FILES "${CMAKE_SOURCE_DIR}/dist/io.github.blackbartblues.Wayfile.metainfo.xml"
     DESTINATION share/metainfo)

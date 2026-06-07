@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# QML load smoke test for Heimdall.
+# QML load smoke test for Wayfile.
 #
 # Launches the built binary headless (offscreen Qt platform) in a throwaway
 # XDG environment and fails if the QML engine reports any load or binding
@@ -16,10 +16,10 @@
 # the components depend on many C++ context properties that would have to be
 # mocked, which is far more brittle than running the real app headless.
 #
-# Usage: qml-smoke.sh <path-to-heimdall-binary>
+# Usage: qml-smoke.sh <path-to-wayfile-binary>
 set -u
 
-BIN="${1:?usage: qml-smoke.sh <heimdall-binary>}"
+BIN="${1:?usage: qml-smoke.sh <wayfile-binary>}"
 if [ ! -x "$BIN" ]; then
     echo "qml-smoke: binary not found or not executable: $BIN" >&2
     exit 1
@@ -41,7 +41,7 @@ chmod 700 "$XDG_RUNTIME_DIR"
 export QT_QPA_PLATFORM=offscreen
 export QT_FORCE_STDERR_LOGGING=1
 
-LOG="$TMP/heimdall.log"
+LOG="$TMP/wayfile.log"
 # The app runs until the timeout stops it; `timeout` returning non-zero
 # (124 = stopped) is expected and not a failure — only QML errors are.
 timeout 8 "$BIN" "$TMP" >"$LOG" 2>&1 || true

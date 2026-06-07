@@ -1,12 +1,12 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Window
-import Heimdall
+import Wayfile
 import Quill as Q
 
 Window {
     id: root
-    title: "Heimdall Settings"
+    title: "Wayfile Settings"
     flags: Qt.Dialog | Qt.FramelessWindowHint
     color: "transparent"
 
