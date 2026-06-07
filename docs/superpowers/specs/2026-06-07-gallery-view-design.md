@@ -60,6 +60,30 @@ through media quickly and watch videos in place.
 - **On entering the view or changing directory**, the first media item is selected
   by default (the strip is never blank when media exists).
 
+## Folder navigation (sidebar) — added 2026-06-07
+
+In Gallery mode the app sidebar swaps its Places/devices list for a **folder
+navigator**, with a **Places ⇄ Folders toggle** at the top of the sidebar to flip
+back. This gives in-panel directory navigation without leaving the gallery; the
+breadcrumb (and Places, when toggled) keep working too.
+
+- **Folder navigator:** a "**..**" parent entry followed by the subfolders of the
+  active pane's current directory (a `FoldersOnly` proxy over `fsModel`). Clicking
+  a folder navigates the active pane into it (`host.navigateActivePaneTo`); the
+  thumbnails column + preview refresh. Clicking ".." goes to the parent.
+- **Toggle:** a two-segment control (Places / Folders) at the top of the sidebar,
+  shown only while the active view is Gallery. Defaults to **Folders** on entering
+  Gallery; state persists; leaving Gallery restores the normal Places sidebar.
+- **Resulting layout:** sidebar (folders) │ thumbnails column │ large preview │
+  metadata bar. The thumbnails/preview/metadata are the existing GalleryView
+  content area, unchanged — only the sidebar is repurposed.
+- **Scope note:** the navigator reflects and navigates the **primary pane** via
+  `fsModel` + `navigateActivePaneTo`; with Gallery in a non-primary split pane it
+  is best-effort (follows the primary pane). Single-pane (the common case) is exact.
+- **Files:** new `src/qml/components/GalleryFolderNav.qml`; `SidebarPane.qml` swaps
+  between `Sidebar` and `GalleryFolderNav` and adds the toggle header; `Main.qml`
+  adds a `galleryFolderNavActive` toggle property (default `true`).
+
 ## Architecture & components
 
 Slots into the existing pluggable-view system; no new app-level concepts.

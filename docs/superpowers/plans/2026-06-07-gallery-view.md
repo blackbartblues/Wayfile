@@ -754,3 +754,41 @@ Launch `build/src/wayfile`, navigate to a folder with mixed media, and confirm:
 - Each task is independently buildable + committable. Tasks 1-2 are backend/build; 3-6 are the feature; 7 packaging; 8 verification.
 - QML changes require `cmake --build build` before any smoke test (QML is rcc'd into the binary).
 - Implement on `rebrand-wayfile` after the rebrand is merged, or rebase onto `main` once the rebrand lands.
+
+---
+
+## Follow-up tasks: folder navigation in the sidebar (added 2026-06-07, approved)
+
+In Gallery mode the sidebar swaps Places for a folder navigator (".." + subfolders,
+click to navigate the active pane), with a Places/Folders toggle. See the spec's
+"Folder navigation (sidebar)" section.
+
+### Task 9: GalleryFolderNav.qml
+
+**Files:** Create `src/qml/components/GalleryFolderNav.qml`; Modify `src/CMakeLists.txt` (QML_FILES).
+
+- [ ] **Step 1: Register the file** — add to `QML_FILES` in `src/CMakeLists.txt` (near the other `qml/components/` entries):
+
+```cmake
+        qml/components/GalleryFolderNav.qml
+```
+
+- [ ] **Step 2: Create `src/qml/components/GalleryFolderNav.qml`** (".." parent + FoldersOnly list over `fsModel`; click → `host.navigateActivePaneTo`). Full code is implemented in this task (see the committed file).
+
+- [ ] **Step 3: Build + smoke** — `cmake --build build && ctest --test-dir build -R tst_qml_smoke`. Expect PASS.
+
+- [ ] **Step 4: Commit** — `git commit -m "feat(gallery): sidebar folder navigator component"`.
+
+### Task 10: Sidebar swap + Places/Folders toggle
+
+**Files:** Modify `src/qml/Main.qml` (add `property bool galleryFolderNavActive: true`), `src/qml/components/SidebarPane.qml` (wrap `Sidebar` in a stack with the toggle header + `GalleryFolderNav`, shown when `tabModel.activeTab.viewMode === "gallery"`).
+
+- [ ] **Step 1:** Add `property bool galleryFolderNavActive: true` to Main.qml near `sidebarVisible`.
+- [ ] **Step 2:** In SidebarPane, replace the bare `Sidebar { … }` with a `Column` holding: a Places/Folders toggle (visible only in gallery), then `Sidebar` (visible when not showing folders) + `GalleryFolderNav` (visible when showing folders).
+- [ ] **Step 3: Build + smoke** — expect PASS.
+- [ ] **Step 4: Commit** — `git commit -m "feat(gallery): swap sidebar to folder navigator in gallery mode"`.
+
+### Task 11 (was Task 8): Manual GUI verification — also verify:
+- Switching to Gallery shows the folder navigator in the sidebar with a Places/Folders toggle (Folders active by default).
+- Clicking a subfolder navigates into it (thumbnails + preview refresh); ".." goes up.
+- Toggling to Places restores the normal sidebar; leaving Gallery restores Places automatically.
