@@ -549,14 +549,12 @@ GridView {
             visible: !delegateItem.hasThumbnail
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: parent.top
-            // Hover lifts the art 2px (handoff folder "hover" state).
-            anchors.topMargin: 8 + (ma.containsMouse && !delegateItem.isSelected ? -2 : 0)
+            // Static on hover (user pref): the icon + label stay completely
+            // still; only the hover highlight rect suggests hover. (Previously
+            // the art lifted 2px, which carried the label up with it.)
+            anchors.topMargin: 8
             width: root.iconSize
             height: root.iconSize
-
-            Behavior on anchors.topMargin {
-                NumberAnimation { duration: Theme.animDurationFast; easing.type: Theme.animEasingEnter; easing.bezierCurve: Theme.animBezierCurve }
-            }
 
             IconFolder {
                 id: folderArt
