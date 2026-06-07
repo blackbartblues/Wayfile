@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtMultimedia
 import Wayfile
 
 // Gallery view (5th mode). A narrow vertical thumbnail filmstrip (a single-column
@@ -139,8 +140,9 @@ FocusScope {
                     id: stillImage
                     anchors.fill: parent
                     anchors.margins: 16
-                    visible: previewState.isImage || previewState.isPdf
-                             || (previewState.isVideo && previewState.hasVisualPreview)
+                    visible: !videoLayer.playing
+                             && (previewState.isImage || previewState.isPdf
+                                 || (previewState.isVideo && previewState.hasVisualPreview))
                     source: previewState.isPdf ? previewState.pdfImageSource
                                                : previewState.visualSource
                     fillMode: Image.PreserveAspectFit
@@ -151,7 +153,7 @@ FocusScope {
                 // Audio / no-visual fallback card.
                 ColumnLayout {
                     anchors.centerIn: parent
-                    visible: mediaProxy.count > 0 && !stillImage.visible
+                    visible: mediaProxy.count > 0 && !stillImage.visible && !videoLayer.playing
                     spacing: 8
                     IconImage {
                         Layout.alignment: Qt.AlignHCenter
@@ -163,6 +165,74 @@ FocusScope {
                         text: previewState.fileName
                         color: Theme.text
                         font.pointSize: Theme.fontNormal
+                    }
+                }
+
+                // ▶ play overlay (click-to-start) for videos.
+                Rectangle {
+                    id: playOverlay
+                    anchors.centerIn: parent
+                    visible: previewState.isVideo && !videoLayer.playing
+                    width: 72; height: 72; radius: 36
+                    color: Qt.rgba(0, 0, 0, 0.45)
+                    border.color: Theme.gold
+                    border.width: 2
+                    Text {
+                        anchors.centerIn: parent
+                        text: "▶"
+                        color: Theme.gold
+                        font.pixelSize: 30
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: videoLayer.start()
+                    }
+                }
+
+                // In-pane video playback (Qt Multimedia), started on demand.
+                Item {
+                    id: videoLayer
+                    anchors.fill: parent
+                    property bool playing: false
+                    visible: playing
+
+                    function start() {
+                        mediaPlayer.source = "file://" + root.currentPreviewPath
+                        mediaPlayer.play()
+                        playing = true
+                    }
+                    function stop() {
+                        mediaPlayer.stop()
+                        mediaPlayer.source = ""
+                        playing = false
+                    }
+
+                    VideoOutput {
+                        id: videoOut
+                        anchors.fill: parent
+                        anchors.margins: 8
+                        fillMode: VideoOutput.PreserveAspectFit
+                    }
+                    MediaPlayer {
+                        id: mediaPlayer
+                        videoOutput: videoOut
+                        audioOutput: AudioOutput { id: audioOut }
+                    }
+                    // Click the video to toggle play/pause.
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: mediaPlayer.playbackState === MediaPlayer.PlayingState
+                                   ? mediaPlayer.pause() : mediaPlayer.play()
+                    }
+                }
+
+                // Stop playback when the selected item changes.
+                Connections {
+                    target: root
+                    function onCurrentPreviewPathChanged() {
+                        if (videoLayer.playing) videoLayer.stop()
                     }
                 }
             }
