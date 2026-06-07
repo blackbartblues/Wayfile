@@ -970,11 +970,14 @@ ApplicationWindow {
     // The toolbar merge button + F3 dispatch through this single function.
     // Behaviour:
     //   * active tab is a supertab  -> unmerge it back into separate tabs
-    //   * 2+ tabs selected          -> merge the selection into one supertab
-    //   * otherwise (only active)   -> spawn a fresh tab and merge it in as a
-    //                                  new pane, so the button doubles as
-    //                                  "add a pane to this tab" (this replaced
-    //                                  the old "Open in split view" action)
+    //   * 2+ tabs selected          -> merge the explicit selection into one
+    //                                  supertab
+    //   * otherwise (only active)   -> merge the active tab with an adjacent
+    //                                  one (defaulting to the tab on the right,
+    //                                  falling back to the left), or spawn a
+    //                                  fresh tab and merge it in when the active
+    //                                  tab is the only tab.  See
+    //                                  TabListModel::mergeActiveWithAdjacent.
     function toggleMergeOrUnmerge() {
         if (!tabModel.activeTab)
             return
@@ -988,15 +991,7 @@ ApplicationWindow {
             return
         }
 
-        // Only the active tab is in the selection: spawn a fresh tab and merge
-        // it against the active one. addTab makes the new tab the only-selected
-        // active, so re-arm the original (its index is unchanged — addTab
-        // appends) then merge {original, new}; mergeSelected picks the lower
-        // index (the original) as the receiver.
-        var active = tabModel.activeIndex
-        tabModel.addTab()
-        tabModel.toggleSelected(active)
-        tabModel.mergeSelected()
+        tabModel.mergeActiveWithAdjacent()
     }
 
     // P2-M5: predicates feeding the toolbar merge button's icon + tooltip.
@@ -1024,7 +1019,9 @@ ApplicationWindow {
                 return "Tab limit reached (max 4 panes)"
             return "Merge " + tabModel.selectedCount + " tabs"
         }
-        return "Add a new pane"
+        // Only the active tab: the click merges it with an adjacent tab, or
+        // spawns a fresh pane when it's the only tab.
+        return tabModel.count >= 2 ? "Merge with adjacent tab" : "Split into a new pane"
     }
 
     // paneCanGoBack/Forward are Q_INVOKABLEs (not bindable Q_PROPERTYs), so

@@ -418,6 +418,102 @@ private slots:
         QCOMPARE(rtab->paneCurrentPath(1), QString("/usr"));
         QCOMPARE(rtab->paneCurrentPath(2), QString("/home"));
     }
+
+    // Phase C: merge button (no explicit multi-selection) — default to the
+    // tab on the RIGHT of the active one.
+    void testMergeActiveWithAdjacentPrefersRight()
+    {
+        TabListModel model;
+        model.activeTab()->navigateTo("/tmp");   // index 0
+        model.addTab();
+        model.tabAt(1)->navigateTo("/usr");       // index 1
+        model.addTab();
+        model.tabAt(2)->navigateTo("/home");      // index 2
+        QCOMPARE(model.rowCount(), 3);
+
+        model.setActiveIndex(1);                  // active = middle tab (/usr)
+        model.mergeActiveWithAdjacent();
+
+        // Merges with the right neighbour (/home); receiver is the lower index.
+        QCOMPARE(model.rowCount(), 2);
+        QCOMPARE(model.activeIndex(), 1);
+        TabModel *merged = model.tabAt(1);
+        QVERIFY(merged->isSupertab());
+        QCOMPARE(merged->paneCount(), 2);
+        QCOMPARE(merged->paneCurrentPath(0), QString("/usr"));
+        QCOMPARE(merged->paneCurrentPath(1), QString("/home"));
+        // The left tab (/tmp) is untouched.
+        QCOMPARE(model.tabAt(0)->currentPath(), QString("/tmp"));
+        QVERIFY(!model.tabAt(0)->isSupertab());
+    }
+
+    // Phase C: when the active tab is the last one, fall back to the left
+    // neighbour.
+    void testMergeActiveWithAdjacentFallsBackLeft()
+    {
+        TabListModel model;
+        model.activeTab()->navigateTo("/tmp");   // 0
+        model.addTab();
+        model.tabAt(1)->navigateTo("/usr");       // 1
+        model.addTab();
+        model.tabAt(2)->navigateTo("/home");      // 2
+
+        model.setActiveIndex(2);                  // active = last tab (/home)
+        model.mergeActiveWithAdjacent();
+
+        // No right neighbour -> merge with the left one (/usr) at index 1.
+        QCOMPARE(model.rowCount(), 2);
+        QCOMPARE(model.activeIndex(), 1);
+        TabModel *merged = model.tabAt(1);
+        QVERIFY(merged->isSupertab());
+        QCOMPARE(merged->paneCount(), 2);
+        QCOMPARE(merged->paneCurrentPath(0), QString("/usr"));
+        QCOMPARE(merged->paneCurrentPath(1), QString("/home"));
+        QCOMPARE(model.tabAt(0)->currentPath(), QString("/tmp"));
+    }
+
+    // Phase C: a lone tab spawns a fresh tab and merges into a 2-pane supertab.
+    void testMergeActiveWithAdjacentSpawnsWhenAlone()
+    {
+        TabListModel model;
+        model.activeTab()->navigateTo("/tmp");
+        QCOMPARE(model.rowCount(), 1);
+
+        model.mergeActiveWithAdjacent();
+
+        QCOMPARE(model.rowCount(), 1);            // the two tabs merged into one
+        TabModel *merged = model.activeTab();
+        QVERIFY(merged->isSupertab());
+        QCOMPARE(merged->paneCount(), 2);
+        QCOMPARE(merged->paneCurrentPath(0), QString("/tmp"));
+    }
+
+    // Phase C: refuse (without disturbing the selection) when merging the
+    // neighbour would exceed the 4-pane cap.
+    void testMergeActiveWithAdjacentRespectsPaneCap()
+    {
+        TabListModel model;
+        model.activeTab()->navigateTo("/tmp");   // 0, single pane
+        model.addTab();                           // 1
+        TabModel *b = model.tabAt(1);
+        b->navigateTo("/");
+        b->addPane("/usr");
+        b->addPane("/home");
+        b->addPane("/etc");
+        b->setSupertab(true);
+        QCOMPARE(b->paneCount(), 4);
+
+        model.setActiveIndex(0);
+        QSignalSpy limitSpy(&model, &TabListModel::selectionLimitReached);
+        model.mergeActiveWithAdjacent();
+
+        // 1 + 4 = 5 > kMaxPanes -> refused, both tabs intact, no dangling sel.
+        QVERIFY(limitSpy.count() >= 1);
+        QCOMPARE(model.rowCount(), 2);
+        QCOMPARE(model.selectedCount(), 1);
+        QVERIFY(!model.tabAt(0)->isSupertab());
+        QCOMPARE(model.tabAt(1)->paneCount(), 4);
+    }
 };
 
 QTEST_MAIN(TestTabModel)

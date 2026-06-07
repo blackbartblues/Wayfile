@@ -398,6 +398,45 @@ void TabListModel::mergeSelected()
     emit sessionChanged();
 }
 
+void TabListModel::mergeActiveWithAdjacent()
+{
+    if (m_activeIndex < 0 || m_activeIndex >= m_tabs.size())
+        return;
+
+    const int active = m_activeIndex;
+
+    // Genuinely the only tab: spawn a fresh tab and merge it in as a second
+    // pane, so the merge button doubles as "split this tab into two panes".
+    // addTab appends and makes the new tab the sole-selected active, so we
+    // re-add the original (its index is unchanged) before merging.
+    if (m_tabs.size() < 2) {
+        addTab();
+        toggleSelected(active);
+        mergeSelected();  // {original, new} -> supertab at the original's row
+        return;
+    }
+
+    // At least one neighbour exists: prefer the tab on the RIGHT, fall back to
+    // the left when the active tab is the last one.
+    const int neighbour = (active + 1 < m_tabs.size()) ? active + 1 : active - 1;
+
+    // Collapse to {active} first so we start from a clean selection regardless
+    // of any stale multi-selection, then pre-flight the pane cap here — a
+    // refused merge must not leave the selection dangling at two tabs
+    // (mergeSelected's own check fires only after the selection is mutated).
+    clearSelection();           // -> {active}
+    const int combined =
+        m_tabs[active]->paneCount() + m_tabs[neighbour]->paneCount();
+    if (combined > kMaxPanes) {
+        emit selectionLimitReached(
+            tr("Merge would exceed %1 panes").arg(kMaxPanes));
+        return;
+    }
+
+    toggleSelected(neighbour);  // -> {active, neighbour}
+    mergeSelected();
+}
+
 void TabListModel::unmergeAt(int idx)
 {
     if (idx < 0 || idx >= m_tabs.size())

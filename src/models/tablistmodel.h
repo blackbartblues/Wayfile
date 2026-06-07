@@ -83,6 +83,15 @@ public:
     // when the selection has fewer than 2 entries.
     Q_INVOKABLE void mergeSelected();
 
+    // Phase C: the toolbar merge button's "no explicit multi-selection" path.
+    // Merges the active tab with an adjacent one, defaulting to the tab on the
+    // RIGHT and falling back to the left when the active tab is last.  When the
+    // active tab is the only tab, spawns a fresh tab and merges it in as a
+    // second pane.  Respects kMaxPanes: refuses (and emits
+    // selectionLimitReached) without disturbing the selection if the combined
+    // pane count would exceed the cap.
+    Q_INVOKABLE void mergeActiveWithAdjacent();
+
     // Phase 2 P2-M5: sum of paneCount() across currently-selected tabs.
     // Mirrors mergeSelected's pre-flight check so the toolbar tooltip
     // can announce "cap reached" before the user clicks instead of
