@@ -263,6 +263,7 @@ target_link_libraries(wayfile PRIVATE
     Qt6::Svg
     Qt6::Network
     Qt6::Concurrent
+    Qt6::Multimedia
     PkgConfig::GIO
 )
 
