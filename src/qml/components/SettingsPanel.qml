@@ -38,7 +38,7 @@ Window {
     }
 
     readonly property color sectionBorderColor: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.08)
-    readonly property string defaultThemeName: "catppuccin-mocha"
+    readonly property string defaultThemeName: "bifrost"
     readonly property string defaultIconThemeName: "Adwaita"
     readonly property string defaultSidebarPosition: "left"
     readonly property int defaultSidebarWidth: 200
@@ -65,10 +65,8 @@ Window {
     property bool currentSidebarVisible: true
     property int currentSidebarWidth: 200
 
-    property var themeOptions: []
     property var fontOptions: []
     property var iconThemeOptions: []
-    property var availableThemeValues: []
     property var availableFontValues: []
     property var availableIconThemeValues: []
     property bool optionSourcesPrimed: false
@@ -83,7 +81,6 @@ Window {
     property string draftDefaultView: config.defaultView
     property string draftSortBy: config.sortBy
     property bool draftSortAscending: config.sortAscending
-    property bool draftDarkMode: true
     property bool draftShowHidden: currentShowHidden
     property bool draftSidebarVisible: currentSidebarVisible
     property string draftSidebarPosition: config.sidebarPosition
@@ -183,7 +180,6 @@ Window {
         if (optionSourcesPrimed)
             return
 
-        availableThemeValues = config.availableThemes
         availableFontValues = config.availableFonts
         availableIconThemeValues = config.availableIconThemes
         optionSourcesPrimed = true
@@ -220,13 +216,8 @@ Window {
         return index >= 0 ? index : fallbackIndex
     }
 
-    function isDarkTheme(themeName) {
-        return themeName !== "catppuccin-latte"
-    }
-
     function setDraftTheme(themeName) {
         draftTheme = themeName
-        draftDarkMode = isDarkTheme(themeName)
     }
 
     function bindAppearancePreview() {
@@ -285,8 +276,6 @@ Window {
         syncingFromConfig = true
         try {
             draftTheme = config.theme
-            draftDarkMode = isDarkTheme(draftTheme)
-            themeOptions = buildOptions(availableThemeValues, draftTheme, "catppuccin-mocha")
 
             draftFontFamily = config.fontFamily
             fontOptions = buildFontOptions()

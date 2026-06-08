@@ -10,61 +10,6 @@ ColumnLayout {
     property SettingsPanel panel
     spacing: 6
 
-
-    RowLayout {
-        Layout.fillWidth: true
-        Layout.bottomMargin: 8
-        spacing: 12
-
-        Text {
-            text: "Dark Mode"
-            color: Theme.text
-            font.pointSize: Theme.fontNormal + 2
-            font.bold: true
-        }
-
-        Item { Layout.fillWidth: true }
-
-        Q.Toggle {
-            label: ""
-            checked: panel.draftDarkMode
-            onToggled: (value) => {
-                panel.setDraftTheme(value ? "catppuccin-mocha" : "catppuccin-latte")
-                panel.applySettingsNow()
-            }
-        }
-    }
-
-    SettingDescription {
-        text: "Switch between the dark and light Catppuccin theme palette."
-    }
-
-    Q.Separator { Layout.bottomMargin: 8 }
-
-    Text {
-        text: "Theme"
-        color: Theme.accent
-        font.pointSize: Theme.fontSmall
-        font.bold: true
-        Layout.bottomMargin: 4
-    }
-
-    SettingsDropdown {
-        settingsPanel: panel
-        Layout.fillWidth: true
-        label: "Theme"
-        model: panel.themeOptions
-        currentIndex: panel.optionIndex(panel.themeOptions, panel.draftTheme, 0)
-        onSelected: (_, value) => {
-            panel.setDraftTheme(value)
-            panel.applySettingsNow()
-        }
-    }
-
-    SettingDescription {
-        text: "Color palette used across the whole interface."
-    }
-
     SettingsDropdown {
         settingsPanel: panel
         Layout.fillWidth: true
