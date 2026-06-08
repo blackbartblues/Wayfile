@@ -176,29 +176,39 @@ private slots:
         ThemeLoader loader;
         loader.loadTheme("bifrost", THEMES_DIR);
 
-        // Gold ramp.
-        QCOMPARE(loader.gold(), QColor("#E3A94B"));
-        QCOMPARE(loader.goldMid(), QColor("#C98F3C"));
-        QCOMPARE(loader.goldDeep(), QColor("#9a6e2e"));
-        QCOMPARE(loader.goldLight(), QColor("#FFE7B6"));
-        // Obsidian surfaces.
-        QCOMPARE(loader.page(), QColor("#050609"));
-        QCOMPARE(loader.bgA(), QColor("#121318"));
-        QCOMPARE(loader.bgB(), QColor("#0a0b0e"));
-        QCOMPARE(loader.panel(), QColor("#111217"));
-        QCOMPARE(loader.panel2(), QColor("#15161c"));
-        QCOMPARE(loader.raise(), QColor("#1b1d24"));
-        QCOMPARE(loader.raise2(), QColor("#22242c"));
-        QCOMPARE(loader.line(), QColor("#25262e"));
-        QCOMPARE(loader.lineSoft(), QColor("#1b1c22"));
-        QCOMPARE(loader.hair(), QColor("#0e0f13"));
+        // Gold ramp (handoff softer tan-gold).
+        QCOMPARE(loader.gold(), QColor("#D4AA6A"));
+        QCOMPARE(loader.goldMid(), QColor("#B8915A"));
+        QCOMPARE(loader.goldDeep(), QColor("#8C6E44"));
+        QCOMPARE(loader.goldLight(), QColor("#ECD4A6"));
+        // Obsidian surfaces (lighter steel-grey ladder).
+        QCOMPARE(loader.page(), QColor("#15181C"));
+        QCOMPARE(loader.bgA(), QColor("#2D3137"));
+        QCOMPARE(loader.bgB(), QColor("#1E2126"));
+        QCOMPARE(loader.panel(), QColor("#1E2126"));
+        QCOMPARE(loader.panel2(), QColor("#25292E"));
+        QCOMPARE(loader.raise(), QColor("#25292E"));
+        QCOMPARE(loader.raise2(), QColor("#2F343A"));
+        QCOMPARE(loader.line(), QColor("#353B42"));
+        QCOMPARE(loader.lineSoft(), QColor("#2A2E33"));
+        QCOMPARE(loader.hair(), QColor("#1A1D21"));
         // Semantic tokens retuned to obsidian + gold.
-        QCOMPARE(loader.accent(), QColor("#E3A94B"));
-        QCOMPARE(loader.base(), QColor("#111217"));
-        QCOMPARE(loader.crust(), QColor("#050609"));
-        QCOMPARE(loader.text(), QColor("#ECE7DC"));
-        QCOMPARE(loader.subtext(), QColor("#9CA0A8"));
-        QCOMPARE(loader.muted(), QColor("#62666e"));
+        QCOMPARE(loader.accent(), QColor("#D4AA6A"));
+        QCOMPARE(loader.base(), QColor("#1E2126"));
+        QCOMPARE(loader.crust(), QColor("#15181C"));
+        QCOMPARE(loader.text(), QColor("#E6E1D6"));
+        QCOMPARE(loader.subtext(), QColor("#A3A8AE"));
+        QCOMPARE(loader.muted(), QColor("#6C7177"));
+        // Remaining changed semantic tokens.
+        QCOMPARE(loader.mantle(),  QColor("#1A1D21"));
+        QCOMPARE(loader.surface(), QColor("#25292E"));
+        QCOMPARE(loader.overlay(), QColor("#2F343A"));
+        QCOMPARE(loader.success(), QColor("#56B881"));
+        QCOMPARE(loader.warning(), QColor("#E0B26C"));
+        QCOMPARE(loader.error(),   QColor("#E06C75"));
+        // Atmosphere tokens (scrim asserts the new RGB too, not just alpha).
+        QCOMPARE(loader.scrim(), QColor("#C715181C"));
+        QCOMPARE(loader.sheen(), QColor("#FFF0D7"));
     }
 
     void testNewTokensFallBackToDefaults()
@@ -257,8 +267,8 @@ private slots:
         reloaded.loadTheme(path, "");
         QCOMPARE(reloaded.color("accent"), QColor("#123456"));
         QCOMPARE(reloaded.color("text"), QColor("#abcdef"));
-        QCOMPARE(reloaded.color("gold"), QColor("#E3A94B"));
-        QCOMPARE(reloaded.color("page"), QColor("#050609"));
+        QCOMPARE(reloaded.color("gold"), QColor("#D4AA6A"));
+        QCOMPARE(reloaded.color("page"), QColor("#15181C"));
     }
 
     void testSaveThemeFilePreservesAlpha()
