@@ -8,7 +8,7 @@ import QtQuick
 QtObject {
     id: root
 
-    // ── 7 type tints ──────────────────────────────────────────────
+    // ── 9 type tints ──────────────────────────────────────────────
     readonly property color folder: "#D4AA6A"
     readonly property color image:  "#8FC380"
     readonly property color doc:    "#6FA8DC"
