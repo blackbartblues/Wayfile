@@ -51,9 +51,9 @@ QtObject {
     property int radiusMedium: config.radiusMedium
     property int radiusLarge: config.radiusLarge
     // Fixed handoff radii (independent of the config-driven radii above).
-    readonly property int radiusSm: 7    // --u-r-sm
-    readonly property int radiusMd: 10   // --u-r-md
-    readonly property int radiusLg: 14   // --u-r-lg
+    readonly property int radiusSm: 4    // --h-r-sm
+    readonly property int radiusMd: 6    // --h-r-md
+    readonly property int radiusLg: 10   // --h-r-lg
     readonly property int radiusTab: 9   // tab top corners
     readonly property int radiusButton: 8
     readonly property int radiusPill: 6
