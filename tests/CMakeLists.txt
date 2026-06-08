@@ -209,6 +209,16 @@ target_include_directories(tst_dirfilterproxymodel PRIVATE
 target_link_libraries(tst_dirfilterproxymodel PRIVATE Qt6::Test Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Svg Qt6::SvgWidgets Qt6::Concurrent)
 add_test(NAME tst_dirfilterproxymodel COMMAND tst_dirfilterproxymodel)
 
+add_executable(tst_foldertreemodel tst_foldertreemodel.cpp
+    ${CMAKE_SOURCE_DIR}/src/models/foldertreemodel.cpp
+)
+target_include_directories(tst_foldertreemodel PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/third_party
+)
+target_link_libraries(tst_foldertreemodel PRIVATE Qt6::Test Qt6::Core Qt6::Gui)
+add_test(NAME tst_foldertreemodel COMMAND tst_foldertreemodel)
+
 add_executable(tst_searchservice tst_searchservice.cpp
     ${CMAKE_SOURCE_DIR}/src/services/searchservice.cpp
     ${CMAKE_SOURCE_DIR}/src/models/searchresultsmodel.cpp

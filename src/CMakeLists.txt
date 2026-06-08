@@ -28,6 +28,7 @@ set(WAYFILE_SOURCES
     models/searchresultsmodel.cpp
     models/searchproxymodel.cpp
     models/dirfilterproxymodel.cpp
+    models/foldertreemodel.cpp
     services/searchservice.cpp
     services/undomanager.cpp
     services/previewservice.cpp

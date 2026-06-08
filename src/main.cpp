@@ -41,6 +41,7 @@
 #include "models/searchresultsmodel.h"
 #include "models/searchproxymodel.h"
 #include "models/dirfilterproxymodel.h"
+#include "models/foldertreemodel.h"
 #include "services/searchservice.h"
 #include "services/undomanager.h"
 #include "services/previewservice.h"
@@ -404,6 +405,7 @@ int main(int argc, char *argv[])
     // Creatable QML type: each HybridView instantiates its own folders/files
     // filter proxies over its pane's source model (Phase 8).
     qmlRegisterType<DirFilterProxyModel>("Wayfile", 1, 0, "DirFilterProxyModel");
+    qmlRegisterType<FolderTreeModel>("Wayfile", 1, 0, "FolderTreeModel");
 
     // Register context properties
     engine.rootContext()->setContextProperty("config", config);
