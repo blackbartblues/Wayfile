@@ -4,28 +4,30 @@ import QtQuick
 // Fixed file-type tint palette for folder badges (Phase 5) and the metallic
 // file-type chips in file rows (Phase 6). Per design decision D3 these are
 // immutable — NOT theme-overridable — so type identity stays consistent across
-// themes. Values come from the handoff `--u-ft-*` tokens.
+// themes. Values come from the handoff `--h-ft-*` tokens.
 QtObject {
     id: root
 
     // ── 7 type tints ──────────────────────────────────────────────
-    readonly property color folder: "#E3A94B"
+    readonly property color folder: "#D4AA6A"
     readonly property color image:  "#8FC380"
     readonly property color doc:    "#6FA8DC"
     readonly property color md:     "#BFA4E0"
     readonly property color pdf:    "#E06C75"
     readonly property color zip:    "#E0B26C"
     readonly property color code:   "#7BC6BD"
+    readonly property color audio:  "#D4A6A6"
+    readonly property color video:  "#C68FE0"
     readonly property color other:  "#9CA0A8" // text-2, for unknown types
-    readonly property color hidden: "#62666e" // text-3, for dotfiles ("#")
+    readonly property color hidden: "#6C7177" // text-3, for dotfiles ("#")
 
     // FileCategoryRole string -> tint.
     function colorForCategory(category) {
         switch (category) {
         case "folder":   return folder
         case "image":    return image
-        case "video":    return image    // share the green media tint
-        case "audio":    return md
+        case "video":    return video
+        case "audio":    return audio
         case "document": return doc
         case "code":     return code
         case "archive":  return zip
