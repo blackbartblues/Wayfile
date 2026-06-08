@@ -1,15 +1,16 @@
 pragma Singleton
 import QtQuick
 
-// Fixed file-type tint palette for folder badges (Phase 5) and the metallic
-// file-type chips in file rows (Phase 6). Per design decision D3 these are
-// immutable — NOT theme-overridable — so type identity stays consistent across
-// themes. Values come from the handoff `--h-ft-*` tokens.
+// File-type tint palette for folder badges (Phase 5) and the metallic
+// file-type chips in file rows (Phase 6). The file-type tints are immutable
+// (NOT theme-overridable) so type identity stays consistent across presets.
+// The ONE exception is `folder`, which tracks the active accent (W2) — folders
+// read as gold/accent in every preset. Values come from the handoff `--h-ft-*`.
 QtObject {
     id: root
 
     // ── 9 type tints ──────────────────────────────────────────────
-    readonly property color folder: "#D4AA6A"
+    readonly property color folder: Theme.gold // tracks the active accent (W2)
     readonly property color image:  "#8FC380"
     readonly property color doc:    "#6FA8DC"
     readonly property color md:     "#BFA4E0"
