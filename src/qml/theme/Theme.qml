@@ -18,11 +18,24 @@ QtObject {
     property color error: theme.error
 
     // ── "Wayfile Unified" obsidian + gold token layer ─────────────
-    // Gold ramp.
-    property color gold: theme.gold
-    property color goldMid: theme.goldMid
-    property color goldDeep: theme.goldDeep
-    property color goldLight: theme.goldLight
+    // ── Accent-derived gold ramp (W2) ─────────────────────────────────────
+    // A preset overrides only `accent`; the whole gold ramp + glow retints
+    // from it. _shade shifts the accent's HSL lightness by `dl` and scales its
+    // saturation by `ss` (hue preserved). The steps reproduce the W1 Bifröst
+    // ramp for accent=#D4AA6A within ~±2/255.
+    function _shade(c, dl, ss, dh) {
+        var h = (c.hslHue >= 0 ? c.hslHue : 0) + (dh || 0)
+        h = h - Math.floor(h)   // wrap into [0, 1)
+        var s = Math.max(0, Math.min(1, c.hslSaturation * ss))
+        var l = Math.max(0, Math.min(1, c.hslLightness + dl))
+        return Qt.hsla(h, s, l, c.a)
+    }
+    readonly property color gold: accent
+    readonly property color goldMid:   _shade(accent, -0.086, 0.72)
+    readonly property color goldDeep:  _shade(accent, -0.215, 0.63)
+    // Small +hue lift so the default accent reproduces the W1 Bifröst goldLight
+    // (#ECD4A6) exactly; imperceptible on the other accent presets.
+    readonly property color goldLight: _shade(accent, 0.165, 1.17, 0.0088)
     // Obsidian surfaces (page = deepest .. raise2 = highest).
     property color page: theme.page
     property color bgA: theme.bgA
@@ -40,7 +53,9 @@ QtObject {
     property color sheen: theme.sheen
     property color shadowInk: theme.shadowInk
     property color scrim: theme.scrim
-    property color goldInk: theme.goldInk
+    // Dark ink painted on accent-filled fills — a very dark shade of the
+    // accent so it stays legible on any preset's accent button/badge.
+    readonly property color goldInk: _shade(accent, -0.561, 1.13)
     property color knob: theme.knob
     // Gold-derived alpha helpers (track `gold`).
     readonly property color goldLine: Qt.rgba(gold.r, gold.g, gold.b, 0.45)
