@@ -20,12 +20,20 @@ ColumnLayout {
     property SettingsPanel panel
     spacing: 6
 
-    // When linked (default), editing accent also drives gold so the chrome and
-    // the controls/dialogs stay one accent (see the accent⟷gold coupling).
-    property bool linkGold: true
     // Bumped to force every editor row to re-read its seed colour (after a
     // reset or a theme reload).
     property int rev: 0
+
+    // The 5 shipped accent presets (the obsidian base is shared; each preset
+    // overrides only `accent`). The dot shows the accent; the picker is the
+    // headline way to switch themes.
+    readonly property var presets: [
+        { name: "bifrost", label: "Bifröst", accent: "#D4AA6A" },
+        { name: "aurora",  label: "Aurora",  accent: "#57C7BF" },
+        { name: "nebula",  label: "Nebula",  accent: "#B292E8" },
+        { name: "ember",   label: "Ember",   accent: "#E68B5C" },
+        { name: "verdant", label: "Verdant", accent: "#84C98A" }
+    ]
 
     // ── helpers ───────────────────────────────────────────────────────────
     function _h(x) {
@@ -56,18 +64,12 @@ ColumnLayout {
         var lo = Math.min(relLum(a), relLum(b))
         return (hi + 0.05) / (lo + 0.05)
     }
+    // Editing a base token writes custom.toml and forks the `custom` theme.
+    // The gold ramp is derived from `accent` in Theme.qml, so there is no
+    // separate gold to keep in sync here.
     function applyToken(token, c) {
         theme.setColor(token, c)
-        if (colorsRoot.linkGold && token === "accent")
-            theme.setColor("gold", c)
         colorsRoot.scheduleSave()
-    }
-    // Revert to the signature Bifröst theme; editors re-seed from it. The next
-    // edit re-forks `custom` from these values.
-    function resetToBifrost() {
-        panel.setDraftTheme("bifrost")
-        panel.applySettingsNow()
-        colorsRoot.rev++
     }
 
     Timer {
@@ -87,12 +89,6 @@ ColumnLayout {
 
     // ── editable token groups ───────────────────────────────────────────────
     readonly property var groupAccent: [{ t: "accent", l: "Accent" }]
-    readonly property var groupGoldBase: [{ t: "gold", l: "Gold" }]
-    readonly property var groupGold: [
-        { t: "goldMid", l: "Gold · mid" },
-        { t: "goldDeep", l: "Gold · deep" },
-        { t: "goldLight", l: "Gold · light" }
-    ]
     readonly property var groupSurfaces: [
         { t: "page", l: "Page" },
         { t: "bgA", l: "Window · top" },
@@ -123,7 +119,6 @@ ColumnLayout {
         { t: "sheen", l: "Sheen" },
         { t: "shadowInk", l: "Shadow" },
         { t: "scrim", l: "Scrim" },
-        { t: "goldInk", l: "Gold ink" },
         { t: "knob", l: "Knob" }
     ]
     readonly property var groupStatus: [
@@ -214,42 +209,76 @@ ColumnLayout {
         }
     }
 
+    Text {
+        text: "Theme preset"
+        color: Theme.accent
+        font.pointSize: Theme.fontSmall
+        font.bold: true
+        Layout.topMargin: 6
+    }
+
     RowLayout {
         Layout.fillWidth: true
-        Layout.topMargin: 4
-        spacing: 10
+        Layout.topMargin: 2
+        spacing: 12
 
-        Q.Toggle {
-            label: ""
-            checked: colorsRoot.linkGold
-            onToggled: (v) => {
-                colorsRoot.linkGold = v
-                if (v) {
-                    theme.setColor("gold", theme.currentColor("accent"))
-                    colorsRoot.scheduleSave()
+        Repeater {
+            model: colorsRoot.presets
+            delegate: ColumnLayout {
+                id: swatch
+                required property var modelData
+                readonly property bool active: config.theme === swatch.modelData.name
+                spacing: 4
+
+                Rectangle {
+                    Layout.alignment: Qt.AlignHCenter
+                    width: 46
+                    height: 46
+                    radius: Theme.radiusMedium
+                    color: Theme.panel
+                    border.width: swatch.active ? 2 : 1
+                    border.color: swatch.active
+                        ? Theme.gold
+                        : Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, swatchHover.hovered ? 0.40 : 0.18)
+
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: 26
+                        height: 26
+                        radius: 13
+                        color: swatch.modelData.accent
+                    }
+
+                    HoverHandler { id: swatchHover }
+                    TapHandler {
+                        onTapped: {
+                            colorsRoot.panel.setDraftTheme(swatch.modelData.name)
+                            colorsRoot.panel.applySettingsNow()
+                            colorsRoot.rev++ // re-seed the granular editor rows
+                        }
+                    }
+                }
+
+                Text {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: swatch.modelData.label
+                    color: swatch.active ? Theme.accent : Theme.subtext
+                    font.pointSize: Theme.fontSmall
                 }
             }
         }
-        Text {
-            text: "Keep gold = accent"
-            color: Theme.text
-            font.pointSize: Theme.fontSmall
-            Layout.alignment: Qt.AlignVCenter
-        }
+
         Item { Layout.fillWidth: true }
-        Q.Button {
-            text: "Reset to Bifröst"
-            variant: "ghost"
-            onClicked: colorsRoot.resetToBifrost()
-        }
+    }
+
+    SettingDescription {
+        text: "Pick an accent preset. The obsidian base stays the same; the accent retints folders, highlights, and controls. Edit tokens below to fork a custom theme."
     }
 
     Q.Separator { Layout.topMargin: 6; Layout.bottomMargin: 2 }
 
     Text { text: "Accent"; color: Theme.accent; font.pointSize: Theme.fontSmall; font.bold: true; Layout.topMargin: 4 }
     Repeater { model: colorsRoot.groupAccent; delegate: colorRow }
-    Repeater { model: colorsRoot.linkGold ? [] : colorsRoot.groupGoldBase; delegate: colorRow }
-    Repeater { model: colorsRoot.groupGold; delegate: colorRow }
 
     Text { text: "Obsidian surfaces"; color: Theme.accent; font.pointSize: Theme.fontSmall; font.bold: true; Layout.topMargin: 8 }
     Repeater { model: colorsRoot.groupSurfaces; delegate: colorRow }
