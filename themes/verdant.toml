@@ -1,0 +1,4 @@
+# Verdant — sage-green accent on the shared obsidian base.
+# See bifrost.toml for the theming model (preset = one-line accent override).
+[colors]
+accent = "#84C98A"

@@ -6,26 +6,33 @@
 #include <QDebug>
 
 QMap<QString, QColor> ThemeLoader::s_defaults = {
-    {"base", QColor("#1e1e2e")}, {"mantle", QColor("#181825")},
-    {"crust", QColor("#11111b")}, {"surface", QColor("#313244")},
-    {"overlay", QColor("#45475a")}, {"text", QColor("#cdd6f4")},
-    {"subtext", QColor("#bac2de")}, {"muted", QColor("#6c7086")},
-    {"accent", QColor("#89b4fa")}, {"success", QColor("#a6e3a1")},
-    {"warning", QColor("#f9e2af")}, {"error", QColor("#f38ba8")},
-    {"purple", QColor("#cba6f7")},
-    // "Wayfile Unified" obsidian + gold tokens. Defaults are the handoff
-    // values so any theme that omits them still renders coherently.
-    {"gold", QColor("#E3A94B")}, {"goldMid", QColor("#C98F3C")},
-    {"goldDeep", QColor("#9a6e2e")}, {"goldLight", QColor("#FFE7B6")},
-    {"page", QColor("#050609")}, {"bgA", QColor("#121318")},
-    {"bgB", QColor("#0a0b0e")}, {"panel", QColor("#111217")},
-    {"panel2", QColor("#15161c")}, {"raise", QColor("#1b1d24")},
-    {"raise2", QColor("#22242c")}, {"line", QColor("#25262e")},
-    {"lineSoft", QColor("#1b1c22")}, {"hair", QColor("#0e0f13")},
-    // Phase C2 atmosphere tokens (sheen/shadowInk are base colours, alpha is
-    // applied at the use site; scrim bakes its alpha into #aarrggbb).
-    {"sheen", QColor("#FFF0D6")}, {"shadowInk", QColor("#000000")},
-    {"scrim", QColor("#C7080A0D")}, {"goldInk", QColor("#1a1206")},
+    // The shared obsidian base (Bifröst). A preset TOML overrides only
+    // `accent`; everything else is inherited from here, so each preset is a
+    // one-line accent swap. `muted` is nudged lighter (#6C7177 -> #787E85) to
+    // reach WCAG AA 3:1 (large text / UI components) on the lighter obsidian
+    // surfaces; the old #6C7177 fell below 3:1 on `surface`.
+    {"base", QColor("#1E2126")}, {"mantle", QColor("#1A1D21")},
+    {"crust", QColor("#15181C")}, {"surface", QColor("#25292E")},
+    {"overlay", QColor("#2F343A")}, {"text", QColor("#E6E1D6")},
+    {"subtext", QColor("#A3A8AE")}, {"muted", QColor("#787E85")},
+    {"accent", QColor("#D4AA6A")}, {"success", QColor("#56B881")},
+    {"warning", QColor("#E0B26C")}, {"error", QColor("#E06C75")},
+    {"purple", QColor("#BFA4E0")},
+    // Gold ramp — fallback values only. Theme.qml derives the live ramp from
+    // `accent`; these matter solely for saveThemeFile() serialisation and any
+    // direct C++ read.
+    {"gold", QColor("#D4AA6A")}, {"goldMid", QColor("#B8915A")},
+    {"goldDeep", QColor("#8C6E44")}, {"goldLight", QColor("#ECD4A6")},
+    // Obsidian surfaces (page = deepest .. raise2 = highest).
+    {"page", QColor("#15181C")}, {"bgA", QColor("#2D3137")},
+    {"bgB", QColor("#1E2126")}, {"panel", QColor("#1E2126")},
+    {"panel2", QColor("#25292E")}, {"raise", QColor("#25292E")},
+    {"raise2", QColor("#2F343A")}, {"line", QColor("#353B42")},
+    {"lineSoft", QColor("#2A2E33")}, {"hair", QColor("#1A1D21")},
+    // Atmosphere (sheen/shadowInk are base colours, alpha applied at use site;
+    // scrim bakes its alpha into #aarrggbb; goldInk is derived in Theme.qml).
+    {"sheen", QColor("#FFF0D7")}, {"shadowInk", QColor("#000000")},
+    {"scrim", QColor("#C715181C")}, {"goldInk", QColor("#1A1206")},
     {"knob", QColor("#FFF3DF")},
 };
 

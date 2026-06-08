@@ -1,0 +1,4 @@
+# Aurora — cool aqua-teal accent on the shared obsidian base.
+# See bifrost.toml for the theming model (preset = one-line accent override).
+[colors]
+accent = "#57C7BF"

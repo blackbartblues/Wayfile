@@ -1,0 +1,4 @@
+# Nebula — soft violet accent on the shared obsidian base.
+# See bifrost.toml for the theming model (preset = one-line accent override).
+[colors]
+accent = "#B292E8"

@@ -1,48 +1,7 @@
-# Bifröst — Wayfile's signature dark theme.
-# "Wayfile Unified" obsidian + gold skin (hi-fi design handoff, 2026-06).
-# Lighter steel-grey obsidian surfaces with a soft tan-gold gate-glow accent.
-# Values adopted 1:1 from the handoff tokens.css (W1 token adoption).
-#
-# The semantic tokens (base/mantle/crust/surface/overlay/text/...) are aliased
-# to the obsidian/gold token layer below so every existing component renders
-# coherently dark; new components consume the explicit handoff tokens directly.
+# Bifröst — Wayfile's signature theme: a warm tan-gold accent on the shared
+# obsidian base. THEMING MODEL: a preset overrides only `accent`. The obsidian
+# surfaces, text, file-type and status colours live in the engine default
+# (ThemeLoader::s_defaults), and the gold ramp + glow is derived live from the
+# accent in src/qml/theme/Theme.qml. So each preset is a one-line accent swap.
 [colors]
-# Semantic tokens — aliased onto the obsidian surfaces + gold accent.
-base = "#1E2126"      # panel / main content surface     (--h-surface)
-mantle = "#1A1D21"    # darker chrome (sidebar, crumb well) (--h-divider)
-crust = "#15181C"     # deepest insets / wells           (darkest)
-surface = "#25292E"   # raised surface (toolbars, idle tabs) (--h-surface-alt)
-overlay = "#2F343A"   # highest raised / hover-active rows (--h-surface-hi)
-text = "#E6E1D6"      # primary, warm white              (--h-text)
-subtext = "#A3A8AE"   # secondary                        (--h-text-2)
-muted = "#6C7177"     # tertiary / disabled              (--h-text-3)
-accent = "#D4AA6A"    # = gold                           (--h-accent)
-success = "#56B881"   #                                  (--h-success)
-warning = "#E0B26C"   # warm amber (no handoff warning → --h-ft-zip)
-error = "#E06C75"     #                                  (--h-danger)
-purple = "#BFA4E0"    # currently unused; aligned to     (--h-ft-md)
-
-# ── "Wayfile Unified" obsidian + gold token layer ─────────────────
-# Gold ramp (derived from the new accent; W2 derives these in Theme.qml).
-gold = "#D4AA6A"      # = accent                         (--h-accent)
-goldMid = "#B8915A"   #                                  (--h-accent-soft)
-goldDeep = "#8C6E44"  # derived darker tan
-goldLight = "#ECD4A6" # derived lighter tan
-# Obsidian surfaces (page = deepest .. raise2 = highest).
-page = "#15181C"      # deepest inset
-bgA = "#2D3137"       # window/stage gradient top — brighter than surfaces (.h-window top)
-bgB = "#1E2126"       # window/stage gradient bottom     (.h-window bottom)
-panel = "#1E2126"     #                                  (--h-surface)
-panel2 = "#25292E"    # raised panel                     (--h-surface-alt)
-raise = "#25292E"     # raised                           (--h-surface-alt)
-raise2 = "#2F343A"    # highest                          (--h-surface-hi)
-line = "#353B42"      # border                           (--h-border)
-lineSoft = "#2A2E33"  # border-soft                      (--h-border-soft)
-hair = "#1A1D21"      # divider                          (--h-divider)
-# Atmosphere (sheen/shadowInk are base colours — alpha applied at the use
-# site; scrim bakes its alpha into #aarrggbb).
-sheen = "#FFF0D7"      # warm-white highlight; +1 blue vs old, per handoff
-shadowInk = "#000000"  # drop-shadows, inset shadows, faux depth
-scrim = "#C715181C"    # modal scrim dim (alpha 0.78 over darkest obsidian)
-goldInk = "#1a1206"    # dark ink painted on gold fills
-knob = "#FFF3DF"       # warm-white control knob (Quill toggles/sliders)
+accent = "#D4AA6A"
