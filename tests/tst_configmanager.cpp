@@ -22,7 +22,7 @@ private slots:
         QTemporaryDir dir;
         ConfigManager mgr(dir.path() + "/config.toml");
 
-        QCOMPARE(mgr.theme(), QString("catppuccin-mocha"));
+        QCOMPARE(mgr.theme(), QString("bifrost"));
         QCOMPARE(mgr.iconTheme(), QString("Wayfile"));
         QCOMPARE(mgr.builtinIcons(), true);
         QCOMPARE(mgr.fontFamily(), QString());
@@ -42,9 +42,9 @@ private slots:
     void testCustomDefaultTheme()
     {
         QTemporaryDir dir;
-        ConfigManager mgr(dir.path() + "/config.toml", nullptr, QString(), "catppuccin-latte");
+        ConfigManager mgr(dir.path() + "/config.toml", nullptr, QString(), "aurora");
 
-        QCOMPARE(mgr.theme(), QString("catppuccin-latte"));
+        QCOMPARE(mgr.theme(), QString("aurora"));
     }
 
     void testAvailableThemes()
@@ -412,7 +412,7 @@ private slots:
         QSignalSpy spy(&mgr, &ConfigManager::configChanged);
 
         QVariantMap settings;
-        settings.insert("theme", "catppuccin-latte");
+        settings.insert("theme", "aurora");
         settings.insert("fontFamily", "Inter");
         settings.insert("iconTheme", "Papirus");
         settings.insert("showHidden", true);
@@ -427,7 +427,7 @@ private slots:
         mgr.saveSettings(settings);
 
         QCOMPARE(spy.count(), 1);
-        QCOMPARE(mgr.theme(), QString("catppuccin-latte"));
+        QCOMPARE(mgr.theme(), QString("aurora"));
         QCOMPARE(mgr.fontFamily(), QString("Inter"));
         QCOMPARE(mgr.iconTheme(), QString("Papirus"));
         QCOMPARE(mgr.showHidden(), true);
@@ -607,7 +607,7 @@ private slots:
 
         ConfigManager mgr(path);
         // Should use all defaults
-        QCOMPARE(mgr.theme(), QString("catppuccin-mocha"));
+        QCOMPARE(mgr.theme(), QString("bifrost"));
         QCOMPARE(mgr.defaultView(), QString("hybrid"));
     }
 

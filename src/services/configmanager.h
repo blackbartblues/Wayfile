@@ -48,7 +48,7 @@ class ConfigManager : public QObject
 public:
     explicit ConfigManager(const QString &configPath, QObject *parent = nullptr,
                            const QString &themesDir = QString(),
-                           const QString &defaultTheme = QStringLiteral("catppuccin-mocha"));
+                           const QString &defaultTheme = QStringLiteral("bifrost"));
 
     QStringList availableFonts() const;
     QStringList availableIconThemes() const;

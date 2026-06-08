@@ -254,7 +254,7 @@ QStringList ConfigManager::availableIconThemes() const
 void ConfigManager::setDefaults()
 {
     m_theme = m_defaultThemeName.trimmed().isEmpty()
-        ? QStringLiteral("catppuccin-mocha")
+        ? QStringLiteral("bifrost")
         : m_defaultThemeName.trimmed();
     // Wayfile fork: default to the bundled Bifröst-tinted theme. IconProvider
     // falls back to Adwaita / breeze / Papirus / hicolor automatically when an
