@@ -103,6 +103,27 @@ Item {
     readonly property bool showFolderNav:
         galleryActive && (host ? host.galleryFolderNavActive : false)
 
+    // Obsidian background for the Gallery sidebar. In Gallery mode the normal
+    // Sidebar (which paints its own gradient) is hidden and replaced by the
+    // background-less folder tree + toggle, so paint the same obsidian gradient
+    // and right hairline here. Outside Gallery this stays hidden and the normal
+    // Sidebar paints itself, so nothing double-paints.
+    Rectangle {
+        anchors.fill: parent
+        visible: sidebarPane.galleryActive
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: Theme.panel }
+            GradientStop { position: 1.0; color: Theme.mantle }
+        }
+        Rectangle {
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            width: 1
+            color: Theme.hair
+        }
+    }
+
     Column {
         id: sidebarStack
         width: host ? host.sidebarWidth : 0
