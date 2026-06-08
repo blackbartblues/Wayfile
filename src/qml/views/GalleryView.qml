@@ -19,6 +19,12 @@ FocusScope {
     property var viewModel: null
     property string currentPath: ""
 
+    // Resizable filmstrip width (drag the splitter). In-memory only — resets to
+    // the default on relaunch (persistence is an optional config follow-up).
+    property real stripWidth: 200
+    readonly property real minStripWidth: 120
+    readonly property real maxStripWidth: 480
+
     signal fileActivated(string filePath, bool isDirectory)
     signal contextMenuRequested(string filePath, bool isDirectory, point position)
     signal selectionChanged()
@@ -96,10 +102,12 @@ FocusScope {
         FileGridView {
             id: strip
             Layout.fillHeight: true
-            Layout.preferredWidth: 96
+            Layout.preferredWidth: root.stripWidth
             model: mediaProxy
             currentPath: root.currentPath
-            cellSize: 84
+            // One column that fills the strip; iconSize = cellSize − padding, so
+            // thumbnails grow with the bar. Min keeps cellSize sane at narrow widths.
+            cellSize: Math.max(96, Math.round(root.stripWidth))
             zoomEnabled: false
 
             onFileActivated: (fp, isDir) => root.fileActivated(fp, isDir)
@@ -108,10 +116,40 @@ FocusScope {
             onTransferRequested: (paths, dst, move) => root.transferRequested(paths, dst, move)
         }
 
-        Rectangle {
+        // Drag-to-resize splitter between the filmstrip and the preview.
+        Item {
             Layout.fillHeight: true
-            Layout.preferredWidth: 1
-            color: Theme.line
+            Layout.preferredWidth: 6
+            Rectangle {
+                anchors.centerIn: parent
+                width: (splitterHandle.containsMouse || splitterHandle.pressed) ? 2 : 1
+                height: parent.height
+                color: (splitterHandle.containsMouse || splitterHandle.pressed)
+                       ? Theme.accent : Theme.line
+                opacity: splitterHandle.pressed ? 0.9
+                         : (splitterHandle.containsMouse ? 0.6 : 1.0)
+            }
+            MouseArea {
+                id: splitterHandle
+                anchors.fill: parent
+                anchors.margins: -3                  // ~12px hit area
+                hoverEnabled: true
+                cursorShape: Qt.SizeHorCursor
+                preventStealing: true
+                property real startX: 0
+                property real startW: 0
+                onPressed: (mouse) => {
+                    startX = mapToItem(root, mouse.x, 0).x
+                    startW = root.stripWidth
+                }
+                onPositionChanged: (mouse) => {
+                    if (!pressed)
+                        return
+                    var dx = mapToItem(root, mouse.x, 0).x - startX
+                    root.stripWidth = Math.max(root.minStripWidth,
+                                      Math.min(root.maxStripWidth, startW + dx))
+                }
+            }
         }
 
         // ── Preview + metadata (right) ──────────────────────────────────────
