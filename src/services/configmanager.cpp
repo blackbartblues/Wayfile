@@ -198,16 +198,27 @@ ConfigManager::ConfigManager(const QString &configPath, QObject *parent, const Q
 
 QStringList ConfigManager::availableThemes() const
 {
-    if (m_themesDir.isEmpty())
-        return {};
-
-    QDir dir(m_themesDir);
-    const QStringList files = dir.entryList({"*.toml"}, QDir::Files, QDir::Name | QDir::IgnoreCase);
-
     QStringList themes;
-    themes.reserve(files.size());
-    for (const QString &fileName : files)
-        themes.append(QFileInfo(fileName).completeBaseName());
+
+    if (!m_themesDir.isEmpty()) {
+        QDir dir(m_themesDir);
+        const QStringList files = dir.entryList({"*.toml"}, QDir::Files, QDir::Name | QDir::IgnoreCase);
+        themes.reserve(files.size());
+        for (const QString &fileName : files)
+            themes.append(QFileInfo(fileName).completeBaseName());
+    }
+
+    // User presets (writable config dir) appear alongside the install themes.
+    const QString userDir = userThemesDir();
+    if (QDir(userDir).exists()) {
+        const QStringList userFiles = QDir(userDir).entryList(
+            {QStringLiteral("*.toml")}, QDir::Files, QDir::Name | QDir::IgnoreCase);
+        for (const QString &fileName : userFiles) {
+            const QString name = QFileInfo(fileName).completeBaseName();
+            if (!themes.contains(name))
+                themes.append(name);
+        }
+    }
 
     // Surface the user's editable palette (config dir, not the read-only
     // install themes dir) as a selectable theme once it has been created.
@@ -221,6 +232,116 @@ QStringList ConfigManager::availableThemes() const
 QString ConfigManager::customThemePath() const
 {
     return QFileInfo(m_configPath).dir().filePath(QStringLiteral("custom.toml"));
+}
+
+QString ConfigManager::userThemesDir() const
+{
+    return QFileInfo(m_configPath).dir().filePath(QStringLiteral("themes"));
+}
+
+bool ConfigManager::isReservedThemeName(const QString &name) const
+{
+    const QString n = name.trimmed();
+    if (n.compare(QStringLiteral("custom"), Qt::CaseInsensitive) == 0)
+        return true;
+    if (m_themesDir.isEmpty())
+        return false;
+    const QStringList installed = QDir(m_themesDir)
+        .entryList({QStringLiteral("*.toml")}, QDir::Files);
+    for (const QString &f : installed) {
+        if (QFileInfo(f).completeBaseName().compare(n, Qt::CaseInsensitive) == 0)
+            return true;
+    }
+    return false;
+}
+
+QString ConfigManager::themeNameError(const QString &name) const
+{
+    const QString n = name.trimmed();
+    if (n.isEmpty())
+        return QStringLiteral("empty");
+    if (isReservedThemeName(n))
+        return QStringLiteral("reserved");
+    if (n.length() > 64 || n.contains(QLatin1Char('/')) || n.contains(QLatin1Char('\\'))
+        || n.startsWith(QLatin1Char('.')))
+        return QStringLiteral("invalid");
+    return QString();
+}
+
+QString ConfigManager::userThemePath(const QString &name) const
+{
+    if (!themeNameError(name).isEmpty())
+        return QString();
+    const QString dir = userThemesDir();
+    QDir().mkpath(dir);
+    return QDir(dir).filePath(name.trimmed() + QStringLiteral(".toml"));
+}
+
+bool ConfigManager::userThemeExists(const QString &name) const
+{
+    const QString n = name.trimmed();
+    if (n.isEmpty() || n.contains(QLatin1Char('/')) || n.contains(QLatin1Char('\\'))
+        || n.startsWith(QLatin1Char('.')))
+        return false;
+    return QFile::exists(QDir(userThemesDir()).filePath(n + QStringLiteral(".toml")));
+}
+
+bool ConfigManager::deleteUserTheme(const QString &name)
+{
+    // themeNameError blocks empty / reserved (built-ins) / path-escaping names,
+    // so a crafted name like "../secret" can never reach a file outside the
+    // user themes dir.
+    if (!themeNameError(name).isEmpty())
+        return false;
+    const QString n = name.trimmed();
+    const QString path = QDir(userThemesDir()).filePath(n + QStringLiteral(".toml"));
+    if (!QFile::exists(path))
+        return false;
+    return QFile::remove(path);
+}
+
+QVariantList ConfigManager::userThemes() const
+{
+    QVariantList out;
+    const QString dir = userThemesDir();
+    if (!QDir(dir).exists())
+        return out;
+    const QStringList files = QDir(dir).entryList(
+        {QStringLiteral("*.toml")}, QDir::Files, QDir::Name | QDir::IgnoreCase);
+    for (const QString &fileName : files) {
+        const QString name = QFileInfo(fileName).completeBaseName();
+        if (isReservedThemeName(name))
+            continue;
+        QString accent = QStringLiteral("#D4AA6A");
+        try {
+            auto tbl = toml::parse_file(QDir(dir).filePath(fileName).toStdString());
+            if (auto v = tbl["colors"]["accent"].value<std::string>())
+                accent = QString::fromStdString(*v);
+        } catch (const toml::parse_error &) {
+        }
+        QVariantMap m;
+        m.insert(QStringLiteral("name"), name);
+        m.insert(QStringLiteral("accent"), accent);
+        out.append(m);
+    }
+    return out;
+}
+
+QString ConfigManager::themePath(const QString &name) const
+{
+    if (name == QStringLiteral("custom"))
+        return customThemePath();
+    // Reject path-escaping names so a crafted theme name can't read outside the
+    // theme dirs; "" makes ThemeLoader fall back to its built-in defaults.
+    if (name.contains(QLatin1Char('/')) || name.contains(QLatin1Char('\\'))
+        || name.startsWith(QLatin1Char('.')))
+        return QString();
+    const QString userPath = QDir(userThemesDir()).filePath(name + QStringLiteral(".toml"));
+    if (QFile::exists(userPath))
+        return userPath;
+    if (!m_themesDir.isEmpty())
+        return QDir(m_themesDir).filePath(name + QStringLiteral(".toml"));
+    return name;
 }
 
 QStringList ConfigManager::availableFonts() const

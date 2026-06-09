@@ -66,6 +66,144 @@ private slots:
         QCOMPARE(mgr.availableThemes(), QStringList({"dark", "light"}));
     }
 
+    void testUserThemesDir()
+    {
+        QTemporaryDir dir;
+        ConfigManager mgr(dir.path() + "/config.toml");
+        QCOMPARE(mgr.userThemesDir(), QDir(dir.path()).filePath("themes"));
+    }
+
+    void testThemeNameErrorValidation()
+    {
+        QTemporaryDir dir;
+        QDir().mkpath(dir.path() + "/install");
+        QFile bf(dir.path() + "/install/bifrost.toml");
+        QVERIFY(bf.open(QIODevice::WriteOnly));
+        bf.write("[colors]\naccent = \"#D4AA6A\"\n");
+        bf.close();
+
+        ConfigManager mgr(dir.path() + "/config.toml", nullptr, dir.path() + "/install");
+        QCOMPARE(mgr.themeNameError(""), QString("empty"));
+        QCOMPARE(mgr.themeNameError("   "), QString("empty"));
+        QCOMPARE(mgr.themeNameError("bifrost"), QString("reserved"));
+        QCOMPARE(mgr.themeNameError("BIFROST"), QString("reserved"));
+        QCOMPARE(mgr.themeNameError("custom"), QString("reserved"));
+        QCOMPARE(mgr.themeNameError("a/b"), QString("invalid"));
+        QCOMPARE(mgr.themeNameError(".hidden"), QString("invalid"));
+        QCOMPARE(mgr.themeNameError("My Cool Theme"), QString(""));
+    }
+
+    void testUserThemePathCreatesDir()
+    {
+        QTemporaryDir dir;
+        ConfigManager mgr(dir.path() + "/config.toml");
+        const QString p = mgr.userThemePath("Cool");
+        QCOMPARE(p, QDir(dir.path() + "/themes").filePath("Cool.toml"));
+        QVERIFY(QDir(dir.path() + "/themes").exists());
+        QVERIFY(mgr.userThemePath("a/b").isEmpty());
+    }
+
+    void testUserThemesListAndExists()
+    {
+        QTemporaryDir dir;
+        QDir().mkpath(dir.path() + "/themes");
+        QFile t(dir.path() + "/themes/Cool.toml");
+        QVERIFY(t.open(QIODevice::WriteOnly));
+        t.write("[colors]\naccent = \"#123456\"\nbase = \"#000000\"\n");
+        t.close();
+
+        ConfigManager mgr(dir.path() + "/config.toml");
+        QVERIFY(mgr.userThemeExists("Cool"));
+        QVERIFY(!mgr.userThemeExists("Nope"));
+        const QVariantList list = mgr.userThemes();
+        QCOMPARE(list.size(), 1);
+        QCOMPARE(list.first().toMap().value("name").toString(), QString("Cool"));
+        QCOMPARE(list.first().toMap().value("accent").toString(), QString("#123456"));
+    }
+
+    void testThemePathResolution()
+    {
+        QTemporaryDir dir;
+        QDir().mkpath(dir.path() + "/install");
+        QFile bf(dir.path() + "/install/bifrost.toml");
+        QVERIFY(bf.open(QIODevice::WriteOnly));
+        bf.write("[colors]\naccent=\"#D4AA6A\"\n");
+        bf.close();
+        QDir().mkpath(dir.path() + "/themes");
+        QFile ct(dir.path() + "/themes/Cool.toml");
+        QVERIFY(ct.open(QIODevice::WriteOnly));
+        ct.write("[colors]\naccent=\"#123456\"\n");
+        ct.close();
+
+        ConfigManager mgr(dir.path() + "/config.toml", nullptr, dir.path() + "/install");
+        QCOMPARE(mgr.themePath("custom"), mgr.customThemePath());
+        QCOMPARE(mgr.themePath("Cool"), QDir(dir.path() + "/themes").filePath("Cool.toml"));
+        QCOMPARE(mgr.themePath("bifrost"), QDir(dir.path() + "/install").filePath("bifrost.toml"));
+    }
+
+    void testDeleteUserTheme()
+    {
+        QTemporaryDir dir;
+        QDir().mkpath(dir.path() + "/install");
+        QFile bf(dir.path() + "/install/bifrost.toml");
+        QVERIFY(bf.open(QIODevice::WriteOnly));
+        bf.write("[colors]\naccent=\"#D4AA6A\"\n");
+        bf.close();
+        QDir().mkpath(dir.path() + "/themes");
+        QFile ct(dir.path() + "/themes/Cool.toml");
+        QVERIFY(ct.open(QIODevice::WriteOnly));
+        ct.write("[colors]\naccent=\"#123456\"\n");
+        ct.close();
+
+        ConfigManager mgr(dir.path() + "/config.toml", nullptr, dir.path() + "/install");
+        QVERIFY(!mgr.deleteUserTheme("bifrost"));
+        QVERIFY(QFile::exists(dir.path() + "/install/bifrost.toml"));
+        QVERIFY(!mgr.deleteUserTheme("Nope"));
+        QVERIFY(mgr.deleteUserTheme("Cool"));
+        QVERIFY(!QFile::exists(dir.path() + "/themes/Cool.toml"));
+    }
+
+    void testUserThemePathSafetyRejectsTraversal()
+    {
+        QTemporaryDir dir;
+        // A file in the config dir we must never touch via a crafted name.
+        QFile secret(dir.path() + "/secret.toml");
+        QVERIFY(secret.open(QIODevice::WriteOnly));
+        secret.write("[colors]\naccent=\"#ffffff\"\n");
+        secret.close();
+
+        ConfigManager mgr(dir.path() + "/config.toml");
+        // delete must refuse a traversal name and leave the file intact.
+        QVERIFY(!mgr.deleteUserTheme("../secret"));
+        QVERIFY(QFile::exists(dir.path() + "/secret.toml"));
+        // exists must not probe outside the user themes dir.
+        QVERIFY(!mgr.userThemeExists("../secret"));
+        // userThemePath rejects the invalid name.
+        QVERIFY(mgr.userThemePath("../secret").isEmpty());
+        // path resolver returns empty (safe fallback), not a traversal path.
+        QVERIFY(mgr.themePath("../secret").isEmpty());
+    }
+
+    void testAvailableThemesIncludesUserThemes()
+    {
+        QTemporaryDir dir;
+        QDir().mkpath(dir.path() + "/install");
+        QFile bf(dir.path() + "/install/bifrost.toml");
+        QVERIFY(bf.open(QIODevice::WriteOnly));
+        bf.write("[colors]\naccent=\"#D4AA6A\"\n");
+        bf.close();
+        QDir().mkpath(dir.path() + "/themes");
+        QFile ct(dir.path() + "/themes/Cool.toml");
+        QVERIFY(ct.open(QIODevice::WriteOnly));
+        ct.write("[colors]\naccent=\"#123456\"\n");
+        ct.close();
+
+        ConfigManager mgr(dir.path() + "/config.toml", nullptr, dir.path() + "/install");
+        const QStringList themes = mgr.availableThemes();
+        QVERIFY(themes.contains("bifrost"));
+        QVERIFY(themes.contains("Cool"));
+    }
+
     // Phase C4: the editable "custom" theme lives next to config.toml (the
     // writable config dir) and is surfaced in availableThemes once written.
     void testCustomThemePathAndDiscovery()

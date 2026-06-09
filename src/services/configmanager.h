@@ -57,6 +57,16 @@ public:
     // config dir — the install themes dir is read-only. The Colours settings
     // section writes here and selects theme "custom".
     Q_INVOKABLE QString customThemePath() const;
+    // User theme presets — writable, in the config dir's themes/ subdir. The
+    // Colours settings saves the full current palette here and lists them as
+    // deletable swatches alongside the read-only install presets.
+    Q_INVOKABLE QString userThemesDir() const;
+    Q_INVOKABLE QString userThemePath(const QString &name) const;   // "" if name invalid; creates the dir
+    Q_INVOKABLE QString themeNameError(const QString &name) const;  // "" ok, else empty/reserved/invalid
+    Q_INVOKABLE bool userThemeExists(const QString &name) const;
+    Q_INVOKABLE bool deleteUserTheme(const QString &name);          // refuses reserved/built-in names
+    Q_INVOKABLE QVariantList userThemes() const;                    // [{name, accent}, ...]
+    Q_INVOKABLE QString themePath(const QString &name) const;       // resolve custom/user/install -> path
     QString theme() const;
     QString iconTheme() const;
     bool builtinIcons() const;
@@ -102,6 +112,7 @@ signals:
 private:
     void loadConfig();
     void setDefaults();
+    bool isReservedThemeName(const QString &name) const;
 
     QString m_configPath;
     QString m_themesDir;
