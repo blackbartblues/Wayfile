@@ -262,7 +262,7 @@ Item {
             width: 2
             visible: sidebarResizeHandle.containsMouse || sidebarResizeHandle.pressed
             color: Theme.accent
-            opacity: sidebarResizeHandle.pressed ? 0.8 : 0.4
+            opacity: sidebarResizeHandle.pressed ? 0.9 : 0.6
         }
 
         onPressed: (mouse) => {

@@ -28,14 +28,17 @@ Rectangle {
     }
     clip: false
 
-    // Right edge hairline separating the sidebar from the content panel.
+    // Right edge divider separating the sidebar from the content panel. This
+    // is the resting line for ALL non-gallery views; SidebarPane's drag handle
+    // (z:10, on top of this) adds the accent highlight + resize cursor on hover
+    // so the divider doubles as the sidebar's drag-to-resize splitter.
     Rectangle {
         z: 2
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.bottom: parent.bottom
-        width: 1
-        color: Theme.hair
+        width: 2
+        color: Theme.divider
     }
 
     // Place/bookmark glyphs default to the muted (text-3) tint; the loaders in
