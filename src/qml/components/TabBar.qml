@@ -562,7 +562,7 @@ Item {
                              : (tabDelegateHover.hovered
                                 ? Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.03)
                                 : "transparent")
-                        border.width: active ? 1 : 0
+                        border.width: 0
                         border.color: Theme.line
                         Behavior on color { ColorAnimation { duration: Theme.animDuration } }
 
@@ -582,14 +582,31 @@ Item {
                             height: 1
                             color: Qt.rgba(Theme.sheen.r, Theme.sheen.g, Theme.sheen.b, 0.06)
                         }
+
+                        // Soft top-down accent wash on active/selected tabs (handoff
+                        // .tab--active wash). Stronger on the focused tab, gentler on a
+                        // selected-but-not-focused tab.
+                        Rectangle {
+                            visible: tabBody.active || tabDelegate.isSelected
+                            anchors.top: parent.top
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.margins: 1
+                            height: parent.height * 0.44
+                            radius: Theme.radiusTab
+                            gradient: Gradient {
+                                GradientStop { position: 0.0; color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, tabBody.active ? 0.12 : 0.07) }
+                                GradientStop { position: 1.0; color: "transparent" }
+                            }
+                        }
                     }
 
-                    // 2px gold top-underline for the active tab (handoff
-                    // .tab--active::after) with a soft glow. Coexists with the
-                    // multi-select ring below — different geometry (top edge vs
-                    // inset rect), so they never visually collide.
+                    // 2px gold top-bar marker (handoff .tab--active::after)
+                    // with a soft glow. Shared by the active tab AND any
+                    // selected tab — selecting tabs for a merge lights the same
+                    // glowing bar (no separate ring).
                     Rectangle {
-                        visible: tabDelegate.index === tabModel.activeIndex
+                        visible: (tabDelegate.index === tabModel.activeIndex) || tabDelegate.isSelected
                         anchors.top: parent.top
                         anchors.topMargin: 1
                         anchors.horizontalCenter: parent.horizontalCenter
@@ -610,33 +627,6 @@ Item {
                             shadowBlur: 0.5
                         }
                         z: 3
-                    }
-
-                    // pkt-11 multi-select ring: a gold inset outline marking
-                    // tabs picked for a merge. Shown ONLY while more than one
-                    // tab is selected — the lone active tab carries the handoff
-                    // active styling (gradient body + gold top-underline)
-                    // instead, so the two never double up.
-                    Rectangle {
-                        visible: tabDelegate.isSelected && tabModel.selectedCount > 1
-                        anchors.fill: parent
-                        anchors.margins: 3
-                        color: "transparent"
-                        radius: Theme.radiusSmall
-                        border.color: Theme.accent
-                        border.width: 1
-                        z: 2
-                    }
-                    Rectangle {
-                        visible: tabDelegate.isSelected && tabModel.selectedCount > 1
-                        anchors.fill: parent
-                        anchors.margins: 1
-                        color: "transparent"
-                        radius: Theme.radiusSmall
-                        border.color: Qt.rgba(Theme.accent.r, Theme.accent.g,
-                                              Theme.accent.b, 0.32)
-                        border.width: 1
-                        z: 1
                     }
 
                     // P2-M7: single-tab title.  Hidden for supertabs so the
@@ -670,7 +660,9 @@ Item {
                             anchors.right: parent.right
                             anchors.verticalCenter: parent.verticalCenter
                             text: tabDelegate.model.title || "New Tab"
-                            color: tabDelegate.index === tabModel.activeIndex ? Theme.text : Theme.subtext
+                            color: (tabDelegate.index === tabModel.activeIndex)
+                                   ? Theme.text
+                                   : (tabDelegate.isSelected ? Theme.subtext : Theme.subtext)
                             font.pointSize: Theme.fontNormal
                             font.weight: tabDelegate.index === tabModel.activeIndex
                                 ? Font.Medium : Font.Normal
@@ -784,7 +776,9 @@ Item {
                                     return titles.join(" · ")
                                 return tabDelegate.model.title || ""
                             }
-                            color: supertabRow.tabIsActive ? Theme.text : Theme.subtext
+                            color: supertabRow.tabIsActive
+                                   ? Theme.text
+                                   : (tabDelegate.isSelected ? Theme.subtext : Theme.subtext)
                             font.pointSize: Theme.fontNormal
                             font.weight: supertabRow.tabIsActive ? Font.Medium : Font.Normal
                             elide: Text.ElideRight
