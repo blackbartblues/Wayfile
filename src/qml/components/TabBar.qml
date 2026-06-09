@@ -69,13 +69,24 @@ Item {
         // App wordmark removed in the rebrand — no brand text in the tab
         // strip. Tabs now start flush at the left edge of the bar.
 
+        // W5: chrome leading mark — the compass-folder app mark, icon only
+        // (no wordmark, per spec). Sits flush-left of the tab strip.
+        WayfileLogo {
+            id: chromeMark
+            variant: "app"
+            size: Math.round(22 * Theme.uiScale)
+            anchors.left: parent.left
+            anchors.leftMargin: Math.round(10 * Theme.uiScale)
+            anchors.verticalCenter: parent.verticalCenter
+        }
+
         // Flickable scroll area for tabs. When the strip can hold every tab at
         // minTabWidth or wider, contentWidth == flickable.width and there's
         // nothing to scroll. Past that point tabs sit at minTabWidth and the
         // overflow scrolls horizontally via drag or mouse wheel.
         Flickable {
             id: tabScroll
-            anchors.left: parent.left
+            anchors.left: chromeMark.right
             anchors.leftMargin: Math.round(8 * Theme.uiScale)
             anchors.top: parent.top
             anchors.topMargin: root.tabTopGap   // tabs sit 9px below the strip top
