@@ -24,6 +24,10 @@ Rectangle {
     property bool mergeWillUnmerge: false
     property bool mergeOn: false
     property string mergeTooltip: ""
+    // Exposed so Main.qml's click-anywhere-clears overlay can exempt presses
+    // on this button — collapsing the tab selection on the very press that
+    // is about to merge it would disarm the merge before onClicked fires.
+    readonly property Item mergeButton: mergeBtn
     property bool isRecentsView: false
     property bool isHiddenView: false
     property bool isTrashView: false

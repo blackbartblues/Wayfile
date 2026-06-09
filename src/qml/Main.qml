@@ -65,14 +65,26 @@ ApplicationWindow {
     // Shift/Ctrl are skipped so multi-select gestures (Ctrl-click,
     // Shift-click range) still work on the tab strip.
     MouseArea {
+        id: clickClearsTabSelection
         anchors.fill: parent
         z: 9999
         acceptedButtons: Qt.LeftButton
         hoverEnabled: false
         propagateComposedEvents: true
+        // A press on the (armed) merge button must NOT collapse the selection:
+        // this observer fires before the button's onClicked, so collapsing here
+        // would disarm the merge the user is in the middle of triggering.
+        function pressOnMergeButton(x, y) {
+            const btn = toolbar.mergeButton
+            if (!btn || !btn.visible || !btn.enabled)
+                return false
+            const p = btn.mapFromItem(clickClearsTabSelection, x, y)
+            return p.x >= 0 && p.y >= 0 && p.x < btn.width && p.y < btn.height
+        }
         onPressed: (mouse) => {
             if (mouse.modifiers === Qt.NoModifier
-                && tabModel.selectedCount > 1) {
+                && tabModel.selectedCount > 1
+                && !pressOnMergeButton(mouse.x, mouse.y)) {
                 tabModel.activateAndCollapseSelection(tabModel.activeIndex)
             }
             mouse.accepted = false
