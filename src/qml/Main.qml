@@ -1026,6 +1026,13 @@ ApplicationWindow {
         return !!(tabModel.activeTab && tabModel.activeTab.isSupertab)
     }
 
+    // The merge button is binary (W4): armed only when a merge (≥2 tabs
+    // selected) or an unmerge (active tab is a supertab) is available.
+    function mergeButtonOn() {
+        return !!(tabModel.activeTab
+                  && (tabModel.activeTab.isSupertab || tabModel.selectedCount >= 2))
+    }
+
     function mergeButtonTooltip() {
         if (!tabModel.activeTab)
             return ""
@@ -1608,6 +1615,7 @@ ApplicationWindow {
             canGoBack: activePaneCanGoBack()
             canGoForward: activePaneCanGoForward()
             mergeWillUnmerge: root.mergeButtonWillUnmerge()
+            mergeOn: root.mergeButtonOn()
             mergeTooltip: root.mergeButtonTooltip()
             isRecentsView: root.isRecentsView
             isHiddenView: root.isHiddenView

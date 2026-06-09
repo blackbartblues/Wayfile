@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Effects
+import QtQuick.Shapes
 import Wayfile
 import Quill as Q
 
@@ -13,12 +14,15 @@ Rectangle {
     property string navigationPath: ""
     property bool canGoBack: false
     property bool canGoForward: false
-    // P2-M5: dynamic merge/unmerge button state.  mergeWillUnmerge picks
-    // IconUnlink vs IconLink; mergeTooltip rotates between four messages
-    // (merge N / merge with neighbour / unmerge / cap reached) so the
-    // button never feels ambiguous.  Main.qml computes both off the same
-    // predicates as toggleMergeOrUnmerge — see mergeButtonTooltip there.
+    // P2-M5 / W4: dynamic merge/unmerge button state.  mergeOn is the binary
+    // armed flag (a merge/unmerge is available); mergeWillUnmerge picks the
+    // broken-link IconUnlink (unmerge) vs the inlined chain-link Shape (merge);
+    // mergeTooltip rotates between four messages (merge N / merge with
+    // neighbour / unmerge / cap reached) so the button never feels ambiguous.
+    // Main.qml computes all three off the same predicates as
+    // toggleMergeOrUnmerge — see mergeButtonOn/mergeButtonTooltip there.
     property bool mergeWillUnmerge: false
+    property bool mergeOn: false
     property string mergeTooltip: ""
     property bool isRecentsView: false
     property bool isHiddenView: false
@@ -184,21 +188,20 @@ Rectangle {
                     id: mergeBtn
                     width: Theme.controlSize; height: Theme.controlSize
                     visible: !root.searchMode
+                    enabled: root.mergeOn                 // inert when no merge/unmerge available
+                    opacity: root.mergeOn ? 1.0 : 0.35    // dim when off (binary, no neutral state)
                     border.width: 1
-                    border.color: root.mergeWillUnmerge ? Theme.gold : Theme.goldLine
-                    gradient: root.mergeWillUnmerge ? mergeArmedGrad : null
-                    color: root.mergeWillUnmerge
-                        ? "transparent"
-                        : (hovered ? Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.12)
-                                   : Theme.goldWash)
-                    layer.enabled: root.mergeWillUnmerge
+                    border.color: Theme.gold              // 1px accent border (armed recipe)
+                    gradient: mergeArmedGrad
+                    color: "transparent"
+                    layer.enabled: root.mergeOn
                     layer.effect: MultiEffect {
                         autoPaddingEnabled: true
                         shadowEnabled: true
                         shadowColor: Theme.goldGlow
                         shadowBlur: 0.7
                     }
-                    onClicked: root.splitViewToggled()
+                    onClicked: { if (root.mergeOn) root.splitViewToggled() }
 
                     Gradient {
                         id: mergeArmedGrad
@@ -207,8 +210,28 @@ Rectangle {
                         GradientStop { position: 1.0; color: Theme.goldMid }
                     }
 
-                    IconLink { anchors.centerIn: parent; size: 18; color: Theme.gold; visible: !root.mergeWillUnmerge }
-                    IconUnlink { anchors.centerIn: parent; size: 18; color: Theme.goldInk; visible: root.mergeWillUnmerge }
+                    // chain-link to MERGE the selection (inlined Shape per CLAUDE.md
+                    // — the icons dir is a no-push submodule). Broken-link to
+                    // UNMERGE a supertab reuses the existing IconUnlink.
+                    Shape {
+                        anchors.centerIn: parent
+                        width: 18; height: 18
+                        visible: !root.mergeWillUnmerge
+                        preferredRendererType: Shape.CurveRenderer
+                        ShapePath {
+                            strokeColor: Theme.goldInk; strokeWidth: Math.max(1, 18 / 12)
+                            fillColor: "transparent"; capStyle: ShapePath.RoundCap; joinStyle: ShapePath.RoundJoin
+                            scale: Qt.size(18 / 24, 18 / 24)
+                            PathSvg { path: "M10.4 13.6a4 4 0 0 0 6 .43l2.2-2.2a4 4 0 0 0-5.66-5.66l-1.26 1.25" }
+                        }
+                        ShapePath {
+                            strokeColor: Theme.goldInk; strokeWidth: Math.max(1, 18 / 12)
+                            fillColor: "transparent"; capStyle: ShapePath.RoundCap; joinStyle: ShapePath.RoundJoin
+                            scale: Qt.size(18 / 24, 18 / 24)
+                            PathSvg { path: "M13.6 10.4a4 4 0 0 0-6-.43l-2.2 2.2a4 4 0 0 0 5.66 5.66l1.25-1.25" }
+                        }
+                    }
+                    IconUnlink { anchors.centerIn: parent; size: 18; color: Theme.goldInk; visible:  root.mergeWillUnmerge }
                     Q.Tooltip { text: root.mergeTooltip; visible: mergeBtn.hovered && root.mergeTooltip.length > 0 }
                 }
 
