@@ -125,7 +125,7 @@ FocusScope {
                 width: (splitterHandle.containsMouse || splitterHandle.pressed) ? 2 : 1
                 height: parent.height
                 color: (splitterHandle.containsMouse || splitterHandle.pressed)
-                       ? Theme.accent : Theme.line
+                       ? Theme.accent : Theme.divider
                 opacity: splitterHandle.pressed ? 0.9
                          : (splitterHandle.containsMouse ? 0.6 : 1.0)
             }

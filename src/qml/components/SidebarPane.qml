@@ -120,7 +120,7 @@ Item {
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             width: 1
-            color: Theme.hair
+            color: Theme.divider
         }
     }
 

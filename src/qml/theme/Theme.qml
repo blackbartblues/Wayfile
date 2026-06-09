@@ -63,6 +63,10 @@ QtObject {
     readonly property color goldLine: Qt.rgba(gold.r, gold.g, gold.b, 0.45)
     readonly property color goldGlow: Qt.rgba(gold.r, gold.g, gold.b, 0.30)
     readonly property color goldWash: Qt.rgba(gold.r, gold.g, gold.b, 0.08)
+    // Brighter steel for MAJOR section dividers (sidebar|content, tab strip,
+    // toolbar, view splitters) — user pref, more visible than hair/line.
+    // Fixed neutral, not accent-derived, so it never moves with presets.
+    readonly property color divider: "#454C54"
 
     property int radiusSmall: config.radiusSmall
     property int radiusMedium: config.radiusMedium

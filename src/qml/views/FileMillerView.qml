@@ -399,7 +399,7 @@ FocusScope {
         Rectangle {
             width: 1
             height: root.height
-            color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.1)
+            color: Theme.divider
         }
 
         // ── Current column (50%) ─────────────────────────────────────────
@@ -737,7 +737,7 @@ FocusScope {
         Rectangle {
             width: 1
             height: root.height
-            color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.1)
+            color: Theme.divider
         }
 
         // ── Preview column (30%) ─────────────────────────────────────────

@@ -57,7 +57,7 @@ Item {
             anchors.left: parent.left
             anchors.right: parent.right
             height: 1
-            color: Theme.hair
+            color: Theme.divider
             z: 2
         }
 

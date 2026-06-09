@@ -115,7 +115,7 @@ Rectangle {
         anchors.left: parent.left
         anchors.right: parent.right
         height: 1
-        color: Theme.lineSoft
+        color: Theme.divider
         z: 5
     }
 
