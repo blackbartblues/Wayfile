@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Effects
 import Wayfile
 import Quill as Q
 
@@ -559,24 +558,16 @@ GridView {
             width: root.iconSize
             height: root.iconSize
 
-            IconFolder {
+            FileIcon {
                 id: folderArt
-                visible: delegateItem.isDir
                 anchors.centerIn: parent
+                isDir: delegateItem.isDir
+                ext: delegateItem.fileExtension
+                category: delegateItem.fileCategory
+                isHidden: delegateItem.fileName.startsWith(".")
                 size: root.iconSize
-                color: FileTypeColors.folder
-                // Default size/12 stroke is far too heavy at grid scale; slim it.
-                strokeWidth: Math.max(1.5, root.iconSize / 28)
-            }
-            FileTypeChip {
-                visible: !delegateItem.isDir
-                anchors.centerIn: parent
-                size: Math.round(root.iconSize * 0.82)
-                readonly property var desc: FileTypeColors.chipFor(
-                    delegateItem.fileExtension, delegateItem.fileCategory,
-                    delegateItem.fileName.startsWith("."))
-                label: desc.label
-                tint: desc.color
+                hovered: ma.containsMouse
+                selected: delegateItem.isSelected
             }
 
             // Typed-folder marker (handoff v2 §B). Home gets a centred gold
@@ -633,15 +624,10 @@ GridView {
                 }
             }
 
-            // Soft gold halo behind the art when selected or hovered. Coexists
-            // with the pkt-11 selection outline drawn by selectionOverlay.
-            layer.enabled: delegateItem.isSelected || ma.containsMouse
-            layer.effect: MultiEffect {
-                autoPaddingEnabled: true
-                shadowEnabled: true
-                shadowColor: Theme.goldGlow
-                shadowBlur: delegateItem.isSelected ? 0.7 : 0.45
-            }
+            // The uniform gold hover/select bloom now lives inside FileIcon
+            // (it owns its own MultiEffect), so the icon slot no longer applies
+            // a layer effect. The pkt-11 selection outline is still drawn by
+            // selectionOverlay independently.
         }
 
         Rectangle {
