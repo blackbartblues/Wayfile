@@ -35,6 +35,78 @@ ColumnLayout {
         { name: "verdant", label: "Verdant", accent: "#84C98A" }
     ]
 
+    // The preset picker, pinned above the scroll by SettingsPanel. Declared
+    // here so it resolves colorsRoot/config/theme/panel via its creation
+    // context. (Custom swatches + save/delete are added in the next task.)
+    property Component pinnedHeader: Component {
+        ColumnLayout {
+            spacing: 6
+
+            Text {
+                text: "Theme preset"
+                color: Theme.accent
+                font.pointSize: Theme.fontSmall
+                font.bold: true
+                Layout.topMargin: 2
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+
+                Repeater {
+                    model: colorsRoot.presets
+                    delegate: ColumnLayout {
+                        id: swatch
+                        required property var modelData
+                        readonly property bool active: config.theme === swatch.modelData.name
+                        spacing: 4
+
+                        Rectangle {
+                            Layout.alignment: Qt.AlignHCenter
+                            width: 46
+                            height: 46
+                            radius: Theme.radiusMedium
+                            color: Theme.panel
+                            border.width: swatch.active ? 2 : 1
+                            border.color: swatch.active
+                                ? Theme.gold
+                                : Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, swatchHover.hovered ? 0.40 : 0.18)
+
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: 26
+                                height: 26
+                                radius: 13
+                                color: swatch.modelData.accent
+                            }
+
+                            HoverHandler { id: swatchHover }
+                            TapHandler {
+                                onTapped: {
+                                    colorsRoot.panel.setDraftTheme(swatch.modelData.name)
+                                    colorsRoot.panel.applySettingsNow()
+                                    colorsRoot.rev++
+                                }
+                            }
+                        }
+
+                        Text {
+                            Layout.alignment: Qt.AlignHCenter
+                            text: swatch.modelData.label
+                            color: swatch.active ? Theme.accent : Theme.subtext
+                            font.pointSize: Theme.fontSmall
+                        }
+                    }
+                }
+
+                Item { Layout.fillWidth: true }
+            }
+
+            Q.Separator { Layout.topMargin: 4 }
+        }
+    }
+
     // ── helpers ───────────────────────────────────────────────────────────
     function _h(x) {
         var s = Math.round(x * 255).toString(16)
@@ -208,74 +280,6 @@ ColumnLayout {
             font.pointSize: Theme.fontSmall
         }
     }
-
-    Text {
-        text: "Theme preset"
-        color: Theme.accent
-        font.pointSize: Theme.fontSmall
-        font.bold: true
-        Layout.topMargin: 6
-    }
-
-    RowLayout {
-        Layout.fillWidth: true
-        Layout.topMargin: 2
-        spacing: 12
-
-        Repeater {
-            model: colorsRoot.presets
-            delegate: ColumnLayout {
-                id: swatch
-                required property var modelData
-                readonly property bool active: config.theme === swatch.modelData.name
-                spacing: 4
-
-                Rectangle {
-                    Layout.alignment: Qt.AlignHCenter
-                    width: 46
-                    height: 46
-                    radius: Theme.radiusMedium
-                    color: Theme.panel
-                    border.width: swatch.active ? 2 : 1
-                    border.color: swatch.active
-                        ? Theme.gold
-                        : Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, swatchHover.hovered ? 0.40 : 0.18)
-
-                    Rectangle {
-                        anchors.centerIn: parent
-                        width: 26
-                        height: 26
-                        radius: 13
-                        color: swatch.modelData.accent
-                    }
-
-                    HoverHandler { id: swatchHover }
-                    TapHandler {
-                        onTapped: {
-                            colorsRoot.panel.setDraftTheme(swatch.modelData.name)
-                            colorsRoot.panel.applySettingsNow()
-                            colorsRoot.rev++ // re-seed the granular editor rows
-                        }
-                    }
-                }
-
-                Text {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: swatch.modelData.label
-                    color: swatch.active ? Theme.accent : Theme.subtext
-                    font.pointSize: Theme.fontSmall
-                }
-            }
-        }
-
-        Item { Layout.fillWidth: true }
-    }
-
-    SettingDescription {
-        text: "Pick an accent preset. The obsidian base stays the same; the accent retints folders, highlights, and controls. Edit tokens below to fork a custom theme."
-    }
-
-    Q.Separator { Layout.topMargin: 6; Layout.bottomMargin: 2 }
 
     Text { text: "Accent"; color: Theme.accent; font.pointSize: Theme.fontSmall; font.bold: true; Layout.topMargin: 4 }
     Repeater { model: colorsRoot.groupAccent; delegate: colorRow }

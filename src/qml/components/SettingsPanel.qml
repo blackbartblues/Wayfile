@@ -598,6 +598,21 @@ Window {
                                 font.bold: true
                             }
 
+                            // A section page may pin a fixed header above the
+                            // scroll area via `property Component pinnedHeader`.
+                            // The Component is declared inside the page, so it
+                            // resolves the page's ids/state through its creation
+                            // context even though it is instantiated here. Only
+                            // the Colours page uses it (the preset picker).
+                            Loader {
+                                id: pinnedHeaderLoader
+                                Layout.fillWidth: true
+                                active: pageLoader.item
+                                        ? ((pageLoader.item.pinnedHeader || null) !== null)
+                                        : false
+                                sourceComponent: active ? pageLoader.item.pinnedHeader : null
+                            }
+
                             Flickable {
                                 id: contentFlick
                                 Layout.fillWidth: true
