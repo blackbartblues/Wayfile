@@ -129,9 +129,6 @@ list(APPEND wayfile_qml_module_args
         qml/views/HybridView.qml
         qml/views/GalleryView.qml
         qml/views/EmptyState.qml
-        qml/views/OsFolder.qml
-        qml/views/OsFile.qml
-        qml/views/FileTypeChip.qml
         qml/views/WayFolder.qml
         qml/views/WayFile.qml
         qml/views/FileIcon.qml

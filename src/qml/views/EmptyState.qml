@@ -3,9 +3,9 @@ import QtQuick.Layouts
 import QtQuick.Effects
 import Wayfile
 
-// Empty-folder hero state (handoff §8 / system jsx 162-175). A big glossy
-// OsFolder over a soft radial gold halo, a title + subtitle, and three actions:
-// New folder (primary gold), New file (secondary), Show hidden (ghost).
+// Empty-folder hero state (handoff §8 / system jsx 162-175). A big gold
+// folder glyph over a soft radial gold halo, a title + subtitle, and three
+// actions: New folder (primary gold), New file (secondary), Show hidden (ghost).
 //
 // Shown by a view when the current directory lists zero visible items. Purely
 // visual + the three buttons — every other pixel is click-through, so the host
@@ -110,7 +110,7 @@ Item {
 
         // Art: the same gold folder glyph the grid/rows use (FileTypeColors.folder
         // + thinned stroke), over a soft radial gold halo — consistent with the
-        // rest of the app rather than the glossy stone OsFolder.
+        // rest of the app.
         Item {
             Layout.alignment: Qt.AlignHCenter
             implicitWidth: 104
