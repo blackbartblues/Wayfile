@@ -142,25 +142,19 @@ Item {
                     readonly property bool hasThumbnail: !fileOps.isRemotePath(detRow.filePath)
                         && (detRow.hasImagePreview || detRow.hasVideoPreview)
 
-                    // Folders get a clean gold folder glyph (folder = gold tint;
-                    // the glossy OsFolder is too muddy at row size).
-                    IconFolder {
-                        visible: !iconSlot.hasThumbnail && detRow.isDir
+                    // Thin-frame folder/file icon (folder = accent frame; file =
+                    // type-coloured page frame + motif), with the uniform gold
+                    // hover/select bloom baked in.
+                    FileIcon {
+                        visible: !iconSlot.hasThumbnail
                         anchors.centerIn: parent
+                        isDir: detRow.isDir
+                        ext: detRow.fileExtension
+                        category: detRow.fileCategory
+                        isHidden: detRow.fileName.startsWith(".")
                         size: detailIconSize
-                        color: FileTypeColors.folder
-                    }
-
-                    // Files (without a thumbnail) get a metallic type chip.
-                    FileTypeChip {
-                        visible: !iconSlot.hasThumbnail && !detRow.isDir
-                        anchors.fill: parent
-                        size: detailIconSize
-                        readonly property var desc: FileTypeColors.chipFor(
-                            detRow.fileExtension, detRow.fileCategory,
-                            detRow.fileName.startsWith("."))
-                        label: desc.label
-                        tint: desc.color
+                        hovered: rowMa.containsMouse
+                        selected: detRow.isSelected
                     }
 
                     Image {

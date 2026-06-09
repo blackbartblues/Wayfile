@@ -81,6 +81,7 @@ Item {
                 ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
                 delegate: Item {
+                    id: previewRow
                     width: previewDirList.width
                     height: 24
 
@@ -102,20 +103,15 @@ Item {
                             width: 14; height: 14
                             anchors.verticalCenter: parent.verticalCenter
 
-                            IconFolder {
-                                visible: isDir
+                            FileIcon {
                                 anchors.centerIn: parent
+                                isDir: previewRow.isDir
+                                ext: previewRow.fileExtension
+                                category: previewRow.fileCategory
+                                isHidden: previewRow.fileName.startsWith(".")
                                 size: 14
-                                color: FileTypeColors.folder
-                            }
-                            FileTypeChip {
-                                visible: !isDir
-                                anchors.fill: parent
-                                size: 14
-                                readonly property var desc: FileTypeColors.chipFor(
-                                    fileExtension, fileCategory, fileName.startsWith("."))
-                                label: desc.label
-                                tint: desc.color
+                                hovered: false
+                                selected: false
                             }
                             GitBadge {
                                 statusIcon: gitStatusIcon

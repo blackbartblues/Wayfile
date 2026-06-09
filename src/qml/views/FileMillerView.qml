@@ -339,21 +339,15 @@ FocusScope {
                             anchors.verticalCenter: parent.verticalCenter
                             opacity: parentDelegate.isCurrentDir ? 0.95 : 0.8
 
-                            IconFolder {
-                                visible: parentDelegate.isDir
+                            FileIcon {
                                 anchors.centerIn: parent
+                                isDir: parentDelegate.isDir
+                                ext: parentDelegate.fileExtension
+                                category: parentDelegate.fileCategory
+                                isHidden: parentDelegate.fileName.startsWith(".")
                                 size: root.millerIconSize
-                                color: FileTypeColors.folder
-                            }
-                            FileTypeChip {
-                                visible: !parentDelegate.isDir
-                                anchors.fill: parent
-                                size: root.millerIconSize
-                                readonly property var desc: FileTypeColors.chipFor(
-                                    parentDelegate.fileExtension, parentDelegate.fileCategory,
-                                    parentDelegate.fileName.startsWith("."))
-                                label: desc.label
-                                tint: desc.color
+                                hovered: parentMa.containsMouse
+                                selected: parentDelegate.isCurrentDir
                             }
                             GitBadge {
                                 statusIcon: parentDelegate.gitStatusIcon
