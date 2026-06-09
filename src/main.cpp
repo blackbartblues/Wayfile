@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
     app.setDesktopFileName("io.github.blackbartblues.Wayfile");
     // Window icon (task switchers, server-side decorations). Bundled via qrc so
     // it resolves without depending on an installed theme icon.
-    app.setWindowIcon(QIcon(QStringLiteral(":/assets/wayfile-logo.png")));
+    app.setWindowIcon(QIcon(QStringLiteral(":/assets/wayfile-logo.svg")));
 
     // Startup timing: opt-in via WAYFILE_TIMING=1 so normal runs stay quiet.
     // Prints milliseconds from QGuiApplication construction at each phase.

@@ -245,7 +245,7 @@ qt_add_qml_module(wayfile ${wayfile_qml_module_args})
 qt_add_resources(wayfile "wayfile_assets"
     PREFIX "/"
     FILES
-        assets/wayfile-logo.png
+        assets/wayfile-logo.svg
         assets/noise-grain.png
         assets/fonts/Cinzel-VF.ttf
         assets/fonts/JetBrainsMono-VF.ttf
