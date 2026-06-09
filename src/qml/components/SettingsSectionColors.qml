@@ -193,7 +193,11 @@ ColumnLayout {
                             Layout.maximumWidth: 56
                             text: swatch.modelData.label
                             color: swatch.active ? Theme.accent : Theme.subtext
-                            font.pointSize: Theme.fontSmall
+                            // W6: theme names set in the Cormorant display serif;
+                            // +1pt and 600 weight so the serif holds up at small sizes.
+                            font.family: Fonts.display
+                            font.pointSize: Theme.fontSmall + 1
+                            font.weight: 600
                             elide: Text.ElideRight
                             horizontalAlignment: Text.AlignHCenter
                         }
