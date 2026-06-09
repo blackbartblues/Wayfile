@@ -161,7 +161,22 @@ int main(int argc, char *argv[])
     // Use native text rendering (FreeType/fontconfig) for crisp fonts matching GTK apps
     QQuickWindow::setTextRenderType(QQuickWindow::NativeTextRendering);
 
-    auto resolveUiFont = [&](const QString &preferredFamily) {
+    // W6: register the bundled Inter VF and make it the default UI family.
+    // A user-configured `font_family` still wins; Inter only replaces the
+    // platform-font fallback. Features per the handoff: cv11 (single-storey
+    // a alternates set), ss01 (open digits), ss03 (curved r).
+    const int interId = QFontDatabase::addApplicationFont(
+        QStringLiteral(":/assets/fonts/Inter-VF.ttf"));
+    QString interFamily;
+    if (interId >= 0) {
+        const QStringList fams = QFontDatabase::applicationFontFamilies(interId);
+        if (!fams.isEmpty())
+            interFamily = fams.first();
+    } else {
+        qWarning() << "Wayfile: failed to register bundled Inter font";
+    }
+
+    auto resolveUiFont = [&, interFamily](const QString &preferredFamily) {
         // Resolve the platform UI font first so the app does not depend on
         // theme-local font defaults that may not exist inside a sandbox.
         QFont font = QFontDatabase::systemFont(QFontDatabase::GeneralFont);
@@ -170,8 +185,14 @@ int main(int argc, char *argv[])
 
         if (!preferredFamily.trimmed().isEmpty())
             font.setFamily(preferredFamily.trimmed());
+        else if (!interFamily.isEmpty())
+            font.setFamily(interFamily);
 
         font.setHintingPreference(QFont::PreferFullHinting);
+        // Inter stylistic features (no-ops for other families).
+        font.setFeature(QFont::Tag("cv11"), 1);
+        font.setFeature(QFont::Tag("ss01"), 1);
+        font.setFeature(QFont::Tag("ss03"), 1);
         return font;
     };
 
