@@ -35,9 +35,82 @@ ColumnLayout {
         { name: "verdant", label: "Verdant", accent: "#84C98A" }
     ]
 
+    // User-saved presets ({name, accent}), refreshed from ConfigManager.
+    property var userPresets: []
+    function refreshUserPresets() { userPresets = config.userThemes() }
+    Component.onCompleted: refreshUserPresets()
+
+    // Inline "save as preset" state for the picker.
+    property bool naming: false
+    property string nameError: ""        // "", "empty", "reserved", "invalid"
+    property bool confirmingOverwrite: false
+
+    // Built-ins (not deletable) + user presets (deletable) as one swatch model.
+    readonly property var builtinSwatches: presets.map(function (p) {
+        return { name: p.name, label: p.label, accent: p.accent, deletable: false }
+    })
+    property var allSwatches: builtinSwatches.concat(userPresets.map(function (u) {
+        return { name: u.name, label: u.name, accent: u.accent, deletable: true }
+    }))
+
+    function selectPreset(name) {
+        colorsRoot.panel.setDraftTheme(name)
+        colorsRoot.panel.applySettingsNow()
+        colorsRoot.rev++ // re-seed the granular editor rows
+    }
+    function beginSave() {
+        colorsRoot.naming = true
+        colorsRoot.nameError = ""
+        colorsRoot.confirmingOverwrite = false
+    }
+    function cancelSave() {
+        colorsRoot.naming = false
+        colorsRoot.nameError = ""
+        colorsRoot.confirmingOverwrite = false
+    }
+    function attemptSave(rawName) {
+        var n = ("" + (rawName || "")).trim()
+        var err = config.themeNameError(n)
+        if (err !== "") { colorsRoot.nameError = err; colorsRoot.confirmingOverwrite = false; return }
+        colorsRoot.nameError = ""
+        if (!colorsRoot.confirmingOverwrite && config.userThemeExists(n)) {
+            colorsRoot.confirmingOverwrite = true   // ask before clobbering an existing user preset
+            return
+        }
+        var path = config.userThemePath(n)
+        if (path === "") { colorsRoot.nameError = "invalid"; return }
+        if (!theme.saveThemeFile(path)) {           // full current palette
+            colorsRoot.nameError = "write"          // don't fake success on a failed write
+            return
+        }
+        colorsRoot.refreshUserPresets()
+        colorsRoot.selectPreset(n)                  // make the new preset active
+        colorsRoot.naming = false
+        colorsRoot.confirmingOverwrite = false
+    }
+    function deletePreset(name) {
+        var wasActive = (config.theme === name)
+        if (config.deleteUserTheme(name)) {
+            if (wasActive) {
+                colorsRoot.panel.setDraftTheme("bifrost")
+                colorsRoot.panel.applySettingsNow()
+            }
+            colorsRoot.refreshUserPresets()
+            colorsRoot.rev++
+        }
+    }
+    function nameErrorText(code) {
+        if (code === "empty")    return "Enter a name."
+        if (code === "reserved") return "That name is reserved (built-in)."
+        if (code === "invalid")  return "Use a simple name (no /, \\ or leading dot)."
+        if (code === "write")    return "Could not write the preset file."
+        return ""
+    }
+
     // The preset picker, pinned above the scroll by SettingsPanel. Declared
     // here so it resolves colorsRoot/config/theme/panel via its creation
-    // context. (Custom swatches + save/delete are added in the next task.)
+    // context. Shows built-in + user swatches, a "+" save tile, and an inline
+    // name field with overwrite-confirm.
     property Component pinnedHeader: Component {
         ColumnLayout {
             spacing: 6
@@ -55,7 +128,7 @@ ColumnLayout {
                 spacing: 12
 
                 Repeater {
-                    model: colorsRoot.presets
+                    model: colorsRoot.allSwatches
                     delegate: ColumnLayout {
                         id: swatch
                         required property var modelData
@@ -63,6 +136,7 @@ ColumnLayout {
                         spacing: 4
 
                         Rectangle {
+                            id: swatchTile
                             Layout.alignment: Qt.AlignHCenter
                             width: 46
                             height: 46
@@ -81,26 +155,116 @@ ColumnLayout {
                                 color: swatch.modelData.accent
                             }
 
-                            HoverHandler { id: swatchHover }
-                            TapHandler {
-                                onTapped: {
-                                    colorsRoot.panel.setDraftTheme(swatch.modelData.name)
-                                    colorsRoot.panel.applySettingsNow()
-                                    colorsRoot.rev++
+                            // Delete badge — custom presets only, on hover.
+                            Rectangle {
+                                visible: swatch.modelData.deletable && swatchHover.hovered
+                                anchors.top: parent.top
+                                anchors.right: parent.right
+                                anchors.topMargin: -4
+                                anchors.rightMargin: -4
+                                width: 16
+                                height: 16
+                                radius: 8
+                                color: Theme.error
+                                border.width: 1
+                                border.color: Theme.panel
+                                z: 2
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "×"
+                                    color: Theme.knob
+                                    font.pointSize: Theme.fontSmall
+                                }
+                                // ReleaseWithinBounds takes an exclusive grab so
+                                // tapping × deletes without the tile's select
+                                // TapHandler also firing (the badge overlaps it).
+                                TapHandler {
+                                    gesturePolicy: TapHandler.ReleaseWithinBounds
+                                    onTapped: colorsRoot.deletePreset(swatch.modelData.name)
                                 }
                             }
+
+                            HoverHandler { id: swatchHover }
+                            TapHandler { onTapped: colorsRoot.selectPreset(swatch.modelData.name) }
                         }
 
                         Text {
                             Layout.alignment: Qt.AlignHCenter
+                            Layout.maximumWidth: 56
                             text: swatch.modelData.label
                             color: swatch.active ? Theme.accent : Theme.subtext
                             font.pointSize: Theme.fontSmall
+                            elide: Text.ElideRight
+                            horizontalAlignment: Text.AlignHCenter
                         }
                     }
                 }
 
+                // "+" save tile.
+                ColumnLayout {
+                    spacing: 4
+                    Rectangle {
+                        Layout.alignment: Qt.AlignHCenter
+                        width: 46
+                        height: 46
+                        radius: Theme.radiusMedium
+                        color: "transparent"
+                        border.width: 1
+                        border.color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, saveHover.hovered ? 0.40 : 0.18)
+                        Text {
+                            anchors.centerIn: parent
+                            text: "+"
+                            color: Theme.subtext
+                            font.pointSize: Theme.fontLarge + 4
+                        }
+                        HoverHandler { id: saveHover }
+                        TapHandler { onTapped: colorsRoot.beginSave() }
+                    }
+                    Text {
+                        Layout.alignment: Qt.AlignHCenter
+                        text: "Save"
+                        color: Theme.subtext
+                        font.pointSize: Theme.fontSmall
+                    }
+                }
+
                 Item { Layout.fillWidth: true }
+            }
+
+            // Inline name field (shown after pressing +).
+            RowLayout {
+                Layout.fillWidth: true
+                visible: colorsRoot.naming
+                spacing: 8
+
+                Q.TextField {
+                    id: nameField
+                    Layout.preferredWidth: 180
+                    placeholder: "Preset name"
+                    onTextEdited: { colorsRoot.nameError = ""; colorsRoot.confirmingOverwrite = false }
+                    onAccepted: colorsRoot.attemptSave(nameField.text)
+                }
+                Q.Button {
+                    text: colorsRoot.confirmingOverwrite ? "Overwrite" : "Save"
+                    onClicked: colorsRoot.attemptSave(nameField.text)
+                }
+                Q.Button {
+                    text: "Cancel"
+                    variant: "ghost"
+                    onClicked: { colorsRoot.cancelSave(); nameField.text = "" }
+                }
+                Item { Layout.fillWidth: true }
+            }
+
+            Text {
+                Layout.fillWidth: true
+                visible: colorsRoot.naming && (colorsRoot.nameError !== "" || colorsRoot.confirmingOverwrite)
+                wrapMode: Text.WordWrap
+                text: colorsRoot.nameError !== ""
+                      ? colorsRoot.nameErrorText(colorsRoot.nameError)
+                      : "A preset with that name exists — Overwrite to replace it."
+                color: Theme.warning
+                font.pointSize: Theme.fontSmall
             }
 
             Q.Separator { Layout.topMargin: 4 }
