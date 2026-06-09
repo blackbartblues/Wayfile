@@ -183,16 +183,21 @@ int main(int argc, char *argv[])
         if (font.family().isEmpty())
             font = app.font();
 
+        const bool usingInter = preferredFamily.trimmed().isEmpty()
+                                && !interFamily.isEmpty();
         if (!preferredFamily.trimmed().isEmpty())
             font.setFamily(preferredFamily.trimmed());
-        else if (!interFamily.isEmpty())
+        else if (usingInter)
             font.setFamily(interFamily);
 
         font.setHintingPreference(QFont::PreferFullHinting);
-        // Inter stylistic features (no-ops for other families).
-        font.setFeature(QFont::Tag("cv11"), 1);
-        font.setFeature(QFont::Tag("ss01"), 1);
-        font.setFeature(QFont::Tag("ss03"), 1);
+        // Inter stylistic features — only applied when Inter is the family,
+        // so a user-configured font is left exactly as the user set it.
+        if (usingInter) {
+            font.setFeature(QFont::Tag("cv11"), 1);
+            font.setFeature(QFont::Tag("ss01"), 1);
+            font.setFeature(QFont::Tag("ss03"), 1);
+        }
         return font;
     };
 

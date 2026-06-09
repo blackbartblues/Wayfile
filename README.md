@@ -76,7 +76,7 @@ Wayfile is a Qt6/QML file manager built to feel native on Hyprland: lightweight,
 - **Bifröst**, the signature obsidian + gold theme, plus bundled Catppuccin Mocha & Latte
 - **In-app palette editor** — a granular *Colours* settings page edits the live theme token by token (swatch + hex), saves it as a writable `custom` theme, and warns on low accent contrast
 - **TOML themes with live reload** — drop a file in `themes/`, pick it in Settings, no restart
-- **Built-in SVG icon set** (Lucide-style, rendered via Qt Shapes) and the *Cinzel* / *JetBrains Mono* type pairing
+- **Built-in SVG icon set** (Lucide-style, rendered via Qt Shapes) and the *Inter* / *Cormorant Garamond* / *JetBrains Mono* type stack
 - **Configurable** corner radius, fonts, animation timing, transparency
 - **Compositor blur** on Hyprland, plus native KWin blur on KDE Plasma
 
@@ -268,4 +268,4 @@ Issues and PRs welcome. A few notes:
 
 [MIT](LICENSE). Wayfile is a fork maintained by **blackbartblues**, building on the original **[HyprFM](https://github.com/soyeb-jim285/hyprfm)** by **Soyeb Pervez Jim**.
 
-Built with [Qt 6](https://www.qt.io/) · icons from [Lucide](https://lucide.dev/) · type by [Cinzel](https://github.com/NDISCOVER/Cinzel) & [JetBrains Mono](https://www.jetbrains.com/lp/mono/) · inspired by macOS Finder, Nautilus, and Dolphin.
+Built with [Qt 6](https://www.qt.io/) · icons from [Lucide](https://lucide.dev/) · type by [Inter](https://rsms.me/inter/) (OFL), [Cormorant Garamond](https://github.com/CatharsisFonts/Cormorant) (OFL) & [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (OFL) · inspired by macOS Finder, Nautilus, and Dolphin.
