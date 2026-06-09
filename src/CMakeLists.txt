@@ -247,7 +247,8 @@ qt_add_resources(wayfile "wayfile_assets"
     FILES
         assets/wayfile-logo.svg
         assets/noise-grain.png
-        assets/fonts/Cinzel-VF.ttf
+        assets/fonts/Inter-VF.ttf
+        assets/fonts/CormorantGaramond-VF.ttf
         assets/fonts/JetBrainsMono-VF.ttf
 )
 
