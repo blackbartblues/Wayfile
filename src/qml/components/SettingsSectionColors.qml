@@ -242,7 +242,7 @@ ColumnLayout {
                     Layout.preferredWidth: 180
                     placeholder: "Preset name"
                     onTextEdited: { colorsRoot.nameError = ""; colorsRoot.confirmingOverwrite = false }
-                    onAccepted: colorsRoot.attemptSave(nameField.text)
+                    onSubmitted: colorsRoot.attemptSave(nameField.text)
                 }
                 Q.Button {
                     text: colorsRoot.confirmingOverwrite ? "Overwrite" : "Save"
