@@ -227,7 +227,7 @@ int main(int argc, char *argv[])
     mark("ConfigManager loaded");
     app.setFont(resolveUiFont(config->fontFamily()));
     ThemeLoader *theme = new ThemeLoader(&app);
-    theme->loadTheme(config->theme(), themesDir);
+    theme->loadTheme(config->themePath(config->theme()), QString());
     mark("ThemeLoader loaded");
 
     TabListModel *tabModel = new TabListModel(&app);
@@ -340,10 +340,7 @@ int main(int argc, char *argv[])
 
     // Keep the live UI in sync with persisted config values.
     QObject::connect(config, &ConfigManager::configChanged, [=, &app, &resolveUiFont]() {
-        theme->loadTheme(config->theme() == QStringLiteral("custom")
-                             ? config->customThemePath()
-                             : config->theme(),
-                         themesDir);
+        theme->loadTheme(config->themePath(config->theme()), QString());
         bookmarks->setBookmarks(config->bookmarks());
         for (const PaneServices &s : paneServices)
             s.fsModel->setShowHidden(config->showHidden());
