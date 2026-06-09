@@ -114,9 +114,14 @@ GridView {
     readonly property int columnsPerRow: Math.max(1, Math.floor(width / cellSize))
     cellWidth: Math.floor(width / columnsPerRow)
     cellHeight: cellSize  // pinned row height (not = cellWidth) so rows stay evenly spaced
+    // Extra inset shaved off the icon so the gold select/hover bloom has room
+    // to render without being clipped by the view's edge. Multi-column grids
+    // leave 0 (the bloom overflows harmlessly into neighbour cells); the narrow
+    // single-column gallery filmstrip sets this so the halo fits the strip.
+    property int iconInset: 0
     // 8px top, 0px gap, 5px bottom. Clamp to cellWidth for the pathological
     // single-column case where the pane is narrower than cellSize.
-    readonly property int iconSize: Math.min(cellSize, cellWidth) - 8 - labelHeight - 5
+    readonly property int iconSize: Math.min(cellSize, cellWidth) - 8 - labelHeight - 5 - iconInset
 
     focus: visible
     keyNavigationEnabled: false

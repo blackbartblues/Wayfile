@@ -119,7 +119,7 @@ Item {
             anchors.right: parent.right
             anchors.top: parent.top
             anchors.bottom: parent.bottom
-            width: 1
+            width: 2
             color: Theme.divider
         }
     }

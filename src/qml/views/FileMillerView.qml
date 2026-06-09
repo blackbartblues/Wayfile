@@ -397,7 +397,7 @@ FocusScope {
         }
 
         Rectangle {
-            width: 1
+            width: 2
             height: root.height
             color: Theme.divider
         }
@@ -735,7 +735,7 @@ FocusScope {
         }
 
         Rectangle {
-            width: 1
+            width: 2
             height: root.height
             color: Theme.divider
         }

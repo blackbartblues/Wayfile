@@ -33,11 +33,17 @@ Item {
     }
 
     // Uniform gold bloom on hover/selected only (rest = plain Shape).
+    // Explicit paddingRect (not autoPadding) so the blurred halo renders into
+    // a texture ~30% larger than the icon on every side — autoPadding under-
+    // sizes it at the larger blur, clipping the bloom to the icon box (visible
+    // as a hard-edged glow in the gallery filmstrip).
     layer.enabled: root.hovered || root.selected
     layer.effect: MultiEffect {
-        autoPaddingEnabled: true
+        autoPaddingEnabled: false
+        paddingRect: Qt.rect(-root.size * 0.3, -root.size * 0.3,
+                             root.size * 1.6, root.size * 1.6)
         shadowEnabled: true
         shadowColor: Theme.goldGlow
-        shadowBlur: root.selected ? 0.7 : 0.45
+        shadowBlur: root.selected ? 0.6 : 0.4
     }
 }

@@ -56,7 +56,7 @@ Item {
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.right: parent.right
-            height: 1
+            height: 2
             color: Theme.divider
             z: 2
         }

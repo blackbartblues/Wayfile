@@ -108,6 +108,9 @@ FocusScope {
             // One column that fills the strip; iconSize = cellSize − padding, so
             // thumbnails grow with the bar. Min keeps cellSize sane at narrow widths.
             cellSize: Math.max(96, Math.round(root.stripWidth))
+            // Narrow single-column strip: every cell hugs both view edges, so
+            // shave the icon back to keep the gold select bloom from clipping.
+            iconInset: 28
             zoomEnabled: false
 
             onFileActivated: (fp, isDir) => root.fileActivated(fp, isDir)
@@ -122,7 +125,7 @@ FocusScope {
             Layout.preferredWidth: 6
             Rectangle {
                 anchors.centerIn: parent
-                width: (splitterHandle.containsMouse || splitterHandle.pressed) ? 2 : 1
+                width: (splitterHandle.containsMouse || splitterHandle.pressed) ? 3 : 2
                 height: parent.height
                 color: (splitterHandle.containsMouse || splitterHandle.pressed)
                        ? Theme.accent : Theme.divider
