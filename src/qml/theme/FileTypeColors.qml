@@ -74,4 +74,38 @@ QtObject {
             return { "label": e.substring(0, 3).toUpperCase(), "color": colorForCategory(category) }
         return { "label": "•", "color": colorForCategory(category) }
     }
+
+    // extension/category -> { kind, color } for the thin-frame WayFile motif.
+    // Mirrors chipFor's resolution order (extension first, then category).
+    function iconFor(ext, category, isHidden) {
+        if (isHidden)
+            return { "kind": "cfg", "color": hidden }
+        var e = (ext || "").toLowerCase()
+        if (e.indexOf(".") !== -1)
+            e = e.substring(e.lastIndexOf(".") + 1)
+        switch (e) {
+        case "md": case "markdown":              return { "kind": "md",    "color": md }
+        case "pdf":                              return { "kind": "pdf",   "color": pdf }
+        case "json": case "ts": case "tsx":
+        case "js": case "jsx":                   return { "kind": "code",  "color": code }
+        case "png": case "jpg": case "jpeg":
+        case "gif": case "svg": case "webp":     return { "kind": "image", "color": image }
+        case "gz": case "zip": case "tar":
+        case "7z": case "xz": case "bz2":        return { "kind": "zip",   "color": zip }
+        case "txt":                              return { "kind": "txt",   "color": other }
+        case "ini": case "conf": case "cfg":
+        case "toml": case "yaml": case "yml":    return { "kind": "cfg",   "color": other }
+        case "bin": case "exe": case "o":
+        case "so":                               return { "kind": "bin",   "color": other }
+        }
+        switch (category) {
+        case "image":    return { "kind": "image", "color": image }
+        case "video":    return { "kind": "video", "color": video }
+        case "audio":    return { "kind": "audio", "color": audio }
+        case "code":     return { "kind": "code",  "color": code }
+        case "archive":  return { "kind": "zip",   "color": zip }
+        case "document": return { "kind": "doc",   "color": doc }
+        }
+        return { "kind": "doc", "color": other }
+    }
 }

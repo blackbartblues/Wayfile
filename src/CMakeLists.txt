@@ -132,6 +132,9 @@ list(APPEND wayfile_qml_module_args
         qml/views/OsFolder.qml
         qml/views/OsFile.qml
         qml/views/FileTypeChip.qml
+        qml/views/WayFolder.qml
+        qml/views/WayFile.qml
+        qml/views/FileIcon.qml
         qml/views/GitBadge.qml
         qml/views/FileGridView.qml
         qml/views/FileDetailedView.qml
