@@ -374,8 +374,12 @@ ColumnLayout {
 
             // Re-reads on rev bump (comma operator establishes the dependency).
             property color seedColor: (colorsRoot.rev, theme.currentColor(modelData.t))
-            onSeedColorChanged: hexField.text = colorsRoot.hexOf(seedColor)
-            Component.onCompleted: hexField.text = colorsRoot.hexOf(seedColor)
+            // Swatch colour, driven imperatively (seed on reseed, parsed hex on
+            // edit) so the swatch never binds to the imperatively-written
+            // hexField.text — which the engine flagged as a soft binding loop.
+            property color liveColor: rowItem.seedColor
+            onSeedColorChanged: { hexField.text = colorsRoot.hexOf(seedColor); rowItem.liveColor = seedColor }
+            Component.onCompleted: { hexField.text = colorsRoot.hexOf(seedColor); rowItem.liveColor = seedColor }
 
             Text {
                 text: rowItem.modelData.l
@@ -391,10 +395,7 @@ ColumnLayout {
                 radius: Theme.radiusSmall
                 border.width: 1
                 border.color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.18)
-                color: {
-                    var c = colorsRoot.parseHex(hexField.text)
-                    return c.ok ? c.color : rowItem.seedColor
-                }
+                color: rowItem.liveColor
             }
 
             Q.TextField {
@@ -405,8 +406,10 @@ ColumnLayout {
                 // seeding), so there's no apply-loop on re-seed.
                 onTextEdited: (t) => {
                     var c = colorsRoot.parseHex(t)
-                    if (c.ok)
+                    if (c.ok) {
+                        rowItem.liveColor = c.color
                         colorsRoot.applyToken(rowItem.modelData.t, c.color)
+                    }
                 }
             }
 
