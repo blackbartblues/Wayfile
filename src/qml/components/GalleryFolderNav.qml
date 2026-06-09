@@ -115,10 +115,12 @@ Item {
                 anchors.rightMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 6
-                IconFolder {
+                FileIcon {
                     anchors.verticalCenter: parent.verticalCenter
+                    isDir: true
                     size: 15
-                    color: Theme.gold
+                    hovered: rowHover.hovered
+                    selected: rowItem.isCurrent
                 }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
