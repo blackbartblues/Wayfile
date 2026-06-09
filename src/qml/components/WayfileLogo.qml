@@ -20,6 +20,10 @@ Item {
 
     width: size
     height: size
+    // Layout containers size from the implicit pair — without these they'd
+    // fall back to 0 (the scaled inner 120×120 Item doesn't propagate).
+    implicitWidth: size
+    implicitHeight: size
 
     readonly property bool isApp: variant === "app"
     readonly property bool isMono: variant === "mono"
