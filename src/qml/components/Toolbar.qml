@@ -14,8 +14,10 @@ Rectangle {
     property string navigationPath: ""
     property bool canGoBack: false
     property bool canGoForward: false
-    // P2-M5 / W4: dynamic merge/unmerge button state.  mergeOn is the binary
-    // armed flag (a merge/unmerge is available); mergeWillUnmerge picks the
+    // P2-M5 / W4: dynamic merge/unmerge button state.  mergeOn is the ARMED
+    // highlight (an explicit ≥2-tab merge or a supertab unmerge is pending) —
+    // the button stays clickable when off and falls back to merge-with-right-
+    // neighbour; mergeWillUnmerge picks the
     // broken-link IconUnlink (unmerge) vs the inlined chain-link Shape (merge);
     // mergeTooltip rotates between four messages (merge N / merge with
     // neighbour / unmerge / cap reached) so the button never feels ambiguous.
@@ -192,12 +194,18 @@ Rectangle {
                     id: mergeBtn
                     width: Theme.controlSize; height: Theme.controlSize
                     visible: !root.searchMode
-                    enabled: root.mergeOn                 // inert when no merge/unmerge available
-                    opacity: root.mergeOn ? 1.0 : 0.35    // dim when off (binary, no neutral state)
+                    // ALWAYS clickable: with no extra selection a click merges
+                    // the active tab with its right neighbour (left fallback /
+                    // split when it's the only tab). `mergeOn` is the ARMED
+                    // highlight — an explicit ≥2-tab merge or a supertab unmerge
+                    // — and only brightens the recipe; it never gates the click.
                     border.width: 1
-                    border.color: Theme.gold              // 1px accent border (armed recipe)
-                    gradient: mergeArmedGrad
-                    color: "transparent"
+                    border.color: root.mergeOn ? Theme.gold : Theme.goldLine
+                    gradient: root.mergeOn ? mergeArmedGrad : null
+                    color: root.mergeOn
+                        ? "transparent"
+                        : (hovered ? Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.12)
+                                   : Theme.goldWash)
                     layer.enabled: root.mergeOn
                     layer.effect: MultiEffect {
                         autoPaddingEnabled: true
@@ -205,7 +213,7 @@ Rectangle {
                         shadowColor: Theme.goldGlow
                         shadowBlur: 0.7
                     }
-                    onClicked: { if (root.mergeOn) root.splitViewToggled() }
+                    onClicked: root.splitViewToggled()
 
                     Gradient {
                         id: mergeArmedGrad
@@ -223,13 +231,19 @@ Rectangle {
                         visible: !root.mergeWillUnmerge
                         preferredRendererType: Shape.CurveRenderer
                         ShapePath {
-                            strokeColor: Theme.goldInk; strokeWidth: Math.max(1, 18 / 12)
+                            // dark glyph on the bright armed gradient; gold glyph
+                            // on the subtle idle gold-wash (matches handoff).
+                            strokeColor: root.mergeOn ? Theme.goldInk : Theme.gold
+                            strokeWidth: Math.max(1, 18 / 12)
                             fillColor: "transparent"; capStyle: ShapePath.RoundCap; joinStyle: ShapePath.RoundJoin
                             scale: Qt.size(18 / 24, 18 / 24)
                             PathSvg { path: "M10.4 13.6a4 4 0 0 0 6 .43l2.2-2.2a4 4 0 0 0-5.66-5.66l-1.26 1.25" }
                         }
                         ShapePath {
-                            strokeColor: Theme.goldInk; strokeWidth: Math.max(1, 18 / 12)
+                            // dark glyph on the bright armed gradient; gold glyph
+                            // on the subtle idle gold-wash (matches handoff).
+                            strokeColor: root.mergeOn ? Theme.goldInk : Theme.gold
+                            strokeWidth: Math.max(1, 18 / 12)
                             fillColor: "transparent"; capStyle: ShapePath.RoundCap; joinStyle: ShapePath.RoundJoin
                             scale: Qt.size(18 / 24, 18 / 24)
                             PathSvg { path: "M13.6 10.4a4 4 0 0 0-6-.43l-2.2 2.2a4 4 0 0 0 5.66 5.66l1.25-1.25" }

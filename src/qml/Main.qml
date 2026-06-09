@@ -1038,8 +1038,10 @@ ApplicationWindow {
         return !!(tabModel.activeTab && tabModel.activeTab.isSupertab)
     }
 
-    // The merge button is binary (W4): armed only when a merge (≥2 tabs
-    // selected) or an unmerge (active tab is a supertab) is available.
+    // mergeButtonOn drives the ARMED highlight only — the toolbar button is
+    // always clickable (a plain click merges the active tab with its right
+    // neighbour via toggleMergeOrUnmerge). It brightens when an explicit
+    // ≥2-tab merge or a supertab unmerge is pending.
     function mergeButtonOn() {
         return !!(tabModel.activeTab
                   && (tabModel.activeTab.isSupertab || tabModel.selectedCount >= 2))
