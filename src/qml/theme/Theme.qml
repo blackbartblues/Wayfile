@@ -53,9 +53,11 @@ QtObject {
     property color sheen: theme.sheen
     property color shadowInk: theme.shadowInk
     property color scrim: theme.scrim
-    // Dark ink painted on accent-filled fills — a very dark shade of the
-    // accent so it stays legible on any preset's accent button/badge.
-    readonly property color goldInk: _shade(accent, -0.561, 1.13)
+    // Dark ink painted on accent-filled fills — a constant very-dark shade of
+    // the accent (fixed lightness, not a relative drop) so it stays a legible
+    // tinted dark on EVERY preset's accent, including the darker accents where a
+    // relative drop would floor to flat black. 0.063 ≈ the default accent's ink.
+    readonly property color goldInk: _shade(accent, 0.063 - accent.hslLightness, 1.13)
     property color knob: theme.knob
     // Gold-derived alpha helpers (track `gold`).
     readonly property color goldLine: Qt.rgba(gold.r, gold.g, gold.b, 0.45)
