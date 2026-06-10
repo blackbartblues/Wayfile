@@ -35,8 +35,15 @@ Rectangle {
     signal viewModeRequested(string mode)
 
     height: 26
-    color: Theme.mantle
     clip: false
+
+    // Handoff status gradient (mantle #1A1D21 → crust #15181C). The inverse
+    // top-corner Shapes below keep filling with Theme.mantle (the gradient's
+    // top stop) so they still blend the content edge into the bar.
+    gradient: Gradient {
+        GradientStop { position: 0.0; color: Theme.mantle }
+        GradientStop { position: 1.0; color: Theme.crust }
+    }
 
     // Inverse rounded corner — top left
     Shape {
@@ -74,9 +81,9 @@ Rectangle {
 
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: Theme.spacing
-        anchors.rightMargin: Theme.spacing
-        spacing: Theme.spacing
+        anchors.leftMargin: 14
+        anchors.rightMargin: 14
+        spacing: 14
 
         Text {
             text: {
@@ -94,7 +101,7 @@ Rectangle {
             Layout.fillWidth: true
             visible: statusBar.activePath !== ""
             text: statusBar.activePath
-            color: Theme.subtext
+            color: Theme.muted
             font.pointSize: Theme.fontSmall
             font.family: Fonts.mono
             elide: Text.ElideMiddle
@@ -108,7 +115,7 @@ Rectangle {
         Text {
             visible: statusBar.selectedCount > 0
             text: statusBar.selectedCount + " selected" + (statusBar.selectedSize ? " \u2014 " + statusBar.selectedSize : "")
-            color: statusBar.selectedSizePending ? Theme.accent : Theme.subtext
+            color: Theme.accent
             font.pointSize: Theme.fontSmall
             verticalAlignment: Text.AlignVCenter
         }
@@ -140,6 +147,12 @@ Rectangle {
                 id: hybridViewBtn
                 width: 24; height: 24
                 onClicked: statusBar.viewModeRequested("hybrid")
+                Rectangle {
+                    anchors.fill: parent
+                    radius: parent.radius
+                    visible: statusBar.viewMode === "hybrid"
+                    color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14)
+                }
                 IconPanelTop {
                     anchors.centerIn: parent
                     size: 15
@@ -151,6 +164,12 @@ Rectangle {
                 id: gridViewBtn
                 width: 24; height: 24
                 onClicked: statusBar.viewModeRequested("grid")
+                Rectangle {
+                    anchors.fill: parent
+                    radius: parent.radius
+                    visible: statusBar.viewMode === "grid"
+                    color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14)
+                }
                 IconGrid {
                     anchors.centerIn: parent
                     size: 15
@@ -162,6 +181,12 @@ Rectangle {
                 id: millerViewBtn
                 width: 24; height: 24
                 onClicked: statusBar.viewModeRequested("miller")
+                Rectangle {
+                    anchors.fill: parent
+                    radius: parent.radius
+                    visible: statusBar.viewMode === "miller"
+                    color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14)
+                }
                 IconColumns {
                     anchors.centerIn: parent
                     size: 15
@@ -173,6 +198,12 @@ Rectangle {
                 id: detailedViewBtn
                 width: 24; height: 24
                 onClicked: statusBar.viewModeRequested("detailed")
+                Rectangle {
+                    anchors.fill: parent
+                    radius: parent.radius
+                    visible: statusBar.viewMode === "detailed"
+                    color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14)
+                }
                 IconList {
                     anchors.centerIn: parent
                     size: 15
@@ -184,6 +215,12 @@ Rectangle {
                 id: galleryViewBtn
                 width: 24; height: 24
                 onClicked: statusBar.viewModeRequested("gallery")
+                Rectangle {
+                    anchors.fill: parent
+                    radius: parent.radius
+                    visible: statusBar.viewMode === "gallery"
+                    color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14)
+                }
                 IconImage {
                     anchors.centerIn: parent
                     size: 15

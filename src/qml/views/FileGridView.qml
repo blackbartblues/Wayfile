@@ -471,7 +471,7 @@ GridView {
                 }
                 ctx.closePath()
             }
-            ctx.fillStyle = Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, root.isDragging ? 0.1 : 0.2)
+            ctx.fillStyle = Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, root.isDragging ? 0.06 : 0.1)
             ctx.fill()
             ctx.lineWidth = 1
             ctx.strokeStyle = Theme.accent
@@ -748,7 +748,7 @@ GridView {
                 if (folderDropArea.containsDrag)
                     return Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.35)
                 if (ma.containsMouse)
-                    return Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.07)
+                    return Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.025)
                 return "transparent"
             }
             Behavior on color { ColorAnimation { duration: Theme.animDuration } }

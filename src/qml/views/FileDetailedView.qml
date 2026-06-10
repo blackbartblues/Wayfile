@@ -44,7 +44,7 @@ FocusScope {
     property int headerRadius: Theme.radiusMedium
     readonly property int minRowHeight: 22
     readonly property int maxRowHeight: 56
-    readonly property int detailIconSize: Math.round(rowHeight * 0.571)  // 16 at default 28
+    readonly property int detailIconSize: Math.round(rowHeight * 0.643)  // 18 at default 28
 
     // Contiguous runs of selected rows — one merged outline block each.
     readonly property var selectionRuns: {
@@ -213,9 +213,9 @@ FocusScope {
 
                             Text {
                                 text: modelData.label
-                                color: root.sortColumn === modelData.key ? Theme.accent : Theme.subtext
+                                color: root.sortColumn === modelData.key ? Theme.accent : Theme.muted
                                 font.pointSize: Theme.fontSmall
-                                font.bold: root.sortColumn === modelData.key
+                                font.weight: Font.Medium
                                 anchors.verticalCenter: parent.verticalCenter
                             }
 
@@ -444,22 +444,22 @@ FocusScope {
                         width: listView.width - 4
                         height: (modelData.end - modelData.start + 1) * root.rowHeight - 4
 
-                        Rectangle {   // inset fill — handoff gold gradient
+                        Rectangle {   // inset fill — handoff accent gradient .10→.04
                             anchors.fill: parent
                             anchors.margins: 1
-                            radius: Math.max(0, Theme.radiusMedium - 1)
+                            radius: Math.max(0, Theme.radiusSm - 1)
                             gradient: Gradient {
                                 orientation: Gradient.Horizontal
-                                GradientStop { position: 0.0; color: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.18) }
-                                GradientStop { position: 1.0; color: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.04) }
+                                GradientStop { position: 0.0; color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.10) }
+                                GradientStop { position: 1.0; color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.04) }
                             }
                         }
-                        Rectangle {   // outline — transparent fill, gold border
+                        Rectangle {   // inset 1px accent.18 outline, r4
                             anchors.fill: parent
-                            radius: Theme.radiusMedium
+                            radius: Theme.radiusSm
                             color: "transparent"
                             border.width: 1
-                            border.color: Theme.accent
+                            border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.18)
                         }
                     }
                 }

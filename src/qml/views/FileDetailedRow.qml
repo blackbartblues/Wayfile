@@ -94,7 +94,7 @@ Item {
             if (folderDropArea.containsDrag)
                 return Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.3)
             if (rowMa.containsMouse)
-                return Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.05)
+                return Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.025)
             // Selection fill + outline drawn by FileDetailedView's overlay;
             // the row goes transparent so it shows through.
             if (detRow.isSelected)
@@ -122,15 +122,15 @@ Item {
 
         Row {
             anchors.fill: parent
-            anchors.leftMargin: 8
-            anchors.rightMargin: 8
+            anchors.leftMargin: 16
+            anchors.rightMargin: 16
             spacing: 0
 
             // Name
             Row {
                 width: colName
                 height: parent.height
-                spacing: 6
+                spacing: 10
 
                 // Icon with git badge
                 Item {
@@ -279,6 +279,7 @@ Item {
                 }
                 color: Theme.subtext
                 font.pointSize: Theme.fontSmall
+                font.family: Fonts.mono
                 horizontalAlignment: Text.AlignRight
                 rightPadding: 8
             }
