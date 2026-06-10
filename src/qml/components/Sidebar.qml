@@ -813,6 +813,8 @@ Rectangle {
             id: placesTree
             Layout.fillWidth: true
             host: root.host
+            // W8: forward Places-tree right-clicks to the shared sidebar menu.
+            onContextMenuRequested: (item, position) => root.sidebarContextMenuRequested(item, position)
         }
 
         // Separator between places and devices

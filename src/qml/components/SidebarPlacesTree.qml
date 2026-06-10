@@ -21,6 +21,12 @@ Column {
     readonly property int _rowHeight: Math.round(28 * Theme.uiScale)
     spacing: 0
 
+    // W8: right-clicking any Places row (XDG header or a subtree folder) emits
+    // this with a quickAccess payload; Sidebar.qml forwards it to its own
+    // sidebarContextMenuRequested so the shared sidebar menu opens. entryId is
+    // empty — tree folders are real filesystem entries, not hideable rows.
+    signal contextMenuRequested(var item, point position)
+
     // Per-place icon components for XDG roots (handoff: each root gets a
     // distinct semantic glyph instead of the generic folder icon).
     Component { id: xdgIconDesktop;   IconMonitor  { size: 16; color: Theme.muted } }
@@ -126,14 +132,29 @@ Column {
                     }
                 }
 
-                // Click the label area to navigate + auto-expand.
+                // Click the label area to navigate + auto-expand; right-click
+                // opens the shared sidebar context menu.
                 MouseArea {
+                    id: xdgRowMouse
                     anchors.left: xdgChev.right
                     anchors.right: parent.right
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: {
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    onClicked: (mouse) => {
+                        if (mouse.button === Qt.RightButton) {
+                            var mapped = xdgRowMouse.mapToItem(null, mouse.x, mouse.y)
+                            root.contextMenuRequested({
+                                kind: "quickAccess",
+                                name: xdgItem.modelData.label,
+                                path: xdgItem.modelData.dir,
+                                isRecents: false,
+                                isHidden: false,
+                                entryId: ""
+                            }, Qt.point(mapped.x, mapped.y))
+                            return
+                        }
                         if (root.host)
                             root.host.navigateActivePaneTo(xdgItem.modelData.dir)
                         xdgItem.expanded = true
@@ -270,14 +291,29 @@ Column {
                                 }
                             }
 
-                            // Click label area to navigate + expand.
+                            // Click label area to navigate + expand; right-click
+                            // opens the shared sidebar context menu.
                             MouseArea {
+                                id: rowMouse
                                 anchors.left: chev.right
                                 anchors.right: parent.right
                                 anchors.top: parent.top
                                 anchors.bottom: parent.bottom
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: {
+                                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                onClicked: (mouse) => {
+                                    if (mouse.button === Qt.RightButton) {
+                                        var mapped = rowMouse.mapToItem(null, mouse.x, mouse.y)
+                                        root.contextMenuRequested({
+                                            kind: "quickAccess",
+                                            name: rowItem.display,
+                                            path: rowItem.fullPath,
+                                            isRecents: false,
+                                            isHidden: false,
+                                            entryId: ""
+                                        }, Qt.point(mapped.x, mapped.y))
+                                        return
+                                    }
                                     if (root.host)
                                         root.host.navigateActivePaneTo(rowItem.fullPath)
                                     if (rowItem.hasChildren && !rowItem.expanded)
