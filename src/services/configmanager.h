@@ -25,6 +25,8 @@ class ConfigManager : public QObject
     Q_PROPERTY(QString sidebarPosition READ sidebarPosition NOTIFY configChanged)
     Q_PROPERTY(int sidebarWidth READ sidebarWidth NOTIFY configChanged)
     Q_PROPERTY(bool sidebarVisible READ sidebarVisible NOTIFY configChanged)
+    Q_PROPERTY(bool sidebarCompact READ sidebarCompact NOTIFY configChanged)
+    Q_PROPERTY(QStringList hiddenSidebarEntries READ hiddenSidebarEntries NOTIFY configChanged)
     Q_PROPERTY(double scrollSpeed READ scrollSpeed NOTIFY configChanged)
     Q_PROPERTY(int gridCellSize READ gridCellSize NOTIFY configChanged)
     Q_PROPERTY(QStringList bookmarks READ bookmarks NOTIFY configChanged)
@@ -78,6 +80,8 @@ public:
     QString sidebarPosition() const;
     int sidebarWidth() const;
     bool sidebarVisible() const;
+    bool sidebarCompact() const;
+    QStringList hiddenSidebarEntries() const;
     double scrollSpeed() const;
     int gridCellSize() const;
     QStringList bookmarks() const;
@@ -104,6 +108,10 @@ public:
     Q_INVOKABLE void saveShortcuts(const QVariantMap &shortcuts);
     Q_INVOKABLE void saveBookmarks(const QStringList &paths);
     Q_INVOKABLE void saveSidebarWidth(int width);
+    Q_INVOKABLE void saveSidebarCompact(bool compact);
+    Q_INVOKABLE void hideSidebarEntry(const QString &id);
+    Q_INVOKABLE void showSidebarEntry(const QString &id);
+    Q_INVOKABLE void clearHiddenSidebarEntries();
     Q_INVOKABLE void saveGridCellSize(int size);
 
 signals:
@@ -130,6 +138,8 @@ private:
     QString m_sidebarPosition;
     int m_sidebarWidth;
     bool m_sidebarVisible;
+    bool m_sidebarCompact = false;
+    QStringList m_hiddenSidebarEntries;
     double m_scrollSpeed;
     int m_gridCellSize;
     QStringList m_bookmarks;
@@ -151,4 +161,6 @@ private:
     QVariantList m_customContextActions;
     QMap<QString, QString> m_shortcuts;
     static QMap<QString, QString> s_defaultShortcuts;
+
+    void persistHiddenSidebarEntries();
 };

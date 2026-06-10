@@ -1076,6 +1076,56 @@ private slots:
         QCOMPARE(mgr2.defaultView(), QString("hybrid"));
         QCOMPARE(mgr2.sortBy(), QString("name"));
     }
+
+    // --- W7: sidebarCompact + hiddenSidebarEntries ---
+
+    void sidebarCompactPersists()
+    {
+        QTemporaryDir dir;
+        const QString path = dir.path() + "/config.toml";
+        {
+            ConfigManager cfg(path);
+            QCOMPARE(cfg.sidebarCompact(), false);            // default
+            cfg.saveSidebarCompact(true);
+            QCOMPARE(cfg.sidebarCompact(), true);
+        }
+        ConfigManager reloaded(path);                          // fresh load from disk
+        QCOMPARE(reloaded.sidebarCompact(), true);
+    }
+
+    void hiddenSidebarEntriesPersist()
+    {
+        QTemporaryDir dir;
+        const QString path = dir.path() + "/config.toml";
+        {
+            ConfigManager cfg(path);
+            QVERIFY(cfg.hiddenSidebarEntries().isEmpty());
+            cfg.hideSidebarEntry("places.recents");
+            cfg.hideSidebarEntry("network");
+            cfg.hideSidebarEntry("places.recents");           // dup is a no-op
+            QCOMPARE(cfg.hiddenSidebarEntries().size(), 2);
+            cfg.showSidebarEntry("network");
+            QCOMPARE(cfg.hiddenSidebarEntries(), QStringList{"places.recents"});
+        }
+        ConfigManager reloaded(path);
+        QCOMPARE(reloaded.hiddenSidebarEntries(), QStringList{"places.recents"});
+    }
+
+    void clearHiddenSidebarEntriesPersists()
+    {
+        QTemporaryDir dir;
+        const QString path = dir.path() + "/config.toml";
+        {
+            ConfigManager cfg(path);
+            cfg.hideSidebarEntry("places.recents");
+            cfg.hideSidebarEntry("network");
+            QCOMPARE(cfg.hiddenSidebarEntries().size(), 2);
+            cfg.clearHiddenSidebarEntries();
+            QVERIFY(cfg.hiddenSidebarEntries().isEmpty());
+        }
+        ConfigManager reloaded(path);                          // cleared state persisted to disk
+        QVERIFY(reloaded.hiddenSidebarEntries().isEmpty());
+    }
 };
 
 QTEST_MAIN(TestConfigManager)

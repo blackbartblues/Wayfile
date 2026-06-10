@@ -390,6 +390,8 @@ void ConfigManager::setDefaults()
     m_sidebarPosition = "left";
     m_sidebarWidth = 236;
     m_sidebarVisible = true;
+    m_sidebarCompact = false;
+    m_hiddenSidebarEntries.clear();
     m_scrollSpeed = 3.0;
     m_gridCellSize = 180;  // keep in sync with FileGridView min/maxCellSize (110–320)
     m_bookmarks = {"~/Documents", "~/Downloads", "~/Pictures", "~/Projects"};
@@ -447,6 +449,15 @@ void ConfigManager::loadConfig()
             m_sidebarWidth = static_cast<int>(*v);
         if (auto v = config["sidebar"]["visible"].value<bool>())
             m_sidebarVisible = *v;
+        if (auto v = config["sidebar"]["compact"].value<bool>())
+            m_sidebarCompact = *v;
+        m_hiddenSidebarEntries.clear();
+        if (auto arr = config["sidebar"]["hidden_entries"].as_array()) {
+            for (const auto &item : *arr) {
+                if (auto v = item.value<std::string>())
+                    m_hiddenSidebarEntries.append(QString::fromStdString(*v));
+            }
+        }
 
         if (auto v = config["general"]["scroll_speed"].value<double>())
             m_scrollSpeed = qBound(1.0, *v, 10.0);
@@ -577,6 +588,8 @@ bool ConfigManager::sortAscending() const { return m_sortAscending; }
 QString ConfigManager::sidebarPosition() const { return m_sidebarPosition; }
 int ConfigManager::sidebarWidth() const { return m_sidebarWidth; }
 bool ConfigManager::sidebarVisible() const { return m_sidebarVisible; }
+bool ConfigManager::sidebarCompact() const { return m_sidebarCompact; }
+QStringList ConfigManager::hiddenSidebarEntries() const { return m_hiddenSidebarEntries; }
 QStringList ConfigManager::bookmarks() const { return m_bookmarks; }
 double ConfigManager::scrollSpeed() const { return m_scrollSpeed; }
 int ConfigManager::gridCellSize() const { return m_gridCellSize; }
@@ -744,6 +757,11 @@ void ConfigManager::saveSettings(const QVariantMap &settings)
             m_sidebarPosition = pos;
             sidebar.insert_or_assign("position", pos.toStdString());
         }
+    }
+
+    if (settings.contains("sidebarCompact")) {
+        m_sidebarCompact = settings.value("sidebarCompact").toBool();
+        sidebar.insert_or_assign("compact", m_sidebarCompact);
     }
 
     if (!sidebar.empty())
@@ -928,4 +946,68 @@ void ConfigManager::saveSidebarWidth(int width)
 void ConfigManager::saveGridCellSize(int size)
 {
     saveSettings(QVariantMap{{"gridCellSize", size}});
+}
+
+void ConfigManager::saveSidebarCompact(bool compact)
+{
+    saveSettings(QVariantMap{{"sidebarCompact", compact}});
+}
+
+void ConfigManager::clearHiddenSidebarEntries()
+{
+    m_hiddenSidebarEntries.clear();
+    persistHiddenSidebarEntries();
+}
+
+void ConfigManager::hideSidebarEntry(const QString &id)
+{
+    if (id.isEmpty() || m_hiddenSidebarEntries.contains(id))
+        return;
+    m_hiddenSidebarEntries.append(id);
+    persistHiddenSidebarEntries();
+}
+
+void ConfigManager::showSidebarEntry(const QString &id)
+{
+    if (m_hiddenSidebarEntries.removeAll(id) > 0)
+        persistHiddenSidebarEntries();
+}
+
+void ConfigManager::persistHiddenSidebarEntries()
+{
+    const bool wasWatching = m_watcher.files().contains(m_configPath);
+    if (wasWatching)
+        m_watcher.removePath(m_configPath);
+
+    toml::table config;
+    if (QFile::exists(m_configPath)) {
+        try {
+            config = toml::parse_file(m_configPath.toStdString());
+        } catch (const std::exception &e) {
+            // Bail out rather than overwrite an unparseable config with a near-empty
+            // table — that would destroy every other setting. This path runs on every
+            // hide/show, so it must not be destructive.
+            qWarning() << "ConfigManager: config.toml unparseable, not persisting hidden sidebar entries:" << e.what();
+            if (wasWatching)
+                m_watcher.addPath(m_configPath);
+            return;
+        }
+    }
+
+    toml::array arr;
+    for (const auto &e : m_hiddenSidebarEntries)
+        arr.push_back(e.toStdString());
+
+    toml::table sidebar;
+    if (auto existing = config["sidebar"].as_table())
+        sidebar = *existing;
+    sidebar.insert_or_assign("hidden_entries", std::move(arr));
+    config.insert_or_assign("sidebar", std::move(sidebar));
+
+    writeTomlAtomic(m_configPath, config);
+
+    if (QFile::exists(m_configPath))
+        m_watcher.addPath(m_configPath);
+
+    emit configChanged();
 }
