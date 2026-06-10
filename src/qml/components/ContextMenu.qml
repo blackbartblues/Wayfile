@@ -483,11 +483,11 @@ Item {
         }
 
         // Body — obsidian vertical gradient (#1b1d24→#15161c) + 1px line border,
-        // 12px radius, heavy drop shadow, 1px top sheen.
+        // 10px radius (handoff --h-r-lg), heavy drop shadow, 1px top sheen.
         Rectangle {
             id: menuBg
             anchors.fill: parent
-            radius: 12
+            radius: 10
             border.color: Theme.line
             border.width: 1
             gradient: Gradient {
@@ -561,7 +561,7 @@ Item {
                     anchors.leftMargin: 8
                     anchors.rightMargin: 8
                     height: 1
-                    color: Theme.line
+                    color: Theme.lineSoft
                 }
             }
 
@@ -764,7 +764,7 @@ Item {
         if (!isEmptySpace && targetPath !== "") {
             items.push({ text: "Open", shortcut: "Return", action: "open", icon: "ExternalLink" })
             if (targetIsDir)
-                items.push({ text: "Open in New Tab", shortcut: "", action: "opennewtab", icon: "Folder" })
+                items.push({ text: "Open in New Tab", shortcut: "", action: "opennewtab", icon: "PanelTop" })
             if (!targetIsDir && fileModel) {
                 var props = fileModel.fileProperties(targetPath)
                 var mime = props["mimeType"] || ""

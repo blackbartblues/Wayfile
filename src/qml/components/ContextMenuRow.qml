@@ -6,6 +6,10 @@ import Wayfile
 // trigger, or a separator based on rowData. Extracted from ContextMenu.qml.
 // State flows down: rowData (the buildModel() entry) + the live submenu
 // highlight state as typed props; imperative calls go back through `menu`.
+//
+// W8 restyle: hover = accent gradient (90deg gold .12→.04; red-tinted for
+// danger rows); icons sit at text-2 and brighten to accent (red for danger)
+// only on hover; rows ~28px, radius 5, 10px h-padding, 10px icon↔label gap.
 Loader {
     id: rowLoader
 
@@ -28,33 +32,55 @@ Loader {
     Component {
         id: itemComponent
         Rectangle {
-            height: 32
+            id: itemRect
+            readonly property bool danger: !!(rowLoader.rowData && rowLoader.rowData.destructive)
+            readonly property bool hovered: itemMa.containsMouse
+            height: 28
             width: parent ? parent.width : 248
-            radius: Theme.radiusSm
-            color: itemMa.containsMouse ? Theme.raise2 : "transparent"
-            Behavior on color {
-                ColorAnimation { duration: 100; easing.type: Theme.animEasingEnter; easing.bezierCurve: Theme.animBezierCurve }
+            radius: 5
+            color: "transparent"
+
+            // Hover: 90° accent gradient (gold .12→.04); danger rows tint red.
+            Rectangle {
+                anchors.fill: parent
+                radius: parent.radius
+                opacity: itemRect.hovered ? 1 : 0
+                Behavior on opacity {
+                    NumberAnimation { duration: 100; easing.type: Theme.animEasingEnter; easing.bezierCurve: Theme.animBezierCurve }
+                }
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.0; color: itemRect.danger
+                        ? Qt.rgba(FileTypeColors.pdf.r, FileTypeColors.pdf.g, FileTypeColors.pdf.b, 0.14)
+                        : Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.12) }
+                    GradientStop { position: 1.0; color: itemRect.danger
+                        ? Qt.rgba(FileTypeColors.pdf.r, FileTypeColors.pdf.g, FileTypeColors.pdf.b, 0.04)
+                        : Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.04) }
+                }
             }
             RowLayout {
                 anchors.fill: parent
-                anchors.leftMargin: 12
-                anchors.rightMargin: 12
-                spacing: 8
+                anchors.leftMargin: 10
+                anchors.rightMargin: 10
+                spacing: 10
                 Loader {
-                    Layout.preferredWidth: 16
-                    Layout.preferredHeight: 16
+                    Layout.preferredWidth: 14
+                    Layout.preferredHeight: 14
                     Layout.alignment: Qt.AlignVCenter
                     active: !!(rowLoader.rowData && rowLoader.rowData.icon)
                     source: (rowLoader.rowData && rowLoader.rowData.icon) ? "../icons/Icon" + rowLoader.rowData.icon + ".qml" : ""
                     onLoaded: {
-                        item.size = 16
-                        item.color = Qt.binding(() => rowLoader.rowData && rowLoader.rowData.destructive ? FileTypeColors.pdf : Theme.gold)
+                        item.size = 14
+                        // text-2 normally; accent (red for danger) on hover.
+                        item.color = Qt.binding(() => itemRect.hovered
+                            ? (itemRect.danger ? FileTypeColors.pdf : Theme.gold)
+                            : Theme.subtext)
                     }
                 }
                 Text {
                     text: rowLoader.rowData ? rowLoader.rowData.text : ""
                     font.pointSize: Theme.fontNormal
-                    color: rowLoader.rowData && rowLoader.rowData.destructive ? FileTypeColors.pdf : Theme.text
+                    color: itemRect.danger ? FileTypeColors.pdf : Theme.text
                     Layout.fillWidth: true
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -86,29 +112,41 @@ Loader {
         id: submenuTriggerComponent
         Rectangle {
             id: submenuTrigger
-            height: 32
+            height: 28
             width: parent ? parent.width : 248
-            radius: Theme.radiusSm
+            radius: 5
             readonly property bool isActive: rowLoader.submenuVisible
                 && rowLoader.activeSubmenuKey === rowLoader.menu.submenuKeyForItem(rowLoader.rowData)
-            color: (submenuMa.containsMouse || isActive) ? Theme.raise2 : "transparent"
-            Behavior on color {
-                ColorAnimation { duration: 100; easing.type: Theme.animEasingEnter; easing.bezierCurve: Theme.animBezierCurve }
+            readonly property bool hot: submenuMa.containsMouse || isActive
+            color: "transparent"
+
+            Rectangle {
+                anchors.fill: parent
+                radius: parent.radius
+                opacity: submenuTrigger.hot ? 1 : 0
+                Behavior on opacity {
+                    NumberAnimation { duration: 100; easing.type: Theme.animEasingEnter; easing.bezierCurve: Theme.animBezierCurve }
+                }
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.0; color: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.12) }
+                    GradientStop { position: 1.0; color: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.04) }
+                }
             }
             RowLayout {
                 anchors.fill: parent
-                anchors.leftMargin: 12
-                anchors.rightMargin: 12
-                spacing: 8
+                anchors.leftMargin: 10
+                anchors.rightMargin: 10
+                spacing: 10
                 Loader {
-                    Layout.preferredWidth: 16
-                    Layout.preferredHeight: 16
+                    Layout.preferredWidth: 14
+                    Layout.preferredHeight: 14
                     Layout.alignment: Qt.AlignVCenter
                     active: !!(rowLoader.rowData && rowLoader.rowData.icon)
                     source: (rowLoader.rowData && rowLoader.rowData.icon) ? "../icons/Icon" + rowLoader.rowData.icon + ".qml" : ""
                     onLoaded: {
-                        item.size = 16
-                        item.color = Qt.binding(() => submenuTrigger.isActive ? Theme.goldLight : Theme.gold)
+                        item.size = 14
+                        item.color = Qt.binding(() => submenuTrigger.hot ? Theme.gold : Theme.subtext)
                     }
                 }
                 Text {
@@ -128,7 +166,7 @@ Loader {
                 }
                 IconChevronRight {
                     size: 14
-                    color: submenuTrigger.isActive ? Theme.gold : Theme.muted
+                    color: submenuTrigger.hot ? Theme.gold : Theme.muted
                     Layout.alignment: Qt.AlignVCenter
                 }
             }
@@ -148,11 +186,21 @@ Loader {
         Item {
             height: 9
             width: parent ? parent.width : 248
+            // Hairline + a 1px warm sheen below it (handoff separator).
             Rectangle {
-                anchors.centerIn: parent
+                id: sepLine
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.verticalCenter: parent.verticalCenter
                 width: parent.width - 16
                 height: 1
-                color: Theme.line
+                color: Theme.lineSoft
+            }
+            Rectangle {
+                anchors.left: sepLine.left
+                anchors.right: sepLine.right
+                anchors.top: sepLine.bottom
+                height: 1
+                color: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.04)
             }
         }
     }
