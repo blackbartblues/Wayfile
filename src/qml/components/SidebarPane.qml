@@ -74,6 +74,11 @@ Item {
         }
 
         if (item.kind === "bookmark") {
+            // R7: double-clicking a favorite's star opens a quick picker that
+            // surfaces the color swatches directly (no nested submenu).
+            if (item.colorPicker)
+                return bookmarkColorMenuItem().submenuItems
+
             return withHideEntries(item, [
                 { text: "Open", shortcut: "Return", action: "open" },
                 { text: "Open in New Tab", shortcut: "", action: "opennewtab" },
@@ -205,9 +210,13 @@ Item {
         anchors.left: sidebarOnRight ? parent.left : undefined
         width: 10
         hoverEnabled: true
-        // Resize is only meaningful in Full mode; in Compact (fixed 56px) the
-        // splitter is disabled so the rail width can't be dragged. (W7)
-        enabled: host ? (host.sidebarVisible && !host.sidebarCompact) : false
+        // R4: the splitter works in BOTH modes. In Full mode, dragging inward
+        // past the collapse threshold drops to the Compact rail; in Compact mode,
+        // dragging outward past the (higher) expand threshold restores Full. The
+        // gap between the two thresholds is the anti-flicker hysteresis band.
+        enabled: host ? host.sidebarVisible : false
+        readonly property int collapseThreshold: 110
+        readonly property int expandThreshold: 130
         acceptedButtons: Qt.LeftButton
         cursorShape: Qt.SizeHorCursor
         preventStealing: true
@@ -229,7 +238,10 @@ Item {
         onPressed: (mouse) => {
             host.sidebarResizeActive = true
             host.sidebarResizeStartGlobalX = sidebarResizeHandle.mapToItem(sidebarPane.coordSpace, mouse.x, mouse.y).x
-            host.sidebarResizeStartWidth = host.sidebarWidth
+            // Reference the DISPLAYED width so the raw drag intent below is in
+            // the same space as what the user sees (the compact rail is fixed at
+            // compactWidth, not host.sidebarWidth which still holds the full value).
+            host.sidebarResizeStartWidth = host.sidebarCompact ? sidebarPane.compactWidth : host.sidebarWidth
             mouse.accepted = true
         }
 
@@ -239,7 +251,21 @@ Item {
             var globalX = sidebarResizeHandle.mapToItem(sidebarPane.coordSpace, mouse.x, mouse.y).x
             var delta = globalX - host.sidebarResizeStartGlobalX
             if (config.sidebarPosition === "right") delta = -delta
-            host.sidebarWidth = host.clampedSidebarWidth(host.sidebarResizeStartWidth + delta)
+            // Raw (unclamped) requested width — the user's drag intent.
+            var raw = host.sidebarResizeStartWidth + delta
+            if (host.sidebarCompact) {
+                // Dragging the rail outward past the expand threshold restores Full.
+                if (raw >= sidebarResizeHandle.expandThreshold) {
+                    host.setSidebarCompact(false)
+                    host.sidebarWidth = host.clampedSidebarWidth(raw)
+                }
+            } else if (raw <= sidebarResizeHandle.collapseThreshold) {
+                // Dragging inward past the collapse threshold drops to the rail.
+                // Keep host.sidebarWidth as the remembered full width.
+                host.setSidebarCompact(true)
+            } else {
+                host.sidebarWidth = host.clampedSidebarWidth(raw)
+            }
             mouse.accepted = true
         }
 

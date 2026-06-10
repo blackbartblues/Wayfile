@@ -64,7 +64,10 @@ Loader {
                 anchors.rightMargin: 10
                 spacing: 10
                 Loader {
-                    Layout.preferredWidth: 14
+                    // Swatch rows (the flattened favorite-star color picker) use
+                    // the dot below for their leading glyph, so the icon slot
+                    // collapses to avoid a double leading gap.
+                    Layout.preferredWidth: (rowLoader.rowData && rowLoader.rowData.swatch) ? 0 : 14
                     Layout.preferredHeight: 14
                     Layout.alignment: Qt.AlignVCenter
                     active: !!(rowLoader.rowData && rowLoader.rowData.icon)
@@ -76,6 +79,19 @@ Loader {
                             ? (itemRect.danger ? FileTypeColors.pdf : Theme.gold)
                             : Theme.subtext)
                     }
+                }
+                // W8.5: filled color dot for swatch rows (per-favorite star color
+                // picker opened by double-clicking a favorite's star).
+                Rectangle {
+                    visible: !!(rowLoader.rowData && rowLoader.rowData.swatch)
+                    Layout.preferredWidth: 14
+                    Layout.preferredHeight: 14
+                    Layout.alignment: Qt.AlignVCenter
+                    radius: width / 2
+                    color: (rowLoader.rowData && rowLoader.rowData.swatch)
+                        ? rowLoader.rowData.swatch : "transparent"
+                    border.width: 1
+                    border.color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.18)
                 }
                 Text {
                     text: rowLoader.rowData ? rowLoader.rowData.text : ""

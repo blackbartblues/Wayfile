@@ -587,6 +587,29 @@ Rectangle {
                         entryId: path
                     }, Qt.point(mapped.x, mapped.y))
                 }
+                // R7: double-click the leading star → quick color picker. The
+                // star sits at the row's leading edge (leftMargin 16 + 14px); the
+                // rest of the row keeps its normal click-to-navigate behaviour.
+                onDoubleClicked: (mouse) => {
+                    if (mouse.button !== Qt.LeftButton)
+                        return
+                    if (mouse.x < 8 || mouse.x > 36)
+                        return
+                    var index = (mouse.y >= 0 && mouse.y < bookmarksSection.visibleCount * bookmarksSection.rowHeight)
+                        ? idxAt(mouse.y) : -1
+                    if (index < 0 || index >= bookmarks.count)
+                        return
+                    var path = bookmarks.data(bookmarks.index(index, 0), 258 /* PathRole */) || ""
+                    var mapped = bmInteraction.mapToItem(null, mouse.x, mouse.y)
+                    root.sidebarContextMenuRequested({
+                        kind: "bookmark",
+                        index: index,
+                        name: bookmarks.data(bookmarks.index(index, 0), 257 /* NameRole */) || "",
+                        path: path,
+                        entryId: path,
+                        colorPicker: true
+                    }, Qt.point(mapped.x, mapped.y))
+                }
                 onExited: hoverIndex = -1
                 onCanceled: {
                     bookmarksSection.dragCurrentIndex = -1
@@ -1027,7 +1050,9 @@ Rectangle {
             visible: !root.trashHidden
             Layout.fillWidth: true
             Layout.leftMargin: Theme.spacing / 2
-            Layout.rightMargin: Theme.spacing / 2
+            // Reserve the bottom-right corner for the collapse-sidebar button
+            // (the overlay sibling below) so Trash content never sits under it.
+            Layout.rightMargin: Theme.spacing / 2 + 28
             Layout.bottomMargin: Theme.spacing / 2
             height: 28
             radius: Theme.radiusRow
@@ -1122,6 +1147,32 @@ Rectangle {
         OperationsBar {
             Layout.fillWidth: true
         }
+    }
+
+    // Collapse-to-rail control — pinned to the FULL sidebar's bottom-right
+    // corner (Trash sits bottom-left; opposite corner). Toggles + persists the
+    // compact state. Sits at the Trash band when idle; the reserved trashRow
+    // right margin keeps them from colliding.
+    HoverRect {
+        id: collapseSidebarBtn
+        visible: !root.compactMode
+        z: 5
+        width: 24; height: 24
+        radius: Theme.radiusButton
+        anchors.right: parent.right
+        anchors.rightMargin: Theme.spacing / 2
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: Theme.spacing / 2 + 2
+        onClicked: {
+            if (root.host)
+                root.host.setSidebarCompact(!root.host.sidebarCompact)
+        }
+        IconPanelLeft {
+            anchors.centerIn: parent
+            size: 15
+            color: collapseSidebarBtn.hovered ? Theme.gold : Theme.muted
+        }
+        Quill.Tooltip { text: "Collapse sidebar"; visible: collapseSidebarBtn.hovered }
     }
 
     // ── W7 COMPACT RAIL ──────────────────────────────────────────────────────
