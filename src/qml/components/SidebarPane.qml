@@ -192,6 +192,7 @@ Item {
             Sidebar {
                 anchors.fill: parent
                 visible: !sidebarPane.showFolderNav
+                host: sidebarPane.host
                 tooltipLayer: sidebarPane.sidebarTooltipLayer
                 currentPath: host ? host.activePanePath : ""
                 trashPath: host ? host.unifiedTrashPath : ""

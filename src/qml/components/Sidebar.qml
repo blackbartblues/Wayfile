@@ -10,6 +10,7 @@ Rectangle {
     Accessible.role: Accessible.Pane
     Accessible.name: "Sidebar navigation"
 
+    property var host: null
     property string currentPath: ""
     property string trashPath: fsModel.homePath() + "/.local/share/Trash/files"
     property bool isRecentsView: false
@@ -47,8 +48,6 @@ Rectangle {
     Component { id: iconEyeOff; IconEyeOff { size: 18; color: Theme.muted } }
     Component { id: iconClock; IconClock { size: 18; color: Theme.muted } }
     Component { id: iconTrash; IconTrash { size: 18; color: Theme.muted } }
-    Component { id: iconImage; IconImage { size: 18; color: Theme.muted } }
-    Component { id: iconDownload; IconDownload { size: 18; color: Theme.muted } }
     Component { id: iconGlobe; IconGlobe { size: 18; color: Theme.muted } }
     Component { id: iconFolder; IconFolder { size: 18; color: Theme.muted } }
     Component { id: iconStarGold; IconStar { size: 11; color: Theme.gold } }
@@ -99,198 +98,41 @@ Rectangle {
             height: Theme.spacing
         }
 
-        // Wayfile section header: PLACES — Linux home + common folders.
-        // Style follows design canvas overline spec (11px uppercase, soft
-        // letter-spacing). Kept tight so it doesn't dominate the row stack.
-        Text {
-            Layout.fillWidth: true
-            Layout.leftMargin: Theme.spacing
-            Layout.topMargin: Theme.spacing / 2
-            text: "PLACES"
-            color: Theme.muted
-            font.pointSize: Theme.fontSmall - 1
-            font.bold: true
-            font.capitalization: Font.AllUppercase
-            font.letterSpacing: 1.3
-        }
-
-        // Quick access section
-        Column {
-            Layout.fillWidth: true
-
-            // Quick access entries
-            Repeater {
-                model: ListModel {
-                    ListElement { name: "Home"; iconType: "home" }
-                    ListElement { name: "Hidden"; iconType: "eyeoff" }
-                    ListElement { name: "Recents"; iconType: "clock" }
-                    ListElement { name: "Trash"; iconType: "trash" }
-                    ListElement { name: "Network"; iconType: "globe" }
-                    ListElement { name: "Pictures"; iconType: "image" }
-                    ListElement { name: "Downloads"; iconType: "download" }
-                }
-
-                delegate: Rectangle {
-                    id: quickAccessDelegate
-
-                    readonly property string resolvedPath: {
-                        const home = fsModel.homePath()
-                        if (model.name === "Home") return home
-                        if (model.name === "Hidden") return ""
-                        if (model.name === "Recents") return ""
-                        if (model.name === "Trash") return root.trashPath
-                        if (model.name === "Network") return "network:///"
-                        if (model.name === "Pictures") return home + "/Pictures"
-                        if (model.name === "Downloads") return home + "/Downloads"
-                        return ""
-                    }
-
-                    width: parent.width - Theme.spacing
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    height: 32
-                    readonly property bool isActive: {
-                        if (model.name === "Recents") return root.isRecentsView
-                        if (model.name === "Hidden") return root.isHiddenView
-                        if (model.name === "Trash") return !root.isRecentsView && !root.isHiddenView && fileOps.isTrashPath(root.currentPath)
-                        if (model.name === "Network") return !root.isRecentsView && !root.isHiddenView && fileOps.isRemotePath(root.currentPath)
-                        if (resolvedPath === "") return false
-                        return !root.isRecentsView && !root.isHiddenView && resolvedPath === root.currentPath
-                    }
-
-                    color: {
-                        if (qaHoverArea.containsMouse && !isActive)
-                            return Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.03)
-                        return "transparent"
-                    }
-                    radius: Theme.radiusRow
-                    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
-
-                    // Active: gold-wash → transparent gradient + faint goldLine
-                    // inset ring (handoff .sb-item--active).
-                    Rectangle {
-                        visible: quickAccessDelegate.isActive
-                        anchors.fill: parent
-                        radius: parent.radius
-                        gradient: Gradient {
-                            orientation: Gradient.Horizontal
-                            GradientStop { position: 0.0; color: Theme.goldWash }
-                            GradientStop { position: 1.0; color: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.02) }
-                        }
-                        border.width: 1
-                        border.color: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.14)
-                    }
-
-                    // Active: 3px gold left bar with a soft glow, sitting at the
-                    // sidebar's left edge (handoff .sb-item--active::before).
-                    Rectangle {
-                        visible: quickAccessDelegate.isActive
-                        anchors.left: parent.left
-                        anchors.leftMargin: -(Theme.spacing / 2)
-                        anchors.top: parent.top
-                        anchors.topMargin: 5
-                        anchors.bottom: parent.bottom
-                        anchors.bottomMargin: 5
-                        width: 3
-                        color: Theme.gold
-                        topRightRadius: 3
-                        bottomRightRadius: 3
-                        layer.enabled: true
-                        layer.effect: MultiEffect {
-                            autoPaddingEnabled: true
-                            shadowEnabled: true
-                            shadowColor: Theme.goldGlow
-                            shadowBlur: 0.6
-                        }
-                    }
-
-                    Row {
-                        anchors.left: parent.left
-                        anchors.leftMargin: Theme.spacing
-                        anchors.right: parent.right
-                        anchors.rightMargin: Theme.spacing
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: Theme.spacing
-
-                        Loader {
-                            width: 18; height: 18
-                            anchors.verticalCenter: parent.verticalCenter
-                            sourceComponent: {
-                                if (model.iconType === "home") return iconHome
-                                if (model.iconType === "eyeoff") return iconEyeOff
-                                if (model.iconType === "clock") return iconClock
-                                if (model.iconType === "trash") return iconTrash
-                                if (model.iconType === "monitor") return iconMonitor
-                                if (model.iconType === "globe") return iconGlobe
-                                if (model.iconType === "image") return iconImage
-                                if (model.iconType === "download") return iconDownload
-                                return iconHome
-                            }
-                            onLoaded: item.color = Qt.binding(
-                                () => quickAccessDelegate.isActive ? Theme.gold : Theme.muted)
-                        }
-
-                        Text {
-                            text: model.name
-                            color: quickAccessDelegate.isActive ? Theme.text : Theme.subtext
-                            font.pointSize: Theme.fontNormal
-                            verticalAlignment: Text.AlignVCenter
-                            elide: Text.ElideRight
-                            width: parent.width - 32 - Theme.spacing
-                        }
-                    }
-
-                    MouseArea {
-                        id: qaHoverArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        acceptedButtons: Qt.LeftButton | Qt.RightButton
-                        onClicked: (mouse) => {
-                            if (mouse.button === Qt.RightButton) {
-                                var mapped = qaHoverArea.mapToItem(null, mouse.x, mouse.y)
-                                root.sidebarContextMenuRequested({
-                                    kind: "quickAccess",
-                                    name: model.name,
-                                    path: quickAccessDelegate.resolvedPath,
-                                    isRecents: model.name === "Recents",
-                                    isHidden: model.name === "Hidden"
-                                }, Qt.point(mapped.x, mapped.y))
-                                return
-                            }
-
-                            if (model.name === "Recents")
-                                root.recentsClicked()
-                            else if (model.name === "Hidden")
-                                root.hiddenClicked()
-                            else
-                                root.bookmarkClicked(quickAccessDelegate.resolvedPath)
-                        }
-                    }
-                }
-            }
-        }
-
-        // Separator between quick access and bookmarks
-        Rectangle {
+        // Wayfile section header: FAVORITES — user-curated bookmarks.
+        // Drag a folder onto the section to pin it (existing Wayfile logic);
+        // the trailing "+" (revealed on header hover) pins the active folder.
+        RowLayout {
             Layout.fillWidth: true
             Layout.leftMargin: Theme.spacing
             Layout.rightMargin: Theme.spacing
-            height: 1
-            color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.08)
-        }
-
-        // Wayfile section header: FAVORITES — user-curated bookmarks.
-        // Drag a folder onto the section to pin it (existing Wayfile logic).
-        Text {
-            Layout.fillWidth: true
-            Layout.leftMargin: Theme.spacing
             Layout.topMargin: Theme.spacing / 2
-            text: "FAVORITES"
-            color: Theme.muted
-            font.pointSize: Theme.fontSmall - 1
-            font.bold: true
-            font.capitalization: Font.AllUppercase
-            font.letterSpacing: 1.3
+            HoverHandler { id: favHeaderHover }
+            Text {
+                Layout.fillWidth: true
+                text: "FAVORITES"
+                color: Theme.muted
+                font.pointSize: Theme.fontSmall - 1
+                font.bold: true
+                font.capitalization: Font.AllUppercase
+                font.letterSpacing: 1.3
+            }
+            IconPlus {
+                id: favAdd
+                size: 13
+                color: favAddHover.containsMouse ? Theme.gold : Theme.muted
+                opacity: favHeaderHover.hovered ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: Theme.animDurationFast } }
+                MouseArea {
+                    id: favAddHover
+                    anchors.fill: parent; anchors.margins: -6
+                    hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        var p = root.host ? root.host.activePanePath : ""
+                        if (p && config.bookmarks.indexOf(p) < 0)
+                            config.saveBookmarks(config.bookmarks.concat([p]))
+                    }
+                }
+            }
         }
 
         // Bookmarks section — drag folders to add, drag items to reorder
@@ -450,7 +292,7 @@ Rectangle {
                             anchors.topMargin: 5
                             anchors.bottom: parent.bottom
                             anchors.bottomMargin: 5
-                            width: 3
+                            width: 2
                             color: Theme.gold
                             topRightRadius: 3
                             bottomRightRadius: 3
@@ -662,9 +504,181 @@ Rectangle {
             }
         }
 
-        // Separator between bookmarks and devices
+        // Separator between favorites and places
         Rectangle {
-            visible: bookmarks.count > 0
+            Layout.fillWidth: true
+            Layout.leftMargin: Theme.spacing
+            Layout.rightMargin: Theme.spacing
+            height: 1
+            color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.08)
+        }
+
+        // Wayfile section header: PLACES — Linux home + common folders + the
+        // curated-XDG folder forest below. Quick rows: Home (mono) / Recents /
+        // Hidden; Trash + Network moved to their own sections.
+        Text {
+            Layout.fillWidth: true
+            Layout.leftMargin: Theme.spacing
+            Layout.topMargin: Theme.spacing / 2
+            text: "PLACES"
+            color: Theme.muted
+            font.pointSize: Theme.fontSmall - 1
+            font.bold: true
+            font.capitalization: Font.AllUppercase
+            font.letterSpacing: 1.3
+        }
+
+        // Quick access section
+        Column {
+            Layout.fillWidth: true
+
+            // Quick access entries
+            Repeater {
+                model: ListModel {
+                    ListElement { name: "Home"; iconType: "home"; mono: true }
+                    ListElement { name: "Recents"; iconType: "clock"; mono: false }
+                    ListElement { name: "Hidden"; iconType: "eyeoff"; mono: false }
+                }
+
+                delegate: Rectangle {
+                    id: quickAccessDelegate
+
+                    readonly property string resolvedPath: {
+                        const home = fsModel.homePath()
+                        if (model.name === "Home") return home
+                        if (model.name === "Hidden") return ""
+                        if (model.name === "Recents") return ""
+                        return ""
+                    }
+
+                    width: parent.width - Theme.spacing
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    height: 32
+                    readonly property bool isActive: {
+                        if (model.name === "Recents") return root.isRecentsView
+                        if (model.name === "Hidden") return root.isHiddenView
+                        if (resolvedPath === "") return false
+                        return !root.isRecentsView && !root.isHiddenView && resolvedPath === root.currentPath
+                    }
+
+                    color: {
+                        if (qaHoverArea.containsMouse && !isActive)
+                            return Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.03)
+                        return "transparent"
+                    }
+                    radius: Theme.radiusRow
+                    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+
+                    // Active: gold-wash → transparent gradient + faint goldLine
+                    // inset ring (handoff .sb-item--active).
+                    Rectangle {
+                        visible: quickAccessDelegate.isActive
+                        anchors.fill: parent
+                        radius: parent.radius
+                        gradient: Gradient {
+                            orientation: Gradient.Horizontal
+                            GradientStop { position: 0.0; color: Theme.goldWash }
+                            GradientStop { position: 1.0; color: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.02) }
+                        }
+                        border.width: 1
+                        border.color: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.14)
+                    }
+
+                    // Active: 2px gold left bar with a soft glow, sitting at the
+                    // sidebar's left edge (handoff .sb-item--active::before).
+                    Rectangle {
+                        visible: quickAccessDelegate.isActive
+                        anchors.left: parent.left
+                        anchors.leftMargin: -(Theme.spacing / 2)
+                        anchors.top: parent.top
+                        anchors.topMargin: 5
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: 5
+                        width: 2
+                        color: Theme.gold
+                        topRightRadius: 3
+                        bottomRightRadius: 3
+                        layer.enabled: true
+                        layer.effect: MultiEffect {
+                            autoPaddingEnabled: true
+                            shadowEnabled: true
+                            shadowColor: Theme.goldGlow
+                            shadowBlur: 0.6
+                        }
+                    }
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.leftMargin: Theme.spacing
+                        anchors.right: parent.right
+                        anchors.rightMargin: Theme.spacing
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: Theme.spacing
+
+                        Loader {
+                            width: 18; height: 18
+                            anchors.verticalCenter: parent.verticalCenter
+                            sourceComponent: {
+                                if (model.iconType === "home") return iconHome
+                                if (model.iconType === "eyeoff") return iconEyeOff
+                                if (model.iconType === "clock") return iconClock
+                                return iconHome
+                            }
+                            onLoaded: item.color = Qt.binding(
+                                () => quickAccessDelegate.isActive ? Theme.gold : Theme.muted)
+                        }
+
+                        Text {
+                            text: model.name
+                            color: quickAccessDelegate.isActive ? Theme.text : Theme.subtext
+                            font.family: model.mono ? Fonts.mono : Qt.application.font.family
+                            font.pointSize: Theme.fontNormal
+                            verticalAlignment: Text.AlignVCenter
+                            elide: Text.ElideRight
+                            width: parent.width - 32 - Theme.spacing
+                        }
+                    }
+
+                    MouseArea {
+                        id: qaHoverArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+                        onClicked: (mouse) => {
+                            if (mouse.button === Qt.RightButton) {
+                                var mapped = qaHoverArea.mapToItem(null, mouse.x, mouse.y)
+                                root.sidebarContextMenuRequested({
+                                    kind: "quickAccess",
+                                    name: model.name,
+                                    path: quickAccessDelegate.resolvedPath,
+                                    isRecents: model.name === "Recents",
+                                    isHidden: model.name === "Hidden"
+                                }, Qt.point(mapped.x, mapped.y))
+                                return
+                            }
+
+                            if (model.name === "Recents")
+                                root.recentsClicked()
+                            else if (model.name === "Hidden")
+                                root.hiddenClicked()
+                            else
+                                root.bookmarkClicked(quickAccessDelegate.resolvedPath)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Expandable curated-XDG folder forest (Desktop/Documents/… each a tree).
+        SidebarPlacesTree {
+            Layout.fillWidth: true
+            host: root.host
+        }
+
+        // Separator between places and devices
+        Rectangle {
+            visible: devicesSection.visible
             Layout.fillWidth: true
             Layout.leftMargin: Theme.spacing
             Layout.rightMargin: Theme.spacing
@@ -712,10 +726,242 @@ Rectangle {
             }
         }
 
+        // Separator above NETWORK — always visible: Network is a permanent,
+        // always-reachable entry (network:///), so it always needs a divider
+        // above it. (Unlike the devices separator, which hides with devices.)
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.leftMargin: Theme.spacing
+            Layout.rightMargin: Theme.spacing
+            height: 1
+            color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.08)
+        }
+
+        // Wayfile section header: NETWORK — remote/virtual locations.
+        Text {
+            Layout.fillWidth: true
+            Layout.leftMargin: Theme.spacing
+            Layout.topMargin: Theme.spacing / 2
+            text: "NETWORK"
+            color: Theme.muted
+            font.pointSize: Theme.fontSmall - 1
+            font.bold: true
+            font.capitalization: Font.AllUppercase
+            font.letterSpacing: 1.3
+        }
+
+        // Network section — single entry navigating to network:/// (gvfs mounts).
+        Column {
+            Layout.fillWidth: true
+
+            Repeater {
+                model: ListModel {
+                    ListElement { name: "Network"; iconType: "globe" }
+                }
+
+                delegate: Rectangle {
+                    id: networkDelegate
+
+                    width: parent.width - Theme.spacing
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    height: 32
+                    readonly property bool isActive:
+                        !root.isRecentsView && !root.isHiddenView && fileOps.isRemotePath(root.currentPath)
+
+                    color: {
+                        if (networkHoverArea.containsMouse && !isActive)
+                            return Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.03)
+                        return "transparent"
+                    }
+                    radius: Theme.radiusRow
+                    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+
+                    // Active: gold-wash → transparent gradient + faint goldLine ring.
+                    Rectangle {
+                        visible: networkDelegate.isActive
+                        anchors.fill: parent
+                        radius: parent.radius
+                        gradient: Gradient {
+                            orientation: Gradient.Horizontal
+                            GradientStop { position: 0.0; color: Theme.goldWash }
+                            GradientStop { position: 1.0; color: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.02) }
+                        }
+                        border.width: 1
+                        border.color: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.14)
+                    }
+
+                    // Active: 2px gold left bar with a soft glow.
+                    Rectangle {
+                        visible: networkDelegate.isActive
+                        anchors.left: parent.left
+                        anchors.leftMargin: -(Theme.spacing / 2)
+                        anchors.top: parent.top
+                        anchors.topMargin: 5
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: 5
+                        width: 2
+                        color: Theme.gold
+                        topRightRadius: 3
+                        bottomRightRadius: 3
+                        layer.enabled: true
+                        layer.effect: MultiEffect {
+                            autoPaddingEnabled: true
+                            shadowEnabled: true
+                            shadowColor: Theme.goldGlow
+                            shadowBlur: 0.6
+                        }
+                    }
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.leftMargin: Theme.spacing
+                        anchors.right: parent.right
+                        anchors.rightMargin: Theme.spacing
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: Theme.spacing
+
+                        Loader {
+                            width: 18; height: 18
+                            anchors.verticalCenter: parent.verticalCenter
+                            sourceComponent: iconGlobe
+                            onLoaded: item.color = Qt.binding(
+                                () => networkDelegate.isActive ? Theme.gold : Theme.muted)
+                        }
+
+                        Text {
+                            text: model.name
+                            color: networkDelegate.isActive ? Theme.text : Theme.subtext
+                            font.pointSize: Theme.fontNormal
+                            verticalAlignment: Text.AlignVCenter
+                            elide: Text.ElideRight
+                            width: parent.width - 32 - Theme.spacing
+                        }
+                    }
+
+                    MouseArea {
+                        id: networkHoverArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+                        onClicked: (mouse) => {
+                            if (mouse.button === Qt.RightButton) {
+                                var mapped = networkHoverArea.mapToItem(null, mouse.x, mouse.y)
+                                root.sidebarContextMenuRequested({
+                                    kind: "quickAccess",
+                                    name: "Network",
+                                    path: "network:///",
+                                    isRecents: false,
+                                    isHidden: false
+                                }, Qt.point(mapped.x, mapped.y))
+                                return
+                            }
+                            root.bookmarkClicked("network:///")
+                        }
+                    }
+                }
+            }
+        }
+
         // Spacer pushes operations bar to bottom
         Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
+        }
+
+        // Trash — pinned at the very bottom, with a mono item-count chip.
+        Rectangle {
+            id: trashRow
+            Layout.fillWidth: true
+            Layout.leftMargin: Theme.spacing / 2
+            Layout.rightMargin: Theme.spacing / 2
+            Layout.bottomMargin: Theme.spacing / 2
+            height: 32
+            radius: Theme.radiusRow
+            readonly property bool isActive:
+                !root.isRecentsView && !root.isHiddenView && fileOps.isTrashPath(root.currentPath)
+            color: trashHover.containsMouse && !isActive
+                   ? Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.03) : "transparent"
+            Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+
+            // Active: gold-wash → transparent gradient + faint goldLine ring.
+            Rectangle {
+                visible: trashRow.isActive
+                anchors.fill: parent
+                radius: parent.radius
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.0; color: Theme.goldWash }
+                    GradientStop { position: 1.0; color: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.02) }
+                }
+                border.width: 1
+                border.color: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.14)
+            }
+
+            // Active: 2px gold left bar with a soft glow.
+            Rectangle {
+                visible: trashRow.isActive
+                anchors.left: parent.left
+                anchors.leftMargin: -(Theme.spacing / 2)
+                anchors.top: parent.top
+                anchors.topMargin: 5
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 5
+                width: 2
+                color: Theme.gold
+                topRightRadius: 3
+                bottomRightRadius: 3
+                layer.enabled: true
+                layer.effect: MultiEffect {
+                    autoPaddingEnabled: true
+                    shadowEnabled: true
+                    shadowColor: Theme.goldGlow
+                    shadowBlur: 0.6
+                }
+            }
+
+            Row {
+                anchors.left: parent.left; anchors.leftMargin: Theme.spacing
+                anchors.right: parent.right; anchors.rightMargin: Theme.spacing
+                anchors.verticalCenter: parent.verticalCenter; spacing: Theme.spacing
+                Loader {
+                    width: 18; height: 18
+                    anchors.verticalCenter: parent.verticalCenter
+                    sourceComponent: iconTrash
+                    onLoaded: item.color = Qt.binding(() => trashRow.isActive ? Theme.gold : Theme.muted)
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter; text: "Trash"
+                    color: trashRow.isActive ? Theme.text : Theme.subtext
+                    font.pointSize: Theme.fontNormal
+                    elide: Text.ElideRight
+                    width: parent.width - 18 - Theme.spacing * 2 - 24
+                }
+            }
+            Text {
+                anchors.right: parent.right; anchors.rightMargin: Theme.spacing
+                anchors.verticalCenter: parent.verticalCenter
+                visible: fsModel.trashEntryCount > 0
+                text: fsModel.trashEntryCount
+                font.family: Fonts.mono; font.pointSize: Theme.fontSmall
+                color: Theme.muted
+            }
+            MouseArea {
+                id: trashHover; anchors.fill: parent; hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                onClicked: (m) => {
+                    if (m.button === Qt.RightButton) {
+                        var p = trashHover.mapToItem(null, m.x, m.y)
+                        root.sidebarContextMenuRequested({
+                            kind: "quickAccess", name: "Trash",
+                            path: root.trashPath, isRecents: false, isHidden: false
+                        }, Qt.point(p.x, p.y))
+                        return
+                    }
+                    root.bookmarkClicked(root.trashPath)
+                }
+            }
         }
 
         // File operations progress bar
