@@ -35,8 +35,8 @@ Item {
     signal subPaneClicked(int tabIndex, int paneIdx)
 
     // Chrome-ish bounds. Tune here if the design canvas tightens these later.
-    readonly property int minTabWidth: 128
-    readonly property int maxTabWidth: 210
+    readonly property int minTabWidth: 108
+    readonly property int maxTabWidth: 190
 
     // "Wayfile Unified" tab strip: 40px tall, tabs bottom-aligned with a 9px
     // gap above so their rounded top corners read against the strip gradient.
@@ -611,7 +611,10 @@ Item {
                         anchors.top: parent.top
                         anchors.topMargin: 1
                         anchors.horizontalCenter: parent.horizontalCenter
-                        width: parent.width - 18
+                        // Inset well clear of the tab L/R edges (tabBody itself
+                        // already insets 2px) so the soft gold glow below stays
+                        // inside the tab and doesn't bleed onto its neighbours.
+                        width: parent.width - 28
                         height: 2
                         radius: 1
                         gradient: Gradient {
@@ -625,7 +628,7 @@ Item {
                             autoPaddingEnabled: true
                             shadowEnabled: true
                             shadowColor: Theme.goldGlow
-                            shadowBlur: 0.5
+                            shadowBlur: 0.34
                         }
                         z: 3
                     }
