@@ -49,13 +49,20 @@ Rectangle {
 
     // Place/bookmark glyphs default to the muted (text-3) tint; the loaders in
     // each row rebind the color to gold when their row is the active one.
-    Component { id: iconHome; IconHome { size: 18; color: Theme.muted } }
-    Component { id: iconEyeOff; IconEyeOff { size: 18; color: Theme.muted } }
-    Component { id: iconClock; IconClock { size: 18; color: Theme.muted } }
-    Component { id: iconTrash; IconTrash { size: 18; color: Theme.muted } }
-    Component { id: iconGlobe; IconGlobe { size: 18; color: Theme.muted } }
-    Component { id: iconFolder; IconFolder { size: 18; color: Theme.muted } }
+    Component { id: iconHome; IconHome { size: 16; color: Theme.muted } }
+    Component { id: iconEyeOff; IconEyeOff { size: 16; color: Theme.muted } }
+    Component { id: iconClock; IconClock { size: 16; color: Theme.muted } }
+    Component { id: iconTrash; IconTrash { size: 16; color: Theme.muted } }
+    Component { id: iconGlobe; IconGlobe { size: 16; color: Theme.muted } }
+    Component { id: iconFolder; IconFolder { size: 16; color: Theme.muted } }
     Component { id: iconStarGold; IconStar { size: 11; color: Theme.gold } }
+    // Per-place icons for XDG roots in the compact rail (matching SidebarPlacesTree).
+    Component { id: iconMonitor;  IconMonitor  { size: 16; color: Theme.muted } }
+    Component { id: iconFileText; IconFileText { size: 16; color: Theme.muted } }
+    Component { id: iconDownload; IconDownload { size: 16; color: Theme.muted } }
+    Component { id: iconImage;    IconImage    { size: 16; color: Theme.muted } }
+    Component { id: iconMusic;    IconMusic    { size: 16; color: Theme.muted } }
+    Component { id: iconVideo;    IconVideo    { size: 16; color: Theme.muted } }
 
     // Inverse rounded corner — top right
     Shape {
@@ -111,16 +118,17 @@ Rectangle {
         // the trailing "+" (revealed on header hover) pins the active folder.
         RowLayout {
             Layout.fillWidth: true
-            Layout.leftMargin: Theme.spacing
+            Layout.leftMargin: 14
             Layout.rightMargin: Theme.spacing
-            Layout.topMargin: Theme.spacing / 2
+            Layout.topMargin: 12
+            Layout.bottomMargin: 4
             HoverHandler { id: favHeaderHover }
             Text {
                 Layout.fillWidth: true
                 text: "FAVORITES"
                 color: Theme.muted
                 font.pointSize: Theme.fontSection
-                font.bold: true
+                font.weight: Font.DemiBold
                 font.capitalization: Font.AllUppercase
                 font.letterSpacing: 1.3
             }
@@ -359,14 +367,14 @@ Rectangle {
 
                         Row {
                             anchors.left: parent.left
-                            anchors.leftMargin: Theme.spacing
+                            anchors.leftMargin: 16
                             anchors.right: parent.right
                             anchors.rightMargin: Theme.spacing
                             anchors.verticalCenter: parent.verticalCenter
-                            spacing: Theme.spacing
+                            spacing: 10
 
                             Loader {
-                                width: 18; height: 18
+                                width: 16; height: 16
                                 anchors.verticalCenter: parent.verticalCenter
                                 sourceComponent: iconFolder
                                 onLoaded: item.color = Qt.binding(
@@ -379,7 +387,7 @@ Rectangle {
                                 font.pointSize: Theme.fontNormal
                                 verticalAlignment: Text.AlignVCenter
                                 elide: Text.ElideRight
-                                width: parent.width - 18 - 11 - Theme.spacing * 2
+                                width: parent.width - 16 - 11 - 10 - Theme.spacing
                             }
 
                             // Favorites carry a decorative trailing gold star.
@@ -578,12 +586,13 @@ Rectangle {
         // Hidden; Trash + Network moved to their own sections.
         Text {
             Layout.fillWidth: true
-            Layout.leftMargin: Theme.spacing
-            Layout.topMargin: Theme.spacing / 2
+            Layout.leftMargin: 14
+            Layout.topMargin: 12
+            Layout.bottomMargin: 4
             text: "PLACES"
             color: Theme.muted
             font.pointSize: Theme.fontSection
-            font.bold: true
+            font.weight: Font.DemiBold
             font.capitalization: Font.AllUppercase
             font.letterSpacing: 1.3
         }
@@ -677,14 +686,14 @@ Rectangle {
 
                     Row {
                         anchors.left: parent.left
-                        anchors.leftMargin: Theme.spacing
+                        anchors.leftMargin: 16
                         anchors.right: parent.right
                         anchors.rightMargin: Theme.spacing
                         anchors.verticalCenter: parent.verticalCenter
-                        spacing: Theme.spacing
+                        spacing: 10
 
                         Loader {
-                            width: 18; height: 18
+                            width: 16; height: 16
                             anchors.verticalCenter: parent.verticalCenter
                             sourceComponent: {
                                 if (model.iconType === "home") return iconHome
@@ -703,7 +712,7 @@ Rectangle {
                             font.pointSize: Theme.fontNormal
                             verticalAlignment: Text.AlignVCenter
                             elide: Text.ElideRight
-                            width: parent.width - 32 - Theme.spacing
+                            width: parent.width - 16 - 10 - Theme.spacing
                         }
                     }
 
@@ -767,12 +776,13 @@ Rectangle {
         // Wayfile section header: DEVICES — mount points and USB.
         Text {
             Layout.fillWidth: true
-            Layout.leftMargin: Theme.spacing
-            Layout.topMargin: Theme.spacing / 2
+            Layout.leftMargin: 14
+            Layout.topMargin: 12
+            Layout.bottomMargin: 4
             text: "DEVICES"
             color: Theme.muted
             font.pointSize: Theme.fontSection
-            font.bold: true
+            font.weight: Font.DemiBold
             font.capitalization: Font.AllUppercase
             font.letterSpacing: 1.3
             visible: devicesSection.visible
@@ -812,12 +822,13 @@ Rectangle {
         Text {
             visible: !root.networkHidden
             Layout.fillWidth: true
-            Layout.leftMargin: Theme.spacing
-            Layout.topMargin: Theme.spacing / 2
+            Layout.leftMargin: 14
+            Layout.topMargin: 12
+            Layout.bottomMargin: 4
             text: "NETWORK"
             color: Theme.muted
             font.pointSize: Theme.fontSection
-            font.bold: true
+            font.weight: Font.DemiBold
             font.capitalization: Font.AllUppercase
             font.letterSpacing: 1.3
         }
@@ -889,14 +900,14 @@ Rectangle {
 
                     Row {
                         anchors.left: parent.left
-                        anchors.leftMargin: Theme.spacing
+                        anchors.leftMargin: 16
                         anchors.right: parent.right
                         anchors.rightMargin: Theme.spacing
                         anchors.verticalCenter: parent.verticalCenter
-                        spacing: Theme.spacing
+                        spacing: 10
 
                         Loader {
-                            width: 18; height: 18
+                            width: 16; height: 16
                             anchors.verticalCenter: parent.verticalCenter
                             sourceComponent: iconGlobe
                             onLoaded: item.color = Qt.binding(
@@ -909,7 +920,7 @@ Rectangle {
                             font.pointSize: Theme.fontNormal
                             verticalAlignment: Text.AlignVCenter
                             elide: Text.ElideRight
-                            width: parent.width - 32 - Theme.spacing
+                            width: parent.width - 16 - 10 - Theme.spacing
                         }
                     }
 
@@ -999,11 +1010,11 @@ Rectangle {
             }
 
             Row {
-                anchors.left: parent.left; anchors.leftMargin: Theme.spacing
+                anchors.left: parent.left; anchors.leftMargin: 16
                 anchors.right: parent.right; anchors.rightMargin: Theme.spacing
-                anchors.verticalCenter: parent.verticalCenter; spacing: Theme.spacing
+                anchors.verticalCenter: parent.verticalCenter; spacing: 10
                 Loader {
-                    width: 18; height: 18
+                    width: 16; height: 16
                     anchors.verticalCenter: parent.verticalCenter
                     sourceComponent: iconTrash
                     onLoaded: item.color = Qt.binding(() => trashRow.isActive ? Theme.gold : Theme.muted)
@@ -1013,7 +1024,7 @@ Rectangle {
                     color: trashRow.isActive ? Theme.text : Theme.subtext
                     font.pointSize: Theme.fontNormal
                     elide: Text.ElideRight
-                    width: parent.width - 18 - Theme.spacing * 2 - 24
+                    width: parent.width - 16 - 10 - Theme.spacing - 24
                 }
             }
             Text {
@@ -1126,7 +1137,7 @@ Rectangle {
 
             Loader {
                 anchors.centerIn: parent
-                width: 18; height: 18
+                width: 16; height: 16
                 sourceComponent: {
                     switch (cbtn.iconKind) {
                     case "star":      return iconStarGold
@@ -1137,6 +1148,12 @@ Rectangle {
                     case "trash":     return iconTrash
                     case "harddrive": return iconCompactDrive
                     case "usb":       return iconCompactUsb
+                    case "desktop":   return iconMonitor
+                    case "documents": return iconFileText
+                    case "downloads": return iconDownload
+                    case "pictures":  return iconImage
+                    case "music":     return iconMusic
+                    case "videos":    return iconVideo
                     default:          return iconFolder
                     }
                 }
@@ -1167,9 +1184,38 @@ Rectangle {
     Component { id: iconCompactDrive; IconHardDrive { size: 18; color: Theme.muted } }
     Component { id: iconCompactUsb;   IconUsb { size: 18; color: Theme.muted } }
 
+    // Compact Trash pinned to bottom of the rail. Rendered outside the Flickable
+    // so it stays anchored to the bottom of the sidebar even when the scrollable
+    // content is short. Height matches the rail button (34) + bottom padding.
+    Loader {
+        id: compactTrashLoader
+        z: 1
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: Theme.spacing
+        anchors.horizontalCenter: parent.horizontalCenter
+        width: root.compactRailWidth
+        active: root.compactMode && !root.trashHidden
+        visible: active
+        height: active ? 34 : 0
+        sourceComponent: compactButton
+        onLoaded: {
+            item.iconKind = "trash"
+            item.tip = "Trash"
+            item.active = Qt.binding(() =>
+                !root.isRecentsView && !root.isHiddenView
+                && fileOps.isTrashPath(root.currentPath))
+            item.activated.connect(function() { root.bookmarkClicked(root.trashPath) })
+        }
+    }
+
     Flickable {
         id: compactRail
         anchors.fill: parent
+        // Reserve room for the bottom-pinned compact Trash button so scrolled
+        // content never slides under it: 34 (compactTrashLoader height) +
+        // Theme.spacing (its bottom anchor margin) + 4 (gap above it).
+        anchors.bottomMargin: root.compactMode && !root.trashHidden
+            ? (34 + Theme.spacing + 4) : 0
         visible: root.compactMode
         contentWidth: width
         contentHeight: compactColumn.height
@@ -1291,7 +1337,16 @@ Rectangle {
                     height: active ? 34 : 0
                     sourceComponent: compactButton
                     onLoaded: {
-                        item.iconKind = "folder"
+                        // Map each XDG root to its unique semantic icon kind
+                        // (mirrors the per-place icons in SidebarPlacesTree).
+                        var lbl = modelData.label
+                        if      (lbl === "Desktop")   item.iconKind = "desktop"
+                        else if (lbl === "Documents") item.iconKind = "documents"
+                        else if (lbl === "Downloads") item.iconKind = "downloads"
+                        else if (lbl === "Pictures")  item.iconKind = "pictures"
+                        else if (lbl === "Music")     item.iconKind = "music"
+                        else if (lbl === "Videos")    item.iconKind = "videos"
+                        else                          item.iconKind = "folder"
                         item.tip = modelData.label
                         item.active = Qt.binding(() =>
                             !root.isRecentsView && !root.isHiddenView
@@ -1363,22 +1418,6 @@ Rectangle {
                 }
             }
 
-            // Trash — pinned last.
-            Loader {
-                width: root.compactRailWidth
-                active: !root.trashHidden
-                visible: active
-                height: active ? 34 : 0
-                sourceComponent: compactButton
-                onLoaded: {
-                    item.iconKind = "trash"
-                    item.tip = "Trash"
-                    item.active = Qt.binding(() =>
-                        !root.isRecentsView && !root.isHiddenView
-                        && fileOps.isTrashPath(root.currentPath))
-                    item.activated.connect(function() { root.bookmarkClicked(root.trashPath) })
-                }
-            }
         }
     }
 }

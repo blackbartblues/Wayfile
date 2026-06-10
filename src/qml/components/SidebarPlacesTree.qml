@@ -21,6 +21,15 @@ Column {
     readonly property int _rowHeight: Math.round(28 * Theme.uiScale)
     spacing: 0
 
+    // Per-place icon components for XDG roots (handoff: each root gets a
+    // distinct semantic glyph instead of the generic folder icon).
+    Component { id: xdgIconDesktop;   IconMonitor  { size: 16; color: Theme.muted } }
+    Component { id: xdgIconDocuments; IconFileText { size: 16; color: Theme.muted } }
+    Component { id: xdgIconDownloads; IconDownload { size: 16; color: Theme.muted } }
+    Component { id: xdgIconPictures;  IconImage    { size: 16; color: Theme.muted } }
+    Component { id: xdgIconMusic;     IconMusic    { size: 16; color: Theme.muted } }
+    Component { id: xdgIconVideos;    IconVideo    { size: 16; color: Theme.muted } }
+
     // One shared folders-only FS model for every subtree.
     FolderTreeModel {
         id: folderTree
@@ -28,12 +37,12 @@ Column {
     }
 
     readonly property var xdgRoots: [
-        { label: "Desktop",   dir: homeDir + "/Desktop"   },
-        { label: "Documents", dir: homeDir + "/Documents" },
-        { label: "Downloads", dir: homeDir + "/Downloads" },
-        { label: "Pictures",  dir: homeDir + "/Pictures"  },
-        { label: "Music",     dir: homeDir + "/Music"     },
-        { label: "Videos",    dir: homeDir + "/Videos"    }
+        { label: "Desktop",   dir: homeDir + "/Desktop",   iconComp: xdgIconDesktop   },
+        { label: "Documents", dir: homeDir + "/Documents", iconComp: xdgIconDocuments },
+        { label: "Downloads", dir: homeDir + "/Downloads", iconComp: xdgIconDownloads },
+        { label: "Pictures",  dir: homeDir + "/Pictures",  iconComp: xdgIconPictures  },
+        { label: "Music",     dir: homeDir + "/Music",     iconComp: xdgIconMusic     },
+        { label: "Videos",    dir: homeDir + "/Videos",    iconComp: xdgIconVideos    }
     ]
 
     Repeater {
@@ -68,8 +77,11 @@ Column {
 
                 // Chevron toggle — expands/collapses the subtree.
                 Item {
+                    // Chevron sits in the 0–16px gutter so the per-place icon
+                    // (Row anchored to xdgChev.right) lands at x=16, left-aligned
+                    // with the flat quick-rows above (handoff .h-sb-item padding-left).
                     id: xdgChev
-                    x: 4; width: 16; height: parent.height
+                    x: 0; width: 16; height: parent.height
                     IconChevronRight {
                         anchors.centerIn: parent
                         size: 13
@@ -86,23 +98,26 @@ Column {
                     }
                 }
 
-                // Folder icon + label — clicking navigates without expanding.
+                // Per-place icon + label — clicking navigates without expanding.
+                // Left inset 16px (handoff .h-sb-item padding-left), icon 16px,
+                // icon↔text gap 10px.
                 Row {
                     anchors.left: xdgChev.right
                     anchors.right: parent.right
                     anchors.rightMargin: 8
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 6
-                    FileIcon {
+                    spacing: 10
+                    Loader {
+                        width: 16; height: 16
                         anchors.verticalCenter: parent.verticalCenter
-                        isDir: true
-                        size: 15
-                        hovered: xdgHeaderHover.hovered
-                        selected: xdgItem.modelData.dir === root.currentDir
+                        sourceComponent: xdgItem.modelData.iconComp
+                        onLoaded: item.color = Qt.binding(
+                            () => xdgItem.modelData.dir === root.currentDir
+                                  ? Theme.gold : Theme.muted)
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width - 15 - 6
+                        width: parent.width - 16 - 10
                         text: xdgItem.modelData.label
                         color: xdgItem.modelData.dir === root.currentDir
                                ? Theme.gold : Theme.text
