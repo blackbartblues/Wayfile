@@ -37,6 +37,7 @@
 #include "models/tablistmodel.h"
 #include "models/bookmarkmodel.h"
 #include "models/devicemodel.h"
+#include "models/networklocationmodel.h"
 #include "models/recentfilesmodel.h"
 #include "models/searchresultsmodel.h"
 #include "models/searchproxymodel.h"
@@ -392,6 +393,9 @@ int main(int argc, char *argv[])
     // Create DeviceModel
     DeviceModel *devices = new DeviceModel(&app, true);
 
+    // Live GVFS network mounts (sftp/smb/nfs/…) for the sidebar Network section.
+    NetworkLocationModel *networkLocations = new NetworkLocationModel(&app);
+
     // Aggregate runtime tools + compile-time features + DBus services for the
     // in-app MissingDependenciesDialog. Replaces the older hand-rolled
     // `which` loop that only logged to stderr.
@@ -460,6 +464,7 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("millerParentModel", millerParentModel);
     engine.rootContext()->setContextProperty("millerPreviewModel", millerPreviewModel);
     engine.rootContext()->setContextProperty("devices", devices);
+    engine.rootContext()->setContextProperty("networkModel", networkLocations);
     engine.rootContext()->setContextProperty("recentFiles", recentFiles);
     engine.rootContext()->setContextProperty("hiddenEntries", hiddenEntries);
     engine.rootContext()->setContextProperty("searchProxy", paneServices[0].searchProxy);

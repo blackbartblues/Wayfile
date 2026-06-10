@@ -24,6 +24,7 @@ set(WAYFILE_SOURCES
     models/devicemodel.cpp
     models/devicemodel_enumerate.cpp
     models/devicemodel_mount.cpp
+    models/networklocationmodel.cpp
     models/recentfilesmodel.cpp
     models/searchresultsmodel.cpp
     models/searchproxymodel.cpp

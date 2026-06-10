@@ -21,6 +21,9 @@ Rectangle {
     // whose header (Network) or whole row (Trash) must collapse with their id.
     readonly property bool networkHidden: config.hiddenSidebarEntries.indexOf("network") >= 0
     readonly property bool trashHidden: config.hiddenSidebarEntries.indexOf("trash") >= 0
+    // W8: the Network section enumerates live GVFS network mounts and hides
+    // entirely (header + separator + rows) when there are none (or it's hidden).
+    readonly property bool networkSectionVisible: !networkHidden && networkModel.count > 0
     signal bookmarkClicked(string path)
     signal sidebarContextMenuRequested(var item, point position)
     signal recentsClicked()
@@ -54,6 +57,34 @@ Rectangle {
     Component { id: iconClock; IconClock { size: 16; color: Theme.muted } }
     Component { id: iconTrash; IconTrash { size: 16; color: Theme.muted } }
     Component { id: iconGlobe; IconGlobe { size: 16; color: Theme.muted } }
+    // W8: inline "network" glyph (Lucide network: three nodes + a connecting
+    // bus) for the Network section. icons/ is a no-push submodule, so it lives
+    // here in the main repo rather than as a new IconNetwork.qml.
+    Component {
+        id: iconNetwork
+        Shape {
+            id: netShape
+            property real size: 16
+            property color color: Theme.muted
+            property real strokeWidth: Math.max(1, size / 12)
+            width: size; height: size
+            preferredRendererType: Shape.CurveRenderer
+            // Three node boxes.
+            ShapePath {
+                strokeColor: netShape.color; strokeWidth: netShape.strokeWidth
+                fillColor: "transparent"; capStyle: ShapePath.RoundCap; joinStyle: ShapePath.RoundJoin
+                scale: Qt.size(netShape.size / 24, netShape.size / 24)
+                PathSvg { path: "M9 2 H15 V8 H9 Z M2 16 H8 V22 H2 Z M16 16 H22 V22 H16 Z" }
+            }
+            // Connecting bus: centre drop, horizontal trunk, two leg drops.
+            ShapePath {
+                strokeColor: netShape.color; strokeWidth: netShape.strokeWidth
+                fillColor: "transparent"; capStyle: ShapePath.RoundCap; joinStyle: ShapePath.RoundJoin
+                scale: Qt.size(netShape.size / 24, netShape.size / 24)
+                PathSvg { path: "M12 8 V12 M5 12 H19 M5 12 V16 M19 12 V16" }
+            }
+        }
+    }
     Component { id: iconFolder; IconFolder { size: 16; color: Theme.muted } }
     Component { id: iconStarGold; IconStar { size: 11; color: Theme.gold } }
     // W8: FILLED star for the Favorites leading icon. IconStar (submodule) is a
@@ -835,11 +866,10 @@ Rectangle {
             }
         }
 
-        // Separator above NETWORK — hides with the Network entry (W7 per-entry
-        // hide). Network is otherwise a permanent, always-reachable entry, so
-        // the divider follows the row's visibility.
+        // Separator above NETWORK — hidden with the whole section when there
+        // are no live network mounts (or it's hidden via W7 per-entry hide).
         Rectangle {
-            visible: !root.networkHidden
+            visible: root.networkSectionVisible
             Layout.fillWidth: true
             Layout.leftMargin: Theme.spacing
             Layout.rightMargin: Theme.spacing
@@ -847,9 +877,9 @@ Rectangle {
             color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.08)
         }
 
-        // Wayfile section header: NETWORK — remote/virtual locations.
+        // Wayfile section header: NETWORK — live GVFS network mounts (W8).
         Text {
-            visible: !root.networkHidden
+            visible: root.networkSectionVisible
             Layout.fillWidth: true
             Layout.leftMargin: 14
             Layout.topMargin: 12
@@ -862,26 +892,29 @@ Rectangle {
             font.letterSpacing: 1.3
         }
 
-        // Network section — single entry navigating to network:/// (gvfs mounts).
+        // Network section — one row per live GVFS network mount (sftp/smb/nfs/…),
+        // enumerated by NetworkLocationModel. Click navigates to the mount URI;
+        // the whole section hides when the model is empty (W8).
         Column {
             Layout.fillWidth: true
+            visible: root.networkSectionVisible
 
             Repeater {
-                model: ListModel {
-                    ListElement { name: "Network"; iconType: "globe" }
-                }
+                model: networkModel
 
                 delegate: Rectangle {
                     id: networkDelegate
+                    readonly property string entryName: model.name
+                    readonly property string entryUri: model.uri
 
                     width: parent.width - Theme.spacing
                     anchors.horizontalCenter: parent.horizontalCenter
-                    // Hide-from-sidebar (W7): "network" id. Collapse row + (via the
-                    // shared networkHidden flag) the NETWORK header above it.
-                    visible: !root.networkHidden
-                    height: visible ? 28 : 0
+                    height: 28
                     readonly property bool isActive:
-                        !root.isRecentsView && !root.isHiddenView && fileOps.isRemotePath(root.currentPath)
+                        !root.isRecentsView && !root.isHiddenView
+                        && root.currentPath.length > 0
+                        && (root.currentPath === entryUri
+                            || root.currentPath.indexOf(entryUri) === 0)
 
                     color: {
                         if (networkHoverArea.containsMouse && !isActive)
@@ -938,13 +971,13 @@ Rectangle {
                         Loader {
                             width: 16; height: 16
                             anchors.verticalCenter: parent.verticalCenter
-                            sourceComponent: iconGlobe
+                            sourceComponent: iconNetwork
                             onLoaded: item.color = Qt.binding(
                                 () => networkDelegate.isActive ? Theme.gold : Theme.muted)
                         }
 
                         Text {
-                            text: model.name
+                            text: networkDelegate.entryName
                             color: networkDelegate.isActive ? Theme.text : Theme.subtext
                             font.pointSize: Theme.fontNormal
                             verticalAlignment: Text.AlignVCenter
@@ -964,15 +997,15 @@ Rectangle {
                                 var mapped = networkHoverArea.mapToItem(null, mouse.x, mouse.y)
                                 root.sidebarContextMenuRequested({
                                     kind: "quickAccess",
-                                    name: "Network",
-                                    path: "network:///",
+                                    name: networkDelegate.entryName,
+                                    path: networkDelegate.entryUri,
                                     isRecents: false,
                                     isHidden: false,
                                     entryId: "network"
                                 }, Qt.point(mapped.x, mapped.y))
                                 return
                             }
-                            root.bookmarkClicked("network:///")
+                            root.bookmarkClicked(networkDelegate.entryUri)
                         }
                     }
                 }
@@ -1178,6 +1211,7 @@ Rectangle {
                     case "clock":     return iconClock
                     case "eyeoff":    return iconEyeOff
                     case "globe":     return iconGlobe
+                    case "network":   return iconNetwork
                     case "trash":     return iconTrash
                     case "harddrive": return iconCompactDrive
                     case "usb":       return iconCompactUsb
@@ -1446,20 +1480,26 @@ Rectangle {
                 }
             }
 
-            // Network.
-            Loader {
-                width: root.compactRailWidth
-                active: !root.networkHidden
-                visible: active
-                height: active ? 34 : 0
-                sourceComponent: compactButton
-                onLoaded: {
-                    item.iconKind = "globe"
-                    item.tip = "Network"
-                    item.active = Qt.binding(() =>
-                        !root.isRecentsView && !root.isHiddenView
-                        && fileOps.isRemotePath(root.currentPath))
-                    item.activated.connect(function() { root.bookmarkClicked("network:///") })
+            // Network — one compact button per live GVFS mount (W8). Empty
+            // model (or hidden) → no rows.
+            Repeater {
+                model: root.networkHidden ? null : networkModel
+                delegate: Loader {
+                    readonly property string entryName: model.name
+                    readonly property string entryUri: model.uri
+                    width: root.compactRailWidth
+                    height: 34
+                    sourceComponent: compactButton
+                    onLoaded: {
+                        item.iconKind = "network"
+                        item.tip = entryName
+                        item.active = Qt.binding(() =>
+                            !root.isRecentsView && !root.isHiddenView
+                            && root.currentPath.length > 0
+                            && (root.currentPath === entryUri
+                                || root.currentPath.indexOf(entryUri) === 0))
+                        item.activated.connect(function() { root.bookmarkClicked(entryUri) })
+                    }
                 }
             }
 
