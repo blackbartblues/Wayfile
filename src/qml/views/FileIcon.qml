@@ -32,12 +32,17 @@ Item {
         WayFile { size: root.size; kind: root._f ? root._f.kind : "doc"; color: root._f ? root._f.color : FileTypeColors.other }
     }
 
-    // Uniform gold bloom on hover/selected only (rest = plain Shape).
+    // Light-touch bloom on hover/selected only (rest = plain Shape — the GitBadge
+    // perf lesson). W8: files glow in their TYPE colour (folders keep the accent
+    // glow); selection reads stronger than hover via a blur + opacity step.
     layer.enabled: root.hovered || root.selected
     layer.effect: MultiEffect {
         autoPaddingEnabled: true
         shadowEnabled: true
-        shadowColor: Theme.goldGlow
+        shadowColor: root.isDir
+            ? Theme.gold
+            : (root._f ? root._f.color : Theme.gold)
         shadowBlur: root.selected ? 0.7 : 0.45
+        shadowOpacity: root.selected ? 0.55 : 0.32
     }
 }
