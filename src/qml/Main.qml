@@ -1648,9 +1648,23 @@ ApplicationWindow {
             searchDateFilter: root.searchProxyForPane(activePaneIndex).dateFilter
             searchSizeFilter: root.searchProxyForPane(activePaneIndex).sizeFilter
             filterPanelOpen: root.paneFilterPanelOpen(activePaneIndex)
+            moreMenu: mainOverlays.moreMenu
             onBackRequested: root.goActivePaneBack()
             onForwardRequested: root.goActivePaneForward()
             onUpRequested: root.goActivePaneUp()
+            onRefreshRequested: {
+                // Refresh the active model when it can (FileSystemModel —
+                // normal + hidden views); otherwise fall back to the pane's
+                // base model. Recents has no meaningful rescan (it's a derived
+                // list, not a directory) so skip it silently rather than
+                // pointlessly rescanning the base dir; search proxies refresh
+                // via their base model.
+                var mdl = root.paneModel(activePaneIndex)
+                if (mdl && typeof mdl.refresh === "function")
+                    mdl.refresh()
+                else if (!root.paneIsRecents(activePaneIndex))
+                    root.paneBaseModel(activePaneIndex).refresh()
+            }
             onNavigateRequested: (targetPath) => root.navigateActivePaneTo(targetPath)
             onConnectRemoteRequested: root.openRemoteConnectDialog()
             onSettingsRequested: root.openSettingsPanel()

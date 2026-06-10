@@ -43,16 +43,37 @@ Rectangle {
     property string searchDateFilter: ""
     property string searchSizeFilter: ""
     property bool filterPanelOpen: false
-    property alias searchBar: searchBarLoader.item
     property alias filterPanel: filterPanelLoader.item
+    // ⋯More overflow menu — a full-window ContextMenu hosted in MainOverlays
+    // and passed in here (mirrors how SidebarPane receives sidebarContextMenu).
+    property var moreMenu: null
 
     function startEditing() {
         if (!searchMode) breadcrumb.startEditing()
     }
 
-    function syncSearchBarState() {
-        if (searchBarLoader.item)
-            searchBarLoader.item.applyQuery(currentSearchQuery)
+    // ⋯More overflow — Settings + Collapse/Expand sidebar. Built fresh each
+    // open so the sidebar label reflects current state. Anchored to the More
+    // button's bottom-left in window coords.
+    function openMoreMenu(anchorItem) {
+        if (!moreMenu)
+            return
+        var compact = root.window !== null && root.window.sidebarCompact
+        var items = [
+            { text: "Settings", shortcut: "", action: "more-settings", icon: "Settings" }
+        ]
+        if (root.window !== null) {
+            items.push({ separator: true })
+            items.push({
+                text: compact ? "Expand Sidebar" : "Collapse Sidebar",
+                shortcut: "", action: "more-sidebar-toggle", icon: "PanelLeft"
+            })
+        }
+        moreMenu.customItems = items
+        // Map to scene (null) coordinates — the menu overlay fills the window
+        // and positions in window space (mirrors the sidebar menu's mapToItem(null)).
+        var pos = anchorItem.mapToItem(null, anchorItem.width, anchorItem.height + 4)
+        moreMenu.popup(pos.x - moreMenu.menuWidth, pos.y)
     }
 
     function syncFilterPanelState() {
@@ -63,7 +84,6 @@ Rectangle {
         filterPanelLoader.item.applyState(searchTypeFilter, searchDateFilter, searchSizeFilter)
     }
 
-    onCurrentSearchQueryChanged: syncSearchBarState()
     onSearchTypeFilterChanged: syncFilterPanelState()
     onSearchDateFilterChanged: syncFilterPanelState()
     onSearchSizeFilterChanged: syncFilterPanelState()
@@ -77,6 +97,7 @@ Rectangle {
     signal searchClosed()
     signal searchEnterPressed()
     signal searchNavigateDown()
+    signal refreshRequested()
     signal backRequested()
     signal forwardRequested()
     signal upRequested()
@@ -151,9 +172,9 @@ Rectangle {
 
             RowLayout {
                 anchors.fill: parent
-                anchors.leftMargin: Theme.spacing
-                anchors.rightMargin: Theme.spacing
-                spacing: 4
+                anchors.leftMargin: Theme.spacing + 4   // 12px row padding (handoff .h-toolbar)
+                anchors.rightMargin: Theme.spacing + 4
+                spacing: 6                               // handoff .h-toolbar gap
 
                 // Left-side window controls
                 Repeater {
@@ -181,19 +202,84 @@ Rectangle {
                     height: 1
                 }
 
-                // ── Action cluster (left of the breadcrumb, #8) ──
-                // Merge/unmerge, sidebar toggle, search, settings, new folder.
-                // Relocated here from the toolbar's right edge so they sit on
-                // the left side of the breadcrumb. Always visible — they do not
-                // disappear when the sidebar (a separate panel) is collapsed.
+                // ── Nav cluster (handoff order: Back · Fwd · Up · Refresh) ──
+                // Arrows (not chevrons) drawn inline via NavArrow — the icons
+                // dir is a no-push submodule with no arrow glyphs.
+                // Back button
+                HoverRect {
+                    width: Theme.compactControlSize; height: Theme.compactControlSize
+                    radius: Theme.radiusButton
+                    hoverEnabled: root.canGoBack
+                    opacity: hoverEnabled ? 1.0 : 0.4
+                    onClicked: root.backRequested()
+                    NavArrow { anchors.centerIn: parent; direction: "left"; size: 15; color: Theme.text }
+                    Q.Tooltip { text: "Back"; visible: parent.hovered }
+                }
+
+                // Forward button
+                HoverRect {
+                    width: Theme.compactControlSize; height: Theme.compactControlSize
+                    radius: Theme.radiusButton
+                    hoverEnabled: root.canGoForward
+                    opacity: hoverEnabled ? 1.0 : 0.4
+                    onClicked: root.forwardRequested()
+                    NavArrow { anchors.centerIn: parent; direction: "right"; size: 15; color: Theme.text }
+                    Q.Tooltip { text: "Forward"; visible: parent.hovered }
+                }
+
+                // Up button
+                HoverRect {
+                    width: Theme.compactControlSize; height: Theme.compactControlSize
+                    radius: Theme.radiusButton
+                    hoverEnabled: !root.isRecentsView && !root.isHiddenView
+                    opacity: hoverEnabled ? 1.0 : 0.4
+                    onClicked: root.upRequested()
+                    NavArrow { anchors.centerIn: parent; direction: "up"; size: 15; color: Theme.text }
+                    Q.Tooltip { text: "Up"; visible: parent.hovered }
+                }
+
+                // Refresh button (W8 — reloads the active pane's model)
+                HoverRect {
+                    id: refreshBtn
+                    width: Theme.compactControlSize; height: Theme.compactControlSize
+                    radius: Theme.radiusButton
+                    onClicked: root.refreshRequested()
+                    IconRefreshCw { anchors.centerIn: parent; size: 14; color: Theme.text }
+                    Q.Tooltip { text: "Refresh"; visible: refreshBtn.hovered }
+                }
+
+                // Separator: nav cluster | new-folder/merge group
+                Rectangle {
+                    Layout.alignment: Qt.AlignVCenter
+                    Layout.leftMargin: 4; Layout.rightMargin: 4
+                    width: 1; height: 18
+                    color: Theme.line
+                }
+
+                // ── New Folder · Merge group ──
+                HoverRect {
+                    id: newFolderBtn
+                    width: Theme.compactControlSize; height: Theme.compactControlSize
+                    radius: Theme.radiusButton
+                    visible: !root.isTrashView
+                    onClicked: root.newFolderRequested()
+                    IconFolder { anchors.centerIn: parent; size: 16; color: Theme.text }
+                    IconPlus {
+                        anchors.right: parent.right; anchors.bottom: parent.bottom
+                        anchors.rightMargin: 6; anchors.bottomMargin: 6
+                        size: 11; color: Theme.accent
+                    }
+                    Q.Tooltip { text: "New folder"; visible: newFolderBtn.hovered }
+                }
+
                 // Signature merge action. Idle = gold-wash + goldLine border +
                 // gold link glyph (handoff .iconbtn--gold). Armed (the active
                 // tab is a supertab / a merge is pending) = solid gold gradient
                 // + dark glyph + gold glow (handoff .iconbtn--armed).
                 HoverRect {
                     id: mergeBtn
-                    width: Theme.controlSize; height: Theme.controlSize
-                    visible: !root.searchMode
+                    width: Theme.compactControlSize; height: Theme.compactControlSize
+                    radius: Theme.radiusButton
                     // ALWAYS clickable: with no extra selection a click merges
                     // the active tab with its right neighbour (left fallback /
                     // split when it's the only tab). `mergeOn` is the ARMED
@@ -227,153 +313,47 @@ Rectangle {
                     // UNMERGE a supertab reuses the existing IconUnlink.
                     Shape {
                         anchors.centerIn: parent
-                        width: 18; height: 18
+                        width: 16; height: 16
                         visible: !root.mergeWillUnmerge
                         preferredRendererType: Shape.CurveRenderer
                         ShapePath {
                             // dark glyph on the bright armed gradient; gold glyph
                             // on the subtle idle gold-wash (matches handoff).
                             strokeColor: root.mergeOn ? Theme.goldInk : Theme.gold
-                            strokeWidth: Math.max(1, 18 / 12)
+                            strokeWidth: Math.max(1, 16 / 12)
                             fillColor: "transparent"; capStyle: ShapePath.RoundCap; joinStyle: ShapePath.RoundJoin
-                            scale: Qt.size(18 / 24, 18 / 24)
+                            scale: Qt.size(16 / 24, 16 / 24)
                             PathSvg { path: "M10.4 13.6a4 4 0 0 0 6 .43l2.2-2.2a4 4 0 0 0-5.66-5.66l-1.26 1.25" }
                         }
                         ShapePath {
                             // dark glyph on the bright armed gradient; gold glyph
                             // on the subtle idle gold-wash (matches handoff).
                             strokeColor: root.mergeOn ? Theme.goldInk : Theme.gold
-                            strokeWidth: Math.max(1, 18 / 12)
+                            strokeWidth: Math.max(1, 16 / 12)
                             fillColor: "transparent"; capStyle: ShapePath.RoundCap; joinStyle: ShapePath.RoundJoin
-                            scale: Qt.size(18 / 24, 18 / 24)
+                            scale: Qt.size(16 / 24, 16 / 24)
                             PathSvg { path: "M13.6 10.4a4 4 0 0 0-6-.43l-2.2 2.2a4 4 0 0 0 5.66 5.66l1.25-1.25" }
                         }
                     }
-                    IconUnlink { anchors.centerIn: parent; size: 18; color: Theme.goldInk; visible:  root.mergeWillUnmerge }
+                    IconUnlink { anchors.centerIn: parent; size: 16; color: Theme.goldInk; visible:  root.mergeWillUnmerge }
                     Q.Tooltip { text: root.mergeTooltip; visible: mergeBtn.hovered && root.mergeTooltip.length > 0 }
                 }
 
-                // W7: collapses the sidebar to a 56px icon rail (Compact) / back
-                // to Full. Gold-highlighted while Compact (signals "click to
-                // expand"); plain in Full. Persisted via config.saveSidebarCompact.
-                HoverRect {
-                    id: sidebarToggleBtn
-                    width: Theme.controlSize; height: Theme.controlSize
-                    visible: !root.searchMode && root.window !== null
-                    readonly property bool sbCompact: root.window !== null && root.window.sidebarCompact
-                    border.width: sbCompact ? 1 : 0
-                    border.color: Theme.goldLine
-                    color: sbCompact
-                        ? (hovered ? Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.12) : Theme.goldWash)
-                        : (hovered ? Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.1) : "transparent")
-                    onClicked: {
-                        if (root.window) {
-                            root.window.sidebarCompact = !root.window.sidebarCompact
-                            config.saveSidebarCompact(root.window.sidebarCompact)
-                        }
-                    }
-                    IconPanelLeft {
-                        anchors.centerIn: parent
-                        size: 18
-                        color: sidebarToggleBtn.sbCompact ? Theme.gold : Theme.text
-                    }
-                    Q.Tooltip {
-                        text: sidebarToggleBtn.sbCompact ? "Expand sidebar" : "Collapse sidebar"
-                        visible: sidebarToggleBtn.hovered
-                    }
-                }
-
-                HoverRect {
-                    id: searchBtn
-                    width: Theme.controlSize; height: Theme.controlSize
-                    visible: !root.searchMode && !root.isTrashView && !root.isRemoteView
-                    onClicked: root.searchClicked()
-                    IconSearch { anchors.centerIn: parent; size: 18; color: Theme.text }
-                    Q.Tooltip { text: "Search"; visible: searchBtn.hovered }
-                }
-
-                HoverRect {
-                    id: settingsBtn
-                    width: Theme.controlSize; height: Theme.controlSize
-                    visible: !root.searchMode
-                    onClicked: root.settingsRequested()
-                    IconSettings { anchors.centerIn: parent; size: 18; color: Theme.text }
-                    Q.Tooltip { text: "Settings"; visible: settingsBtn.hovered }
-                }
-
-                // Separator between settings and the new-folder action.
+                // Separator: new-folder/merge group | breadcrumb
                 Rectangle {
-                    visible: !root.searchMode
                     Layout.alignment: Qt.AlignVCenter
-                    width: 1
-                    height: Math.round(Theme.controlSize * 0.55)
+                    Layout.leftMargin: 4; Layout.rightMargin: 4
+                    width: 1; height: 18
                     color: Theme.line
                 }
 
-                HoverRect {
-                    id: newFolderBtn
-                    width: Theme.controlSize; height: Theme.controlSize
-                    visible: !root.searchMode && !root.isTrashView
-                    onClicked: root.newFolderRequested()
-                    IconFolder { anchors.centerIn: parent; size: 18; color: Theme.text }
-                    IconPlus {
-                        anchors.right: parent.right; anchors.bottom: parent.bottom
-                        anchors.rightMargin: 8; anchors.bottomMargin: 8
-                        size: 12; color: Theme.accent
-                    }
-                    Q.Tooltip { text: "New folder"; visible: newFolderBtn.hovered }
-                }
-
-                // Divider between the new-folder action and the navigation buttons
-                Rectangle {
-                    visible: !root.searchMode
-                    Layout.alignment: Qt.AlignVCenter
-                    width: 1
-                    height: Math.round(Theme.controlSize * 0.55)
-                    color: Theme.line
-                }
-
-                // Back button
-                HoverRect {
-                    width: Theme.controlSize; height: Theme.controlSize
-                    hoverEnabled: root.canGoBack
-                    opacity: hoverEnabled ? 1.0 : 0.4
-                    onClicked: root.backRequested()
-                    IconChevronLeft { anchors.centerIn: parent; size: 18; color: Theme.text }
-                }
-
-                // Forward button
-                HoverRect {
-                    width: Theme.controlSize; height: Theme.controlSize
-                    hoverEnabled: root.canGoForward
-                    opacity: hoverEnabled ? 1.0 : 0.4
-                    onClicked: root.forwardRequested()
-                    IconChevronRight { anchors.centerIn: parent; size: 18; color: Theme.text }
-                }
-
-                // Up button
-                HoverRect {
-                    width: Theme.controlSize; height: Theme.controlSize
-                    hoverEnabled: !root.isRecentsView && !root.isHiddenView
-                    opacity: hoverEnabled ? 1.0 : 0.4
-                    onClicked: root.upRequested()
-                    IconChevronUp { anchors.centerIn: parent; size: 18; color: Theme.text }
-                }
-
-                // Separator between the navigation buttons and the breadcrumb.
-                Rectangle {
-                    Layout.alignment: Qt.AlignVCenter
-                    width: 1
-                    height: Math.round(Theme.controlSize * 0.55)
-                    color: Theme.line
-                }
-
-                // Breadcrumb / address bar (hidden in search mode)
+                // ── Breadcrumb / address bar (always visible — search no longer
+                //    swaps it out; results render in the content area while the
+                //    breadcrumb stays put, handoff toolbar order). ──
                 Breadcrumb {
                     id: breadcrumb
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    visible: !root.searchMode
                     path: root.navigationPath
                     activeTab: root.activeTab
                     isRecentsView: root.isRecentsView
@@ -381,33 +361,11 @@ Rectangle {
                     onNavigateRequested: (targetPath) => root.navigateRequested(targetPath)
                 }
 
-                // Search bar (shown in search mode)
-                Loader {
-                    id: searchBarLoader
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: Theme.compactControlSize
-                    Layout.alignment: Qt.AlignVCenter
-                    visible: root.searchMode
-                    active: root.searchMode
-                    sourceComponent: SearchBar {
-                        searchQuery: root.currentSearchQuery
-                        filterPanelOpen: root.filterPanelOpen
-                        onQueryChanged: (query) => root.searchQueryChanged(query)
-                        onFilterToggled: root.searchFilterToggled()
-                        onSearchClosed: root.searchClosed()
-                        onEnterPressed: root.searchEnterPressed()
-                        onNavigateDown: root.searchNavigateDown()
-                    }
-                    onLoaded: {
-                        root.syncSearchBarState()
-                        item.focusInput()
-                    }
-                }
-
                 // Restore button (only in trash view)
                 HoverRect {
-                    width: restoreTrashRow.implicitWidth + 16; height: Theme.controlSize
-                    visible: root.isTrashView && !root.searchMode
+                    width: restoreTrashRow.implicitWidth + 16; height: Theme.compactControlSize
+                    radius: Theme.radiusButton
+                    visible: root.isTrashView
                     onClicked: root.restoreTrashRequested()
                     Row {
                         id: restoreTrashRow
@@ -426,8 +384,9 @@ Rectangle {
 
                 // Empty Trash button (only in trash view)
                 HoverRect {
-                    width: emptyTrashRow.implicitWidth + 16; height: Theme.controlSize
-                    visible: root.isTrashView && !root.searchMode
+                    width: emptyTrashRow.implicitWidth + 16; height: Theme.compactControlSize
+                    radius: Theme.radiusButton
+                    visible: root.isTrashView
                     onClicked: root.emptyTrashRequested()
                     Row {
                         id: emptyTrashRow
@@ -444,9 +403,173 @@ Rectangle {
                     }
                 }
 
-                // (D7) The Keyboard-Shortcuts toolbar button was removed — the
-                // keyboard shortcut still opens the dialog (Main.qml). The
-                // keyboardShortcutsRequested signal is retained for that path.
+                // Separator: breadcrumb | search box
+                Rectangle {
+                    visible: !root.isTrashView && !root.isRemoteView
+                    Layout.alignment: Qt.AlignVCenter
+                    Layout.leftMargin: 4; Layout.rightMargin: 4
+                    width: 1; height: 18
+                    color: Theme.line
+                }
+
+                // ── Always-visible search box (240×30, handoff .h-search).
+                //    Typing drives the existing per-pane search backend: a
+                //    non-empty query activates search (results render in the
+                //    content area while the breadcrumb stays visible); clearing
+                //    the box / Esc closes it. The old full-width SearchBar swap
+                //    and the standalone toggle button are gone. ──
+                Rectangle {
+                    id: searchBox
+                    visible: !root.isTrashView && !root.isRemoteView
+                    Layout.preferredWidth: 240
+                    Layout.preferredHeight: 30
+                    Layout.alignment: Qt.AlignVCenter
+                    radius: Theme.radiusButton
+                    color: Theme.crust
+                    border.width: 1
+                    border.color: searchInput.activeFocus ? Theme.goldLine : Theme.lineSoft
+
+                    // subtle inset top shadow (handoff box-shadow: inset 0 1px 2px)
+                    Rectangle {
+                        anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
+                        anchors.margins: 1
+                        height: 1; radius: 1
+                        color: Qt.rgba(0, 0, 0, 0.4)
+                    }
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 10
+                        anchors.rightMargin: 8
+                        spacing: 6
+
+                        IconSearch {
+                            Layout.alignment: Qt.AlignVCenter
+                            size: 14
+                            color: searchInput.activeFocus || searchInput.text.length > 0 ? Theme.text : Theme.subtext
+                        }
+
+                        TextInput {
+                            id: searchInput
+                            Layout.fillWidth: true
+                            Layout.alignment: Qt.AlignVCenter
+                            verticalAlignment: TextInput.AlignVCenter
+                            clip: true
+                            color: Theme.text
+                            font.pointSize: Theme.fontNormal
+                            selectionColor: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.35)
+                            selectedTextColor: Theme.text
+                            // No `text:` binding — the box owns its own text and
+                            // pushes it to the backend on edit. External resets
+                            // (pane switch / closeSearch elsewhere) flow back in
+                            // via the Connections below, guarded so an echo of
+                            // the user's own keystroke never clobbers the cursor.
+                            property bool _internalEdit: false
+                            onTextEdited: {
+                                _internalEdit = true
+                                if (text.length > 0) {
+                                    // Activate search (no-op if already on) then push
+                                    // the query through the existing backend.
+                                    if (!root.searchMode)
+                                        root.searchClicked()
+                                    root.searchQueryChanged(text)
+                                } else {
+                                    root.searchClosed()
+                                }
+                                _internalEdit = false
+                            }
+                            Keys.onEscapePressed: {
+                                searchInput.text = ""
+                                root.searchClosed()
+                                searchInput.focus = false
+                            }
+                            Keys.onReturnPressed: root.searchEnterPressed()
+                            Keys.onEnterPressed: root.searchEnterPressed()
+                            Keys.onDownPressed: root.searchNavigateDown()
+
+                            // Mirror external query changes (pane switch, programmatic
+                            // close) into the box without disturbing live typing.
+                            Connections {
+                                target: root
+                                function onCurrentSearchQueryChanged() {
+                                    if (!searchInput._internalEdit
+                                        && searchInput.text !== root.currentSearchQuery)
+                                        searchInput.text = root.currentSearchQuery
+                                }
+                            }
+
+                            Text {
+                                anchors.fill: parent
+                                verticalAlignment: Text.AlignVCenter
+                                visible: searchInput.text.length === 0
+                                text: "Search current folder"
+                                color: Theme.subtext
+                                font: searchInput.font
+                                elide: Text.ElideRight
+                            }
+                        }
+
+                        // Filter chip — keeps the FilterPanel reachable now that
+                        // the old SearchBar (which hosted the filter toggle) is
+                        // gone. Highlighted while the panel is open.
+                        HoverRect {
+                            Layout.alignment: Qt.AlignVCenter
+                            width: 22; height: 22
+                            radius: Theme.radiusSmall
+                            color: root.filterPanelOpen
+                                ? Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.16)
+                                : (hovered ? Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.1) : "transparent")
+                            onClicked: root.searchFilterToggled()
+                            IconSlidersH {
+                                anchors.centerIn: parent
+                                size: 13
+                                color: root.filterPanelOpen ? Theme.gold : Theme.subtext
+                            }
+                        }
+
+                        // Keyboard-shortcut chip (mono, handoff <kbd>).
+                        Rectangle {
+                            Layout.alignment: Qt.AlignVCenter
+                            visible: searchInput.text.length === 0 && !searchInput.activeFocus
+                            implicitWidth: kbdLabel.implicitWidth + 10
+                            implicitHeight: 16
+                            radius: 3
+                            color: Theme.raise
+                            border.width: 1
+                            border.color: Theme.line
+                            Text {
+                                id: kbdLabel
+                                anchors.centerIn: parent
+                                text: "Ctrl K"
+                                font.family: Fonts.mono
+                                font.pointSize: Theme.fontSection
+                                color: Theme.subtext
+                            }
+                        }
+                    }
+                }
+
+                // ── ⋯More overflow (Settings + Collapse/Expand sidebar). 3
+                //    horizontal dots drawn inline (no ellipsis icon in the
+                //    no-push icons submodule). ──
+                HoverRect {
+                    id: moreBtn
+                    width: Theme.compactControlSize; height: Theme.compactControlSize
+                    radius: Theme.radiusButton
+                    onClicked: root.openMoreMenu(moreBtn)
+                    Row {
+                        anchors.centerIn: parent
+                        spacing: 3
+                        Repeater {
+                            model: 3
+                            delegate: Rectangle {
+                                width: 3; height: 3; radius: 1.5
+                                color: moreBtn.hovered ? Theme.text : Theme.subtext
+                            }
+                        }
+                    }
+                    Q.Tooltip { text: "More"; visible: moreBtn.hovered }
+                }
 
                 Item {
                     visible: root.showWindowControls && root._parsedLayout.right.length > 0

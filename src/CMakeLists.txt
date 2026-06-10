@@ -122,6 +122,7 @@ list(APPEND wayfile_qml_module_args
         qml/components/PaneFrame.qml
         qml/components/SplitPaneHeader.qml
         qml/components/Breadcrumb.qml
+        qml/components/NavArrow.qml
         qml/components/Toolbar.qml
         qml/components/HoverRect.qml
         qml/components/SelectionController.qml
@@ -175,6 +176,7 @@ list(APPEND wayfile_qml_module_args
         qml/icons/IconColumns.qml
         qml/icons/IconHome.qml
         qml/icons/IconSearch.qml
+        qml/icons/IconRefreshCw.qml
         qml/icons/IconPanelLeft.qml
         qml/icons/IconSquareSplitHorizontal.qml
         qml/icons/IconLink.qml
