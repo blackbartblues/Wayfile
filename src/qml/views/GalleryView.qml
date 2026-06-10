@@ -111,6 +111,9 @@ FocusScope {
             // Narrow single-column strip: every cell hugs both view edges, so
             // shave the icon back to keep the gold select bloom from clipping.
             iconInset: 28
+            // Pull the selection frame ~10% smaller so it stops bleeding into
+            // the strip's left edge / right splitter (0.05 per side → 10% total).
+            selectionInsetRatio: 0.05
             zoomEnabled: false
 
             onFileActivated: (fp, isDir) => root.fileActivated(fp, isDir)

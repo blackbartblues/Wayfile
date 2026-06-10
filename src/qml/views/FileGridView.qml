@@ -119,6 +119,11 @@ GridView {
     // leave 0 (the bloom overflows harmlessly into neighbour cells); the narrow
     // single-column gallery filmstrip sets this so the halo fits the strip.
     property int iconInset: 0
+    // W8.5: fraction of the cell that each side of the merged selection frame is
+    // pulled inward (0 = flush to the cell edges, the user-approved grid look).
+    // The gallery filmstrip sets a small value so its select frame stops bleeding
+    // into the strip dividers — a ratio of r yields a frame 2r smaller per axis.
+    property real selectionInsetRatio: 0
     // 8px top, 0px gap, 5px bottom. Clamp to cellWidth for the pathological
     // single-column case where the pane is narrower than cellSize.
     readonly property int iconSize: Math.min(cellSize, cellWidth) - 8 - labelHeight - 5 - iconInset
@@ -408,6 +413,10 @@ GridView {
                 return
             var cY = root.contentY
             var rad = Math.min(Theme.radiusMedium, cw / 2, ch / 2)
+            // Optional inward inset (gallery) — pull every frame side toward the
+            // cell interior by this many px so the outline clears the dividers.
+            var ins = root.selectionInsetRatio > 0
+                ? root.selectionInsetRatio * Math.min(cw, ch) : 0
 
             var firstRow = Math.max(0, Math.floor(cY / ch) - 1)
             var lastRow = Math.floor((cY + height) / ch) + 1
@@ -460,6 +469,24 @@ GridView {
                 }
                 if (loop.length < 3)
                     continue
+                // Inset each vertex toward the interior by `ins`. Edges are
+                // axis-aligned and wound clockwise (interior to the right of
+                // travel), so the inward normal of a unit dir (dx,dy) is
+                // (-dy, dx); summing the two edges meeting at a vertex shifts it
+                // diagonally inward by `ins` on each axis (rectangle → uniform shrink).
+                if (ins > 0) {
+                    var m = loop.length
+                    var orig = loop.slice()
+                    for (var iv = 0; iv < m; iv++) {
+                        var pp = orig[(iv - 1 + m) % m]
+                        var cc = orig[iv]
+                        var np = orig[(iv + 1) % m]
+                        var dInx = Math.sign(cc.x - pp.x), dIny = Math.sign(cc.y - pp.y)
+                        var dOutx = Math.sign(np.x - cc.x), dOuty = Math.sign(np.y - cc.y)
+                        loop[iv] = { x: cc.x + (-dIny - dOuty) * ins,
+                                     y: cc.y + (dInx + dOutx) * ins }
+                    }
+                }
                 var n = loop.length
                 var sx = (loop[n - 1].x + loop[0].x) / 2
                 var sy = (loop[n - 1].y + loop[0].y) / 2
