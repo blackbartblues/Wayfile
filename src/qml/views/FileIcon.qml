@@ -43,6 +43,6 @@ Item {
             ? Theme.gold
             : (root._f ? root._f.color : Theme.gold)
         shadowBlur: root.selected ? 0.7 : 0.45
-        shadowOpacity: root.selected ? 0.55 : 0.32
+        shadowOpacity: root.selected ? 0.7 : 0.45
     }
 }
