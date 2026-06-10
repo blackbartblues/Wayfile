@@ -137,7 +137,7 @@ Rectangle {
                     : "Not mounted"
                 color: Theme.muted
                 font.family: Fonts.mono
-                font.pointSize: Math.max(8, Theme.fontSmall - 1)
+                font.pointSize: Theme.fontSmall
                 elide: Text.ElideRight
                 width: parent.width
             }

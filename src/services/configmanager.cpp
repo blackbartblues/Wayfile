@@ -388,7 +388,7 @@ void ConfigManager::setDefaults()
     m_sortBy = "name";
     m_sortAscending = true;
     m_sidebarPosition = "left";
-    m_sidebarWidth = 236;
+    m_sidebarWidth = 220;
     m_sidebarVisible = true;
     m_sidebarCompact = false;
     m_hiddenSidebarEntries.clear();
@@ -396,8 +396,8 @@ void ConfigManager::setDefaults()
     m_gridCellSize = 180;  // keep in sync with FileGridView min/maxCellSize (110–320)
     m_bookmarks = {"~/Documents", "~/Downloads", "~/Pictures", "~/Projects"};
     m_radiusSmall = 4;
-    m_radiusMedium = 8;
-    m_radiusLarge = 12;
+    m_radiusMedium = 6;
+    m_radiusLarge = 10;
     m_transparencyEnabled = true;
     m_transparencyLevel = 1.0;
     m_animationsEnabled = true;

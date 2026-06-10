@@ -75,19 +75,26 @@ QtObject {
     readonly property int radiusSm: 4    // --h-r-sm
     readonly property int radiusMd: 6    // --h-r-md
     readonly property int radiusLg: 10   // --h-r-lg
-    readonly property int radiusTab: 9   // tab top corners
-    readonly property int radiusButton: 8
+    readonly property int radiusTab: 8   // tab top corners
+    readonly property int radiusButton: 6
     readonly property int radiusPill: 6
     readonly property int radiusTile: 11
-    readonly property int radiusRow: 8
+    readonly property int radiusRow: 4
+    readonly property int radiusWindow: 14  // --h-r-xl (window chrome; reserved — wired in a later W8 task)
     readonly property real baseFontSize: {
         var pointSize = Qt.application.font.pointSize
         return pointSize > 0 ? pointSize : 10
     }
     readonly property real uiScale: Math.max(1.0, baseFontSize / 10.0)
     readonly property int spacing: Math.round(8 * uiScale)
-    readonly property int fontSmall: Math.max(9, Math.round(baseFontSize - 1))
-    readonly property int fontNormal: Math.max(10, Math.round(baseFontSize))
+    // fontNormal ≈12.5px (primary UI text, list rows, menu items, tabs)
+    readonly property int fontNormal: Math.max(9, Math.round(baseFontSize - 1))
+    // fontSmall ≈11px (meta text, secondary labels)
+    readonly property int fontSmall: Math.max(8, Math.round(baseFontSize - 2))
+    // fontSection — sidebar section headers (uppercase, letterspaced). Currently == fontSmall;
+    // kept as a separate semantic token so section-header sizing can diverge from meta-text
+    // sizing in a future pass without a grep sweep. (Replaces the old fontSmall-1, now ~7pt.)
+    readonly property int fontSection: Math.max(8, Math.round(baseFontSize - 2))
     readonly property int fontLarge: Math.max(12, Math.round(baseFontSize + 2))
     readonly property int controlSize: Math.round(32 * uiScale)
     readonly property int compactControlSize: Math.round(28 * uiScale)

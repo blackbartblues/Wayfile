@@ -18,7 +18,7 @@ Column {
     readonly property string homeDir: fsModel.homePath()
     readonly property string currentDir: host ? host.activePanePath : ""
     readonly property int _indent: Math.round(14 * Theme.uiScale)
-    readonly property int _rowHeight: Math.round(30 * Theme.uiScale)
+    readonly property int _rowHeight: Math.round(28 * Theme.uiScale)
     spacing: 0
 
     // One shared folders-only FS model for every subtree.

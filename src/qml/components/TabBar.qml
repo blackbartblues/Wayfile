@@ -38,9 +38,9 @@ Item {
     readonly property int minTabWidth: 128
     readonly property int maxTabWidth: 210
 
-    // "Wayfile Unified" tab strip: 44px tall, tabs bottom-aligned with a 9px
+    // "Wayfile Unified" tab strip: 40px tall, tabs bottom-aligned with a 9px
     // gap above so their rounded top corners read against the strip gradient.
-    implicitHeight: Math.round(44 * Theme.uiScale)
+    implicitHeight: Math.round(40 * Theme.uiScale)
     readonly property int tabTopGap: Math.round(9 * Theme.uiScale)
 
     Rectangle {

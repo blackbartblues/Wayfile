@@ -119,7 +119,7 @@ Rectangle {
                 Layout.fillWidth: true
                 text: "FAVORITES"
                 color: Theme.muted
-                font.pointSize: Theme.fontSmall - 1
+                font.pointSize: Theme.fontSection
                 font.bold: true
                 font.capitalization: Font.AllUppercase
                 font.letterSpacing: 1.3
@@ -149,7 +149,7 @@ Rectangle {
             Layout.fillWidth: true
             implicitHeight: bookmarksList.height
 
-            readonly property int rowHeight: 32
+            readonly property int rowHeight: 28
             readonly property bool externalDragActive:
                 bookmarkDropArea.containsDrag
                 && bookmarkDropArea._extDropIndex >= 0
@@ -582,7 +582,7 @@ Rectangle {
             Layout.topMargin: Theme.spacing / 2
             text: "PLACES"
             color: Theme.muted
-            font.pointSize: Theme.fontSmall - 1
+            font.pointSize: Theme.fontSection
             font.bold: true
             font.capitalization: Font.AllUppercase
             font.letterSpacing: 1.3
@@ -610,7 +610,7 @@ Rectangle {
                     // their id is in the persisted hidden-entries list.
                     visible: model.entryId === ""
                              || config.hiddenSidebarEntries.indexOf(model.entryId) < 0
-                    height: visible ? 32 : 0
+                    height: visible ? 28 : 0
 
                     readonly property string resolvedPath: {
                         const home = fsModel.homePath()
@@ -771,7 +771,7 @@ Rectangle {
             Layout.topMargin: Theme.spacing / 2
             text: "DEVICES"
             color: Theme.muted
-            font.pointSize: Theme.fontSmall - 1
+            font.pointSize: Theme.fontSection
             font.bold: true
             font.capitalization: Font.AllUppercase
             font.letterSpacing: 1.3
@@ -816,7 +816,7 @@ Rectangle {
             Layout.topMargin: Theme.spacing / 2
             text: "NETWORK"
             color: Theme.muted
-            font.pointSize: Theme.fontSmall - 1
+            font.pointSize: Theme.fontSection
             font.bold: true
             font.capitalization: Font.AllUppercase
             font.letterSpacing: 1.3
@@ -839,7 +839,7 @@ Rectangle {
                     // Hide-from-sidebar (W7): "network" id. Collapse row + (via the
                     // shared networkHidden flag) the NETWORK header above it.
                     visible: !root.networkHidden
-                    height: visible ? 32 : 0
+                    height: visible ? 28 : 0
                     readonly property bool isActive:
                         !root.isRecentsView && !root.isHiddenView && fileOps.isRemotePath(root.currentPath)
 
@@ -954,7 +954,7 @@ Rectangle {
             Layout.leftMargin: Theme.spacing / 2
             Layout.rightMargin: Theme.spacing / 2
             Layout.bottomMargin: Theme.spacing / 2
-            height: 32
+            height: 28
             radius: Theme.radiusRow
             readonly property bool isActive:
                 !root.isRecentsView && !root.isHiddenView && fileOps.isTrashPath(root.currentPath)
@@ -1083,7 +1083,7 @@ Rectangle {
         Item {
             id: cbtn
             width: root.compactRailWidth
-            height: 38
+            height: 34
             property string iconKind: "folder"
             property bool active: false
             property string tip: ""
@@ -1093,7 +1093,7 @@ Rectangle {
                 id: cbtnBg
                 anchors.centerIn: parent
                 width: 40
-                height: 32
+                height: 28
                 radius: Theme.radiusRow
                 color: cbtn.active
                     ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.10)
@@ -1207,7 +1207,7 @@ Rectangle {
                         config.hiddenSidebarEntries.indexOf(model.path) >= 0
                     active: !entryHidden
                     visible: active
-                    height: active ? 38 : 0
+                    height: active ? 34 : 0
                     sourceComponent: compactButton
                     onLoaded: {
                         item.iconKind = "folder"
@@ -1248,7 +1248,7 @@ Rectangle {
                 width: root.compactRailWidth
                 active: config.hiddenSidebarEntries.indexOf("places.recents") < 0
                 visible: active
-                height: active ? 38 : 0
+                height: active ? 34 : 0
                 sourceComponent: compactButton
                 onLoaded: {
                     item.iconKind = "clock"
@@ -1263,7 +1263,7 @@ Rectangle {
                 width: root.compactRailWidth
                 active: config.hiddenSidebarEntries.indexOf("places.hidden") < 0
                 visible: active
-                height: active ? 38 : 0
+                height: active ? 34 : 0
                 sourceComponent: compactButton
                 onLoaded: {
                     item.iconKind = "eyeoff"
@@ -1288,7 +1288,7 @@ Rectangle {
                     }
                     active: dirExists
                     visible: active
-                    height: active ? 38 : 0
+                    height: active ? 34 : 0
                     sourceComponent: compactButton
                     onLoaded: {
                         item.iconKind = "folder"
@@ -1351,7 +1351,7 @@ Rectangle {
                 width: root.compactRailWidth
                 active: !root.networkHidden
                 visible: active
-                height: active ? 38 : 0
+                height: active ? 34 : 0
                 sourceComponent: compactButton
                 onLoaded: {
                     item.iconKind = "globe"
@@ -1368,7 +1368,7 @@ Rectangle {
                 width: root.compactRailWidth
                 active: !root.trashHidden
                 visible: active
-                height: active ? 38 : 0
+                height: active ? 34 : 0
                 sourceComponent: compactButton
                 onLoaded: {
                     item.iconKind = "trash"

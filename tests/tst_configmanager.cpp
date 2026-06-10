@@ -31,7 +31,7 @@ private slots:
         QCOMPARE(mgr.sortBy(), QString("name"));
         QCOMPARE(mgr.sortAscending(), true);
         QCOMPARE(mgr.sidebarPosition(), QString("left"));
-        QCOMPARE(mgr.sidebarWidth(), 236);
+        QCOMPARE(mgr.sidebarWidth(), 220);
         QCOMPARE(mgr.sidebarVisible(), true);
         QCOMPARE(mgr.gridCellSize(), 180);
         QCOMPARE(mgr.transparencyEnabled(), true);
@@ -234,8 +234,8 @@ private slots:
         ConfigManager mgr(dir.path() + "/config.toml");
 
         QCOMPARE(mgr.radiusSmall(), 4);
-        QCOMPARE(mgr.radiusMedium(), 8);
-        QCOMPARE(mgr.radiusLarge(), 12);
+        QCOMPARE(mgr.radiusMedium(), 6);
+        QCOMPARE(mgr.radiusLarge(), 10);
     }
 
     void testDefaultBookmarks()
@@ -693,8 +693,8 @@ private slots:
         ConfigManager mgr(path);
         QCOMPARE(mgr.theme(), QString("test"));
         // Other sections should have defaults
-        QCOMPARE(mgr.sidebarWidth(), 236);
-        QCOMPARE(mgr.radiusMedium(), 8);
+        QCOMPARE(mgr.sidebarWidth(), 220);
+        QCOMPARE(mgr.radiusMedium(), 6);
     }
 
     // --- File watcher reload ---

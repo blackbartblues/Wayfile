@@ -388,7 +388,7 @@ Item {
                     color: Theme.text
                     wrapMode: TextEdit.NoWrap
                     font.family: Fonts.mono
-                    font.pointSize: Theme.fontSmall - 1
+                    font.pointSize: Theme.fontSmall
 
                     onCursorRectangleChanged: {
                         var r = cursorRectangle
@@ -687,7 +687,7 @@ Item {
                             return parts.join(" \u00b7 ")
                         }
                         color: Theme.subtext
-                        font.pointSize: Theme.fontSmall - 1
+                        font.pointSize: Theme.fontSmall
                         wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                     }
 
@@ -697,7 +697,7 @@ Item {
                         text: (previewColumn.fileProps.originalPath ? "Original Location: " : "Location: ")
                             + (previewColumn.fileProps.originalPath || previewColumn.fileProps.parentDir || "")
                         color: Theme.subtext
-                        font.pointSize: Theme.fontSmall - 1
+                        font.pointSize: Theme.fontSmall
                         wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                     }
 
@@ -706,7 +706,7 @@ Item {
                         visible: !previewColumn.previewIsDir && !!previewColumn.fileProps.contentText
                         text: "Contents: " + previewColumn.fileProps.contentText
                         color: Theme.subtext
-                        font.pointSize: Theme.fontSmall - 1
+                        font.pointSize: Theme.fontSmall
                         wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                     }
 
@@ -715,7 +715,7 @@ Item {
                         visible: !!previewColumn.fileProps.deleted
                         text: "Deleted: " + previewColumn.fileProps.deleted
                         color: Theme.subtext
-                        font.pointSize: Theme.fontSmall - 1
+                        font.pointSize: Theme.fontSmall
                         wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                     }
 
@@ -726,7 +726,7 @@ Item {
                             width: infoBarContent.width
                             text: modelData.label + ": " + modelData.value
                             color: Theme.subtext
-                            font.pointSize: Theme.fontSmall - 1
+                            font.pointSize: Theme.fontSmall
                             wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                         }
                     }
@@ -736,7 +736,7 @@ Item {
                         visible: previewColumn.metadataLoading
                         text: "Reading metadata…"
                         color: Theme.muted
-                        font.pointSize: Theme.fontSmall - 1
+                        font.pointSize: Theme.fontSmall
                         font.italic: true
                         wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                     }
@@ -746,7 +746,7 @@ Item {
                         visible: previewColumn.metadataHint !== ""
                         text: previewColumn.metadataHint
                         color: Theme.muted
-                        font.pointSize: Theme.fontSmall - 1
+                        font.pointSize: Theme.fontSmall
                         font.italic: true
                         wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                     }
@@ -756,7 +756,7 @@ Item {
                         visible: previewColumn.isText && previewColumn.textPreview.truncated
                         text: "Showing a shortened text preview for quick browsing."
                         color: Theme.subtext
-                        font.pointSize: Theme.fontSmall - 1
+                        font.pointSize: Theme.fontSmall
                         wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                     }
 
@@ -765,7 +765,7 @@ Item {
                         visible: (previewColumn.previewIsDir || previewColumn.isArchive) && previewColumn.directoryPreview.truncated
                         text: "Only the first items are shown here."
                         color: Theme.subtext
-                        font.pointSize: Theme.fontSmall - 1
+                        font.pointSize: Theme.fontSmall
                         wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                     }
                 }

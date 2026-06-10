@@ -41,10 +41,10 @@ Window {
     readonly property string defaultThemeName: "bifrost"
     readonly property string defaultIconThemeName: "Adwaita"
     readonly property string defaultSidebarPosition: "left"
-    readonly property int defaultSidebarWidth: 200
+    readonly property int defaultSidebarWidth: 220
     readonly property int defaultRadiusSmall: 4
-    readonly property int defaultRadiusMedium: 8
-    readonly property int defaultRadiusLarge: 12
+    readonly property int defaultRadiusMedium: 6
+    readonly property int defaultRadiusLarge: 10
     readonly property bool defaultTransparencyEnabled: true
     readonly property real defaultTransparencyLevel: 1.0
     readonly property bool defaultAnimationsEnabled: true
@@ -63,7 +63,7 @@ Window {
 
     property bool currentShowHidden: false
     property bool currentSidebarVisible: true
-    property int currentSidebarWidth: 200
+    property int currentSidebarWidth: 220
 
     property var fontOptions: []
     property var iconThemeOptions: []

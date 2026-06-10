@@ -34,7 +34,7 @@ Rectangle {
     property string viewMode: "grid"
     signal viewModeRequested(string mode)
 
-    height: 28
+    height: 26
     color: Theme.mantle
     clip: false
 
