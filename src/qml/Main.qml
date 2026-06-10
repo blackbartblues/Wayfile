@@ -187,6 +187,7 @@ ApplicationWindow {
         function onConfigChanged() {
             root.sidebarVisible = config.sidebarVisible
             root.sidebarWidth = config.sidebarWidth
+            root.sidebarCompact = config.sidebarCompact
         }
     }
 
@@ -210,6 +211,8 @@ ApplicationWindow {
     // Force initial load after QML is fully set up
     Component.onCompleted: {
         root.wirePaneServiceSignals()
+        // W7: load the persisted Full/Compact sidebar mode on startup.
+        root.sidebarCompact = config.sidebarCompact
         if (tabModel.activeTab) {
             fsModel.setRootPath(tabModel.activeTab.currentPath)
             // Seed every pane of a (possibly session-restored) supertab, not
@@ -288,6 +291,11 @@ ApplicationWindow {
 
     // ── Sidebar visibility (local property; config.sidebarVisible is read-only) ─
     property bool sidebarVisible: config.sidebarVisible
+
+    // W7: Full ↔ Compact (56px icon rail) mode. Local mirror of the read-only
+    // config.sidebarCompact; the toolbar toggle flips this + persists it. Seeded
+    // from config in Component.onCompleted and kept in sync via onConfigChanged.
+    property bool sidebarCompact: config.sidebarCompact
 
     // In Gallery mode the sidebar shows a folder navigator instead of Places.
     // The Places/Folders toggle (SidebarPane) writes this; defaults to Folders.

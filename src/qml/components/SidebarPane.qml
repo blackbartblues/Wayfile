@@ -24,7 +24,18 @@ Item {
     property var sidebarTooltipLayer: null
     property var toast: null
 
-    Layout.preferredWidth: host ? (host.sidebarVisible ? host.sidebarWidth : 0) : 0
+    // Fixed width of the compact icon rail (must match Sidebar.qml's
+    // compactRailWidth; kept as a local constant to avoid a fragile cross-file
+    // binding through the host boundary).
+    readonly property int compactWidth: 56
+
+    // W7: the toolbar toggle flips Full ↔ Compact (a compactWidth icon rail)
+    // rather than hiding the panel. sidebarVisible is preserved as a true hide
+    // (width 0) for any other caller, but the visible width is otherwise the
+    // compact rail or full.
+    Layout.preferredWidth: host
+        ? (host.sidebarVisible ? (host.sidebarCompact ? compactWidth : host.sidebarWidth) : 0)
+        : 0
     Layout.fillHeight: true
     clip: true
 
@@ -151,7 +162,9 @@ Item {
 
     Column {
         id: sidebarStack
-        width: host ? host.sidebarWidth : 0
+        // Track the pane's own width so the compact rail (56) and the full
+        // sidebar (host.sidebarWidth) both fill the panel exactly.
+        width: sidebarPane.width
         height: parent.height
 
         // Places / Folders toggle — only while the Gallery view is active.
@@ -272,7 +285,9 @@ Item {
         anchors.left: sidebarOnRight ? parent.left : undefined
         width: 10
         hoverEnabled: true
-        enabled: host ? host.sidebarVisible : false
+        // Resize is only meaningful in Full mode; in Compact (fixed 56px) the
+        // splitter is disabled so the rail width can't be dragged. (W7)
+        enabled: host ? (host.sidebarVisible && !host.sidebarCompact) : false
         acceptedButtons: Qt.LeftButton
         cursorShape: Qt.SizeHorCursor
         preventStealing: true

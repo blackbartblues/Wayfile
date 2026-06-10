@@ -11,6 +11,10 @@ import Wayfile
 Column {
     id: root
     property var host: null          // Main.qml: navigateActivePaneTo + activePanePath
+    // Expose the internal shared folders-only FS model so the compact rail can
+    // reuse it for its XDG-existence checks instead of spawning a second
+    // QFileSystemModel (duplicate inotify watch + scan thread on $HOME).
+    property alias folderModel: folderTree
     readonly property string homeDir: fsModel.homePath()
     readonly property string currentDir: host ? host.activePanePath : ""
     readonly property int _indent: Math.round(14 * Theme.uiScale)

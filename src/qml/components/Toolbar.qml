@@ -253,29 +253,32 @@ Rectangle {
                     Q.Tooltip { text: root.mergeTooltip; visible: mergeBtn.hovered && root.mergeTooltip.length > 0 }
                 }
 
-                // Gold-highlighted when the sidebar is HIDDEN (signals "click to
-                // bring it back"); plain when it's already showing.
+                // W7: collapses the sidebar to a 56px icon rail (Compact) / back
+                // to Full. Gold-highlighted while Compact (signals "click to
+                // expand"); plain in Full. Persisted via config.saveSidebarCompact.
                 HoverRect {
                     id: sidebarToggleBtn
                     width: Theme.controlSize; height: Theme.controlSize
                     visible: !root.searchMode && root.window !== null
-                    readonly property bool sbHidden: root.window !== null && !root.window.sidebarVisible
-                    border.width: sbHidden ? 1 : 0
+                    readonly property bool sbCompact: root.window !== null && root.window.sidebarCompact
+                    border.width: sbCompact ? 1 : 0
                     border.color: Theme.goldLine
-                    color: sbHidden
+                    color: sbCompact
                         ? (hovered ? Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.12) : Theme.goldWash)
                         : (hovered ? Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.1) : "transparent")
                     onClicked: {
-                        if (root.window)
-                            root.window.sidebarVisible = !root.window.sidebarVisible
+                        if (root.window) {
+                            root.window.sidebarCompact = !root.window.sidebarCompact
+                            config.saveSidebarCompact(root.window.sidebarCompact)
+                        }
                     }
                     IconPanelLeft {
                         anchors.centerIn: parent
                         size: 18
-                        color: sidebarToggleBtn.sbHidden ? Theme.gold : Theme.text
+                        color: sidebarToggleBtn.sbCompact ? Theme.gold : Theme.text
                     }
                     Q.Tooltip {
-                        text: (root.window && root.window.sidebarVisible) ? "Hide sidebar" : "Show sidebar"
+                        text: sidebarToggleBtn.sbCompact ? "Expand sidebar" : "Collapse sidebar"
                         visible: sidebarToggleBtn.hovered
                     }
                 }
