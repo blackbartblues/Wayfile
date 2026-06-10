@@ -385,6 +385,15 @@ ApplicationWindow {
         return Math.max(minSidebarWidth, Math.min(maxSidebarWidth, Math.round(width)))
     }
 
+    // Flip Full ↔ Compact and persist. Used by the sidebar's collapse button
+    // and the drag-to-collapse/expand splitter (R3/R4).
+    function setSidebarCompact(compact) {
+        if (sidebarCompact === compact)
+            return
+        sidebarCompact = compact
+        config.saveSidebarCompact(compact)
+    }
+
     function panePath(pane) {
         if (!tabModel.activeTab)
             return fsModel.homePath()
@@ -1648,7 +1657,6 @@ ApplicationWindow {
             searchDateFilter: root.searchProxyForPane(activePaneIndex).dateFilter
             searchSizeFilter: root.searchProxyForPane(activePaneIndex).sizeFilter
             filterPanelOpen: root.paneFilterPanelOpen(activePaneIndex)
-            moreMenu: mainOverlays.moreMenu
             onBackRequested: root.goActivePaneBack()
             onForwardRequested: root.goActivePaneForward()
             onUpRequested: root.goActivePaneUp()

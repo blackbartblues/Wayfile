@@ -54,7 +54,6 @@ Item {
     property alias emptyTrashConfirmDialog: emptyTrashConfirmDialog
     property alias contextMenu: contextMenu
     property alias sidebarContextMenu: sidebarContextMenu
-    property alias moreMenu: moreMenu
 
     BulkRenameDialog {
         id: bulkRenameDialog
@@ -396,25 +395,6 @@ Item {
         onVisibleChanged: {
             if (!visible)
                 sidebarItem = ({})
-        }
-    }
-
-    // ── ⋯More toolbar-overflow menu (Settings + Collapse/Expand sidebar) ─────
-    // Hosted here (full-window overlay) and passed into the Toolbar so it
-    // renders above all content — mirrors sidebarContextMenu. Items are built
-    // by Toolbar.openMoreMenu(); actions route through customActionRequested.
-    ContextMenu {
-        id: moreMenu
-        menuWidth: 200
-
-        onCustomActionRequested: (action) => {
-            if (action === "more-settings") {
-                host.openSettingsPanel()
-            } else if (action === "more-sidebar-toggle") {
-                var nextCompact = !host.sidebarCompact
-                host.sidebarCompact = nextCompact
-                config.saveSidebarCompact(nextCompact)
-            }
         }
     }
 }

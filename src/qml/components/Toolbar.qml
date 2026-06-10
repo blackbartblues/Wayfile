@@ -44,36 +44,9 @@ Rectangle {
     property string searchSizeFilter: ""
     property bool filterPanelOpen: false
     property alias filterPanel: filterPanelLoader.item
-    // ⋯More overflow menu — a full-window ContextMenu hosted in MainOverlays
-    // and passed in here (mirrors how SidebarPane receives sidebarContextMenu).
-    property var moreMenu: null
 
     function startEditing() {
         if (!searchMode) breadcrumb.startEditing()
-    }
-
-    // ⋯More overflow — Settings + Collapse/Expand sidebar. Built fresh each
-    // open so the sidebar label reflects current state. Anchored to the More
-    // button's bottom-left in window coords.
-    function openMoreMenu(anchorItem) {
-        if (!moreMenu)
-            return
-        var compact = root.window !== null && root.window.sidebarCompact
-        var items = [
-            { text: "Settings", shortcut: "", action: "more-settings", icon: "Settings" }
-        ]
-        if (root.window !== null) {
-            items.push({ separator: true })
-            items.push({
-                text: compact ? "Expand Sidebar" : "Collapse Sidebar",
-                shortcut: "", action: "more-sidebar-toggle", icon: "PanelLeft"
-            })
-        }
-        moreMenu.customItems = items
-        // Map to scene (null) coordinates — the menu overlay fills the window
-        // and positions in window space (mirrors the sidebar menu's mapToItem(null)).
-        var pos = anchorItem.mapToItem(null, anchorItem.width, anchorItem.height + 4)
-        moreMenu.popup(pos.x - moreMenu.menuWidth, pos.y)
     }
 
     function syncFilterPanelState() {
@@ -527,48 +500,23 @@ Rectangle {
                             }
                         }
 
-                        // Keyboard-shortcut chip (mono, handoff <kbd>).
-                        Rectangle {
-                            Layout.alignment: Qt.AlignVCenter
-                            visible: searchInput.text.length === 0 && !searchInput.activeFocus
-                            implicitWidth: kbdLabel.implicitWidth + 10
-                            implicitHeight: 16
-                            radius: 3
-                            color: Theme.raise
-                            border.width: 1
-                            border.color: Theme.line
-                            Text {
-                                id: kbdLabel
-                                anchors.centerIn: parent
-                                text: "Ctrl K"
-                                font.family: Fonts.mono
-                                font.pointSize: Theme.fontSection
-                                color: Theme.subtext
-                            }
-                        }
                     }
                 }
 
-                // ── ⋯More overflow (Settings + Collapse/Expand sidebar). 3
-                //    horizontal dots drawn inline (no ellipsis icon in the
-                //    no-push icons submodule). ──
+                // ── Settings (standalone toolbar button, far right). The old
+                //    ⋯More overflow was removed; sidebar collapse now lives on
+                //    the sidebar itself. ──
                 HoverRect {
-                    id: moreBtn
+                    id: settingsBtn
                     width: Theme.compactControlSize; height: Theme.compactControlSize
                     radius: Theme.radiusButton
-                    onClicked: root.openMoreMenu(moreBtn)
-                    Row {
+                    onClicked: root.settingsRequested()
+                    IconSettings {
                         anchors.centerIn: parent
-                        spacing: 3
-                        Repeater {
-                            model: 3
-                            delegate: Rectangle {
-                                width: 3; height: 3; radius: 1.5
-                                color: moreBtn.hovered ? Theme.text : Theme.subtext
-                            }
-                        }
+                        size: 16
+                        color: settingsBtn.hovered ? Theme.text : Theme.subtext
                     }
-                    Q.Tooltip { text: "More"; visible: moreBtn.hovered }
+                    Q.Tooltip { text: "Settings"; visible: settingsBtn.hovered }
                 }
 
                 Item {
