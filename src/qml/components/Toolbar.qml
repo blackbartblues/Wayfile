@@ -115,13 +115,13 @@ Rectangle {
         GradientStop { position: 1.0; color: Theme.bgA }
     }
 
-    // 1px bottom border line separating the toolbar from the content below.
+    // 1px bottom border separating the toolbar from the content below (handoff --h-border-soft #2A2E33).
     Rectangle {
         anchors.bottom: parent.bottom
         anchors.left: parent.left
         anchors.right: parent.right
-        height: 2
-        color: Theme.divider
+        height: 1
+        color: Theme.lineSoft
         z: 5
     }
 

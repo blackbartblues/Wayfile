@@ -51,13 +51,14 @@ Item {
             GradientStop { position: 1.0; color: Theme.bgA }
         }
 
-        // Bottom hairline divides the tab strip from the toolbar below.
+        // Bottom hairline divides the tab strip from the toolbar below. 1px near-black
+        // (handoff --h-divider #1A1D21); the active tab's bg matches the toolbar so the seam vanishes.
         Rectangle {
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.right: parent.right
-            height: 2
-            color: Theme.divider
+            height: 1
+            color: Theme.hair
             z: 2
         }
 
