@@ -21,6 +21,42 @@ Column {
     readonly property int _rowHeight: Math.round(28 * Theme.uiScale)
     spacing: 0
 
+    // R6: top-level accordion — only ONE root may be open at a time. Holds the
+    // open root's stable KEY (not its dir: Home and Hidden both root at homeDir).
+    property string expandedRoot: ""
+    // Fed from Sidebar so the Home/Hidden roots reflect + drive the pane's
+    // hidden/recents view state.
+    property bool isHiddenView: false
+    property bool isRecentsView: false
+
+    // Navigate the active pane to a root. Hidden enters the hidden-files view;
+    // every other root navigates to its directory.
+    function navigateRoot(md) {
+        if (!host)
+            return
+        if (md.special === "hidden")
+            host.setPaneHidden(host.activePaneIndex, true)
+        else
+            host.navigateActivePaneTo(md.dir)
+    }
+    // True when a root reflects the pane's current location/view.
+    function rootActive(md) {
+        if (md.special === "hidden")
+            return root.isHiddenView
+        return !root.isHiddenView && !root.isRecentsView && md.dir === root.currentDir
+    }
+    // Click a root: re-clicking the open one collapses it; clicking another
+    // collapses the previous and opens (optionally navigating) the new.
+    function toggleRoot(md, navigate) {
+        if (root.expandedRoot === md.key) {
+            root.expandedRoot = ""
+        } else {
+            root.expandedRoot = md.key
+            if (navigate)
+                root.navigateRoot(md)
+        }
+    }
+
     // W8: right-clicking any Places row (XDG header or a subtree folder) emits
     // this with a quickAccess payload; Sidebar.qml forwards it to its own
     // sidebarContextMenuRequested so the shared sidebar menu opens. entryId is
@@ -29,6 +65,8 @@ Column {
 
     // Per-place icon components for XDG roots (handoff: each root gets a
     // distinct semantic glyph instead of the generic folder icon).
+    Component { id: xdgIconHome;      IconHome     { size: 16; color: Theme.muted } }
+    Component { id: xdgIconHidden;    IconEyeOff   { size: 16; color: Theme.muted } }
     Component { id: xdgIconDesktop;   IconMonitor  { size: 16; color: Theme.muted } }
     Component { id: xdgIconDocuments; IconFileText { size: 16; color: Theme.muted } }
     Component { id: xdgIconDownloads; IconDownload { size: 16; color: Theme.muted } }
@@ -42,13 +80,20 @@ Column {
         rootPath: root.homeDir
     }
 
+    // R6: Home + Hidden lead the forest as expandable roots (both rooted at
+    // homeDir — Home navigates home, Hidden enters the hidden view; their
+    // subtrees are identical home folders since FolderTreeModel is folders-only).
+    // `key` is the accordion identity; `special` selects navigation; `entryId`
+    // (when set) makes the root hideable + right-clickable to hide.
     readonly property var xdgRoots: [
-        { label: "Desktop",   dir: homeDir + "/Desktop",   iconComp: xdgIconDesktop   },
-        { label: "Documents", dir: homeDir + "/Documents", iconComp: xdgIconDocuments },
-        { label: "Downloads", dir: homeDir + "/Downloads", iconComp: xdgIconDownloads },
-        { label: "Pictures",  dir: homeDir + "/Pictures",  iconComp: xdgIconPictures  },
-        { label: "Music",     dir: homeDir + "/Music",     iconComp: xdgIconMusic     },
-        { label: "Videos",    dir: homeDir + "/Videos",    iconComp: xdgIconVideos    }
+        { label: "Home",      key: "home",      dir: homeDir,                iconComp: xdgIconHome,      special: "home",   entryId: "",              mono: true  },
+        { label: "Hidden",    key: "hidden",    dir: homeDir,                iconComp: xdgIconHidden,    special: "hidden", entryId: "places.hidden", mono: false },
+        { label: "Desktop",   key: "Desktop",   dir: homeDir + "/Desktop",   iconComp: xdgIconDesktop   },
+        { label: "Documents", key: "Documents", dir: homeDir + "/Documents", iconComp: xdgIconDocuments },
+        { label: "Downloads", key: "Downloads", dir: homeDir + "/Downloads", iconComp: xdgIconDownloads },
+        { label: "Pictures",  key: "Pictures",  dir: homeDir + "/Pictures",  iconComp: xdgIconPictures  },
+        { label: "Music",     key: "Music",     dir: homeDir + "/Music",     iconComp: xdgIconMusic     },
+        { label: "Videos",    key: "Videos",    dir: homeDir + "/Videos",    iconComp: xdgIconVideos    }
     ]
 
     Repeater {
@@ -68,9 +113,15 @@ Column {
                     xdgItem.dirExists = folderTree.indexForPath(xdgItem.modelData.dir).valid
                 }
             }
+            // Hideable roots (Hidden) collapse out when their entryId is in the
+            // persisted hidden-entries list; Home + XDG roots have no entryId.
             visible: dirExists
+                     && (modelData.entryId === undefined
+                         || modelData.entryId === ""
+                         || config.hiddenSidebarEntries.indexOf(modelData.entryId) < 0)
             height: visible ? implicitHeight : 0
-            property bool expanded: false
+            // R6: expansion is owned by the shared top-level accordion.
+            readonly property bool expanded: root.expandedRoot === modelData.key
 
             // XDG root header row.
             Rectangle {
@@ -100,11 +151,12 @@ Column {
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: xdgItem.expanded = !xdgItem.expanded
+                        // Chevron toggles the accordion (no navigation).
+                        onClicked: root.toggleRoot(xdgItem.modelData, false)
                     }
                 }
 
-                // Per-place icon + label — clicking navigates without expanding.
+                // Per-place icon + label — clicking navigates + opens (accordion).
                 // Left inset 16px (handoff .h-sb-item padding-left), icon 16px,
                 // icon↔text gap 10px.
                 Row {
@@ -118,15 +170,16 @@ Column {
                         anchors.verticalCenter: parent.verticalCenter
                         sourceComponent: xdgItem.modelData.iconComp
                         onLoaded: item.color = Qt.binding(
-                            () => xdgItem.modelData.dir === root.currentDir
+                            () => root.rootActive(xdgItem.modelData)
                                   ? Theme.gold : Theme.muted)
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width - 16 - 10
                         text: xdgItem.modelData.label
-                        color: xdgItem.modelData.dir === root.currentDir
+                        color: root.rootActive(xdgItem.modelData)
                                ? Theme.gold : Theme.text
+                        font.family: xdgItem.modelData.mono ? Fonts.mono : Qt.application.font.family
                         font.pointSize: Theme.fontNormal
                         elide: Text.ElideRight
                     }
@@ -145,19 +198,19 @@ Column {
                     onClicked: (mouse) => {
                         if (mouse.button === Qt.RightButton) {
                             var mapped = xdgRowMouse.mapToItem(null, mouse.x, mouse.y)
+                            var md = xdgItem.modelData
                             root.contextMenuRequested({
                                 kind: "quickAccess",
-                                name: xdgItem.modelData.label,
-                                path: xdgItem.modelData.dir,
+                                name: md.label,
+                                path: md.special === "hidden" ? "" : md.dir,
                                 isRecents: false,
-                                isHidden: false,
-                                entryId: ""
+                                isHidden: md.special === "hidden",
+                                entryId: md.entryId !== undefined ? md.entryId : ""
                             }, Qt.point(mapped.x, mapped.y))
                             return
                         }
-                        if (root.host)
-                            root.host.navigateActivePaneTo(xdgItem.modelData.dir)
-                        xdgItem.expanded = true
+                        // Navigate + open (or collapse on re-click) the accordion.
+                        root.toggleRoot(xdgItem.modelData, true)
                     }
                 }
             }

@@ -687,12 +687,11 @@ Rectangle {
             // Quick access entries
             Repeater {
                 model: ListModel {
-                    // Home carries no entryId and is never hideable. Recents and
-                    // Hidden each get a stable id so the hidden-entries filter +
-                    // "Hide from sidebar" action can target them individually.
-                    ListElement { name: "Home"; iconType: "home"; mono: true; entryId: "" }
+                    // R6: Home + Hidden moved into the Places tree below as
+                    // expandable roots; only Recents stays a flat quick row here
+                    // (and it is hidden by default — R5). Its stable entryId lets
+                    // the hidden-entries filter + "Hide from sidebar" target it.
                     ListElement { name: "Recents"; iconType: "clock"; mono: false; entryId: "places.recents" }
-                    ListElement { name: "Hidden"; iconType: "eyeoff"; mono: false; entryId: "places.hidden" }
                 }
 
                 delegate: Rectangle {
@@ -836,6 +835,9 @@ Rectangle {
             id: placesTree
             Layout.fillWidth: true
             host: root.host
+            // R6: the Home/Hidden roots reflect + drive these view states.
+            isHiddenView: root.isHiddenView
+            isRecentsView: root.isRecentsView
             // W8: forward Places-tree right-clicks to the shared sidebar menu.
             onContextMenuRequested: (item, position) => root.sidebarContextMenuRequested(item, position)
         }
