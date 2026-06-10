@@ -117,7 +117,6 @@ list(APPEND wayfile_qml_module_args
         qml/components/Sidebar.qml
         qml/components/SidebarDeviceRow.qml
         qml/components/SidebarPane.qml
-        qml/components/GalleryFolderNav.qml
         qml/components/SidebarPlacesTree.qml
         qml/components/TabBar.qml
         qml/components/PaneFrame.qml

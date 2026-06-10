@@ -297,9 +297,6 @@ ApplicationWindow {
     // from config in Component.onCompleted and kept in sync via onConfigChanged.
     property bool sidebarCompact: config.sidebarCompact
 
-    // In Gallery mode the sidebar shows a folder navigator instead of Places.
-    // The Places/Folders toggle (SidebarPane) writes this; defaults to Folders.
-    property bool galleryFolderNavActive: true
     property int sidebarWidth: config.sidebarWidth
     readonly property int minSidebarWidth: 160
     readonly property int maxSidebarWidth: 480

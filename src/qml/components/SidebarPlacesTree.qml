@@ -7,7 +7,7 @@ import Wayfile
 // chevron that expands an embedded TreeView rooted at that dir over the shared
 // FolderTreeModel. The outer sidebar Flickable owns scrolling (inner TreeViews
 // are interactive:false, height-bound to contentHeight). Clicking a folder name
-// navigates the active pane + expands. Reuses the GalleryFolderNav delegate.
+// navigates the active pane + expands.
 Column {
     id: root
     property var host: null          // Main.qml: navigateActivePaneTo + activePanePath
