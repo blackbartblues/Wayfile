@@ -52,6 +52,18 @@ Loader {
                         item.color = Qt.binding(() => Theme.gold)
                     }
                 }
+                // W8: filled color dot for swatch rows (per-favorite star color).
+                Rectangle {
+                    visible: !!(subRowLoader.rowData && subRowLoader.rowData.swatch)
+                    Layout.preferredWidth: visible ? 12 : 0
+                    Layout.preferredHeight: 12
+                    Layout.alignment: Qt.AlignVCenter
+                    radius: width / 2
+                    color: (subRowLoader.rowData && subRowLoader.rowData.swatch)
+                        ? subRowLoader.rowData.swatch : "transparent"
+                    border.width: 1
+                    border.color: Qt.rgba(1, 1, 1, 0.18)
+                }
                 Text {
                     text: subRowLoader.rowData ? subRowLoader.rowData.text : ""
                     font.pointSize: Theme.fontSmall

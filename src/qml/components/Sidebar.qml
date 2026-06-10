@@ -56,6 +56,27 @@ Rectangle {
     Component { id: iconGlobe; IconGlobe { size: 16; color: Theme.muted } }
     Component { id: iconFolder; IconFolder { size: 16; color: Theme.muted } }
     Component { id: iconStarGold; IconStar { size: 11; color: Theme.gold } }
+    // W8: FILLED star for the Favorites leading icon. IconStar (submodule) is a
+    // stroke-only outline, so we inline a solid-fill variant here (same Lucide
+    // path) — its `color` is rebound per-row to the bookmark's chosen color, or
+    // Theme.gold by default. Keep this in the main repo; do not edit icons/.
+    Component {
+        id: iconStarFilled
+        Shape {
+            id: starShape
+            property real size: 14
+            property color color: Theme.gold
+            width: size; height: size
+            preferredRendererType: Shape.CurveRenderer
+            ShapePath {
+                strokeColor: "transparent"; strokeWidth: 0
+                fillColor: starShape.color
+                joinStyle: ShapePath.RoundJoin
+                scale: Qt.size(starShape.size / 24, starShape.size / 24)
+                PathSvg { path: "M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a.53.53 0 0 0 .4.29l5.16.753a.53.53 0 0 1 .294.904l-3.733 3.638a.53.53 0 0 0-.152.469l.882 5.14a.53.53 0 0 1-.77.56l-4.614-2.426a.53.53 0 0 0-.494 0L7.14 18.728a.53.53 0 0 1-.77-.56l.882-5.14a.53.53 0 0 0-.152-.47L3.367 8.92a.53.53 0 0 1 .294-.905l5.16-.752a.53.53 0 0 0 .4-.29z" }
+            }
+        }
+    }
     // Per-place icons for XDG roots in the compact rail (matching SidebarPlacesTree).
     Component { id: iconMonitor;  IconMonitor  { size: 16; color: Theme.muted } }
     Component { id: iconFileText; IconFileText { size: 16; color: Theme.muted } }
@@ -373,12 +394,19 @@ Rectangle {
                             anchors.verticalCenter: parent.verticalCenter
                             spacing: 10
 
+                            // W8: filled star in the bookmark's chosen color
+                            // (or accent gold by default). The trailing pin star
+                            // below is unchanged.
                             Loader {
-                                width: 16; height: 16
+                                width: 14; height: 14
                                 anchors.verticalCenter: parent.verticalCenter
-                                sourceComponent: iconFolder
-                                onLoaded: item.color = Qt.binding(
-                                    () => bmDelegate.isActive ? Theme.gold : Theme.muted)
+                                sourceComponent: iconStarFilled
+                                onLoaded: {
+                                    item.size = 14
+                                    item.color = Qt.binding(() =>
+                                        (model.color && model.color.length > 0)
+                                            ? model.color : Theme.gold)
+                                }
                             }
 
                             Text {
@@ -387,10 +415,11 @@ Rectangle {
                                 font.pointSize: Theme.fontNormal
                                 verticalAlignment: Text.AlignVCenter
                                 elide: Text.ElideRight
-                                width: parent.width - 16 - 11 - 10 - Theme.spacing
+                                width: parent.width - 14 - 11 - 10 - Theme.spacing
                             }
 
-                            // Favorites carry a decorative trailing gold star.
+                            // Favorites carry a decorative trailing gold star
+                            // (the pin/unpin affordance — left untouched by W8).
                             Loader {
                                 width: 11; height: 11
                                 anchors.verticalCenter: parent.verticalCenter
@@ -1098,6 +1127,9 @@ Rectangle {
             property string iconKind: "folder"
             property bool active: false
             property string tip: ""
+            // W8: optional fixed glyph color (used by colored favorite stars in
+            // the rail). When unset (transparent), the active/muted rule applies.
+            property color glyphColor: "transparent"
             signal activated()
 
             Rectangle {
@@ -1141,6 +1173,7 @@ Rectangle {
                 sourceComponent: {
                     switch (cbtn.iconKind) {
                     case "star":      return iconStarGold
+                    case "favstar":   return iconStarFilled
                     case "home":      return iconHome
                     case "clock":     return iconClock
                     case "eyeoff":    return iconEyeOff
@@ -1158,9 +1191,16 @@ Rectangle {
                     }
                 }
                 onLoaded: {
-                    // The star is intrinsically gold and small; leave it. Every
-                    // other glyph turns gold when its entry is active.
-                    if (cbtn.iconKind !== "star" && item)
+                    if (!item)
+                        return
+                    // The "star" section anchor is intrinsically gold; leave it.
+                    if (cbtn.iconKind === "star")
+                        return
+                    // A pinned-favorite star carries its own fixed color
+                    // (glyphColor); every other glyph turns gold when active.
+                    if (cbtn.glyphColor.a > 0)
+                        item.color = Qt.binding(() => cbtn.glyphColor)
+                    else
                         item.color = Qt.binding(() => cbtn.active ? Theme.gold : Theme.muted)
                 }
             }
@@ -1256,7 +1296,12 @@ Rectangle {
                     height: active ? 34 : 0
                     sourceComponent: compactButton
                     onLoaded: {
-                        item.iconKind = "folder"
+                        // W8: filled star in the bookmark's chosen color (gold
+                        // default), matching the full Favorites rows.
+                        item.iconKind = "favstar"
+                        item.glyphColor = Qt.binding(() =>
+                            (model.color && model.color.length > 0)
+                                ? model.color : Theme.gold)
                         item.tip = model.name
                         item.active = Qt.binding(() =>
                             !root.isRecentsView && !root.isHiddenView

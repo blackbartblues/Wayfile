@@ -506,6 +506,19 @@ void ConfigManager::loadConfig()
             }
         }
 
+        // Per-bookmark star colors live in an OPTIONAL [bookmarks.colors]
+        // sub-table (path = "#RRGGBB"). Old configs without it load fine —
+        // the map just stays empty and every star falls back to gold.
+        m_bookmarkColors.clear();
+        if (auto colors = config["bookmarks"]["colors"].as_table()) {
+            for (const auto &[key, val] : *colors) {
+                if (auto v = val.value<std::string>()) {
+                    m_bookmarkColors.insert(QString::fromStdString(std::string(key)),
+                                            QString::fromStdString(*v));
+                }
+            }
+        }
+
         m_customContextActions.clear();
         if (auto arr = config["context_menu"]["actions"].as_array()) {
             for (const auto &item : *arr) {
@@ -591,6 +604,13 @@ bool ConfigManager::sidebarVisible() const { return m_sidebarVisible; }
 bool ConfigManager::sidebarCompact() const { return m_sidebarCompact; }
 QStringList ConfigManager::hiddenSidebarEntries() const { return m_hiddenSidebarEntries; }
 QStringList ConfigManager::bookmarks() const { return m_bookmarks; }
+QVariantMap ConfigManager::bookmarkColors() const
+{
+    QVariantMap result;
+    for (auto it = m_bookmarkColors.constBegin(); it != m_bookmarkColors.constEnd(); ++it)
+        result.insert(it.key(), it.value());
+    return result;
+}
 double ConfigManager::scrollSpeed() const { return m_scrollSpeed; }
 int ConfigManager::gridCellSize() const { return m_gridCellSize; }
 int ConfigManager::radiusSmall() const { return m_radiusSmall; }
@@ -925,13 +945,64 @@ void ConfigManager::saveBookmarks(const QStringList &paths)
         } catch (...) {}
     }
 
-    // Update bookmarks array
+    // Read-modify-write the [bookmarks] table so the optional [bookmarks.colors]
+    // sub-table is preserved — replacing the whole table would wipe colors.
+    toml::table bookmarksTbl;
+    if (auto existing = config["bookmarks"].as_table())
+        bookmarksTbl = *existing;
+
     toml::array arr;
     for (const auto &p : paths)
         arr.push_back(p.toStdString());
-    config.insert_or_assign("bookmarks", toml::table{{"paths", std::move(arr)}});
+    bookmarksTbl.insert_or_assign("paths", std::move(arr));
+    config.insert_or_assign("bookmarks", std::move(bookmarksTbl));
 
     // Write back
+    writeTomlAtomic(m_configPath, config);
+
+    if (QFile::exists(m_configPath))
+        m_watcher.addPath(m_configPath);
+}
+
+void ConfigManager::saveBookmarkColor(const QString &path, const QString &color)
+{
+    if (path.isEmpty())
+        return;
+
+    // Update the in-memory map first so getters/reloads stay consistent.
+    if (color.isEmpty())
+        m_bookmarkColors.remove(path);
+    else
+        m_bookmarkColors.insert(path, color);
+
+    const bool wasWatchingConfig = m_watcher.files().contains(m_configPath);
+    if (wasWatchingConfig)
+        m_watcher.removePath(m_configPath);
+
+    toml::table config;
+    if (QFile::exists(m_configPath)) {
+        try {
+            config = toml::parse_file(m_configPath.toStdString());
+        } catch (...) {}
+    }
+
+    // Read-modify-write [bookmarks] so the flat `paths` array is left intact;
+    // we only rebuild the nested `colors` sub-table from the in-memory map.
+    toml::table bookmarksTbl;
+    if (auto existing = config["bookmarks"].as_table())
+        bookmarksTbl = *existing;
+
+    toml::table colorsTbl;
+    for (auto it = m_bookmarkColors.constBegin(); it != m_bookmarkColors.constEnd(); ++it)
+        colorsTbl.insert_or_assign(it.key().toStdString(), it.value().toStdString());
+
+    if (colorsTbl.empty())
+        bookmarksTbl.erase("colors");
+    else
+        bookmarksTbl.insert_or_assign("colors", std::move(colorsTbl));
+
+    config.insert_or_assign("bookmarks", std::move(bookmarksTbl));
+
     writeTomlAtomic(m_configPath, config);
 
     if (QFile::exists(m_configPath))

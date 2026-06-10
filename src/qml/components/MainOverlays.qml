@@ -370,6 +370,14 @@ Item {
             } else if (action === "removebookmark") {
                 if (sidebarItem.kind === "bookmark" && sidebarItem.index >= 0)
                     bookmarks.removeBookmark(sidebarItem.index)
+            } else if (action.indexOf("bookmark-color:") === 0) {
+                // W8: per-favorite star color. "bookmark-color:<hex>"; an empty
+                // hex clears the override back to the default gold. Persisted
+                // via the model → ConfigManager.saveBookmarkColor wiring.
+                if (sidebarItem.kind === "bookmark" && sidebarItem.index >= 0) {
+                    var hex = action.substring("bookmark-color:".length)
+                    bookmarks.setBookmarkColor(sidebarItem.index, hex)
+                }
             } else if (action === "mountdevice") {
                 if (sidebarItem.backend === "udisks2" && !runtimeFeatures.udisksctlAvailable) {
                     toast.show(runtimeFeatures.installHint("deviceMount"), "info")

@@ -85,6 +85,7 @@ public:
     double scrollSpeed() const;
     int gridCellSize() const;
     QStringList bookmarks() const;
+    QVariantMap bookmarkColors() const;
     int radiusSmall() const;
     int radiusMedium() const;
     int radiusLarge() const;
@@ -107,6 +108,10 @@ public:
     Q_INVOKABLE void saveSettings(const QVariantMap &settings);
     Q_INVOKABLE void saveShortcuts(const QVariantMap &shortcuts);
     Q_INVOKABLE void saveBookmarks(const QStringList &paths);
+    // Per-bookmark star color, keyed by absolute path. Persisted under a
+    // [bookmarks.colors] sub-table so it never disturbs the flat `paths`
+    // array. An empty `color` removes the entry (revert to the default gold).
+    Q_INVOKABLE void saveBookmarkColor(const QString &path, const QString &color);
     Q_INVOKABLE void saveSidebarWidth(int width);
     Q_INVOKABLE void saveSidebarCompact(bool compact);
     Q_INVOKABLE void hideSidebarEntry(const QString &id);
@@ -143,6 +148,8 @@ private:
     double m_scrollSpeed;
     int m_gridCellSize;
     QStringList m_bookmarks;
+    // path → "#RRGGBB" star color. Absent ⇒ default gold.
+    QMap<QString, QString> m_bookmarkColors;
     int m_radiusSmall;
     int m_radiusMedium;
     int m_radiusLarge;

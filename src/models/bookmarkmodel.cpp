@@ -51,6 +51,7 @@ QVariant BookmarkModel::data(const QModelIndex &index, int role) const
     case NameRole: return bm.name;
     case PathRole: return bm.path;
     case IconRole: return bm.icon;
+    case ColorRole: return bm.color;
     }
     return {};
 }
@@ -61,6 +62,7 @@ QHash<int, QByteArray> BookmarkModel::roleNames() const
         {NameRole, "name"},
         {PathRole, "path"},
         {IconRole, "icon"},
+        {ColorRole, "color"},
     };
 }
 
@@ -78,7 +80,8 @@ void BookmarkModel::setBookmarks(const QStringList &paths)
             const Bookmark &current = m_bookmarks.at(i);
             unchanged = current.path == bookmark.path
                         && current.name == bookmark.name
-                        && current.icon == bookmark.icon;
+                        && current.icon == bookmark.icon
+                        && current.color == bookmark.color;
         }
     }
 
@@ -89,6 +92,29 @@ void BookmarkModel::setBookmarks(const QStringList &paths)
     m_bookmarks = updatedBookmarks;
     endResetModel();
     emit countChanged();
+}
+
+void BookmarkModel::setBookmarkColors(const QVariantMap &colors)
+{
+    m_bookmarkColors.clear();
+    for (auto it = colors.constBegin(); it != colors.constEnd(); ++it)
+        m_bookmarkColors.insert(it.key(), it.value().toString());
+
+    // Re-apply colors to any already-loaded rows (no-op on the empty first
+    // load, where setBookmarks runs afterwards and reads m_bookmarkColors).
+    if (m_bookmarks.isEmpty())
+        return;
+
+    bool anyChanged = false;
+    for (auto &bm : m_bookmarks) {
+        const QString resolved = m_bookmarkColors.value(bm.path);
+        if (bm.color != resolved) {
+            bm.color = resolved;
+            anyChanged = true;
+        }
+    }
+    if (anyChanged)
+        emit dataChanged(index(0), index(m_bookmarks.size() - 1), {ColorRole});
 }
 
 QStringList BookmarkModel::paths() const
@@ -164,6 +190,31 @@ void BookmarkModel::moveBookmark(int from, int to)
     emit bookmarksChanged();
 }
 
+void BookmarkModel::setBookmarkColor(int index, const QString &color)
+{
+    if (index < 0 || index >= m_bookmarks.size())
+        return;
+
+    Bookmark &bm = m_bookmarks[index];
+    if (bm.color == color)
+        return;
+
+    bm.color = color;
+
+    // Keep the in-memory lookup in sync so a subsequent setBookmarks rebuild
+    // (e.g. reorder) preserves the color without a config round-trip.
+    if (color.isEmpty())
+        m_bookmarkColors.remove(bm.path);
+    else
+        m_bookmarkColors.insert(bm.path, color);
+
+    const QModelIndex idx = this->index(index, 0);
+    emit dataChanged(idx, idx, {ColorRole});
+    // Route persistence through the host (ConfigManager), mirroring the
+    // bookmarksChanged → saveBookmarks wiring in main.cpp.
+    emit bookmarkColorChanged(bm.path, color);
+}
+
 bool BookmarkModel::containsPath(const QString &path) const
 {
     QString expanded = expandPath(path);
@@ -178,7 +229,8 @@ BookmarkModel::Bookmark BookmarkModel::makeBookmark(const QString &rawPath) cons
 {
     QString expanded = expandPath(rawPath);
     QString name = bookmarkDisplayName(expanded);
-    return {name, expanded, iconForPath(name.toLower())};
+    return {name, expanded, iconForPath(name.toLower()),
+            m_bookmarkColors.value(expanded)};
 }
 
 QString BookmarkModel::expandPath(const QString &path)

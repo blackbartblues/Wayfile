@@ -247,6 +247,78 @@ private slots:
         QVERIFY(bookmarks.size() >= 1);
     }
 
+    void testDefaultBookmarkColorsEmpty()
+    {
+        QTemporaryDir dir;
+        ConfigManager mgr(dir.path() + "/config.toml");
+        QVERIFY(mgr.bookmarkColors().isEmpty());
+    }
+
+    void testSaveBookmarkColorPersistsAndReloads()
+    {
+        QTemporaryDir dir;
+        QString path = dir.path() + "/config.toml";
+
+        {
+            ConfigManager mgr(path);
+            mgr.saveBookmarkColor("/home/user/Documents", "#D4AA6A");
+            mgr.saveBookmarkColor("/home/user/Music", "#57C7BF");
+            QCOMPARE(mgr.bookmarkColors().value("/home/user/Documents").toString(),
+                     QString("#D4AA6A"));
+        }
+
+        ConfigManager mgr2(path);
+        QCOMPARE(mgr2.bookmarkColors().value("/home/user/Documents").toString(),
+                 QString("#D4AA6A"));
+        QCOMPARE(mgr2.bookmarkColors().value("/home/user/Music").toString(),
+                 QString("#57C7BF"));
+    }
+
+    void testSaveBookmarkColorEmptyClears()
+    {
+        QTemporaryDir dir;
+        QString path = dir.path() + "/config.toml";
+
+        ConfigManager mgr(path);
+        mgr.saveBookmarkColor("/home/user/Pictures", "#8FC380");
+        QCOMPARE(mgr.bookmarkColors().value("/home/user/Pictures").toString(),
+                 QString("#8FC380"));
+
+        mgr.saveBookmarkColor("/home/user/Pictures", "");
+        QVERIFY(!mgr.bookmarkColors().contains("/home/user/Pictures"));
+
+        ConfigManager mgr2(path);
+        QVERIFY(!mgr2.bookmarkColors().contains("/home/user/Pictures"));
+    }
+
+    // Saving paths must NOT wipe the colors sub-table, and saving a color must
+    // NOT wipe the paths array — they share the [bookmarks] table.
+    void testBookmarkPathsAndColorsAreIndependent()
+    {
+        QTemporaryDir dir;
+        QString path = dir.path() + "/config.toml";
+
+        ConfigManager mgr(path);
+        mgr.saveBookmarkColor("/home/user/Documents", "#D4AA6A");
+        mgr.saveBookmarks({"/home/user/Documents", "/home/user/Downloads"});
+
+        // Colors survived the saveBookmarks call.
+        QCOMPARE(mgr.bookmarkColors().value("/home/user/Documents").toString(),
+                 QString("#D4AA6A"));
+
+        // Now save another color; the paths array must remain intact.
+        mgr.saveBookmarkColor("/home/user/Downloads", "#E68B5C");
+
+        ConfigManager mgr2(path);
+        QStringList reloaded = mgr2.bookmarks();
+        QVERIFY(reloaded.contains("/home/user/Documents"));
+        QVERIFY(reloaded.contains("/home/user/Downloads"));
+        QCOMPARE(mgr2.bookmarkColors().value("/home/user/Documents").toString(),
+                 QString("#D4AA6A"));
+        QCOMPARE(mgr2.bookmarkColors().value("/home/user/Downloads").toString(),
+                 QString("#E68B5C"));
+    }
+
     void testDefaultShortcuts()
     {
         QTemporaryDir dir;

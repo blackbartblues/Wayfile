@@ -82,6 +82,8 @@ Item {
                 { text: "Open in Terminal", shortcut: "", action: "terminal" },
                 { text: "Properties", shortcut: "", action: "properties" },
                 { separator: true },
+                bookmarkColorMenuItem(),
+                { separator: true },
                 { text: "Remove from Bookmarks", shortcut: "", action: "removebookmark", destructive: true }
             ])
         }
@@ -105,6 +107,25 @@ Item {
         }
 
         return withHideEntries(item, [])
+    }
+
+    // W8: per-favorite star color submenu. Each swatch carries a `swatch` color
+    // (rendered as a filled dot by ContextMenuSubmenuRow) and an action of the
+    // form "bookmark-color:<hex>"; "Default" uses an empty hex to clear the
+    // override back to accent gold. MainOverlays routes the action to
+    // bookmarks.setBookmarkColor(index, hex).
+    function bookmarkColorMenuItem() {
+        return { text: "Color", shortcut: "", action: "bookmark-color-toggle", isSubmenu: true, icon: "Palette",
+            submenuItems: [
+                { text: "Default",    shortcut: "", action: "bookmark-color:",        swatch: "#D4AA6A" },
+                { text: "Gold",       shortcut: "", action: "bookmark-color:#D4AA6A", swatch: "#D4AA6A" },
+                { text: "Rose",       shortcut: "", action: "bookmark-color:#D4A6A6", swatch: "#D4A6A6" },
+                { text: "Image",      shortcut: "", action: "bookmark-color:#8FC380", swatch: "#8FC380" },
+                { text: "Aqua",       shortcut: "", action: "bookmark-color:#57C7BF", swatch: "#57C7BF" },
+                { text: "Violet",     shortcut: "", action: "bookmark-color:#B292E8", swatch: "#B292E8" },
+                { text: "Coral",      shortcut: "", action: "bookmark-color:#E68B5C", swatch: "#E68B5C" }
+            ]
+        }
     }
 
     // W7 per-entry hide: append the "Hide from sidebar" action (only for rows

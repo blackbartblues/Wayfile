@@ -275,11 +275,19 @@ int main(int argc, char *argv[])
                                  sessionData.value("activeTab").toInt(0));
 
     BookmarkModel *bookmarks = new BookmarkModel(&app);
+    // Seed per-bookmark star colors BEFORE setBookmarks so they apply on first
+    // load (makeBookmark reads the color map).
+    bookmarks->setBookmarkColors(config->bookmarkColors());
     bookmarks->setBookmarks(config->bookmarks());
 
     // Persist bookmark changes to config
     QObject::connect(bookmarks, &BookmarkModel::bookmarksChanged, [=]() {
         config->saveBookmarks(bookmarks->paths());
+    });
+    // Persist per-bookmark star color changes (separate [bookmarks.colors]).
+    QObject::connect(bookmarks, &BookmarkModel::bookmarkColorChanged,
+                     [=](const QString &path, const QString &color) {
+        config->saveBookmarkColor(path, color);
     });
 
     FileOperations *fileOps = new FileOperations(&app);
