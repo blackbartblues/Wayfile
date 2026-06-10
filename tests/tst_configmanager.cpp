@@ -1171,8 +1171,10 @@ private slots:
         const QString path = dir.path() + "/config.toml";
         {
             ConfigManager cfg(path);
-            QVERIFY(cfg.hiddenSidebarEntries().isEmpty());
-            cfg.hideSidebarEntry("places.recents");
+            // R5: Recents is hidden by default, so a fresh config starts with it
+            // in the list (no longer empty).
+            QCOMPARE(cfg.hiddenSidebarEntries(), QStringList{"places.recents"});
+            cfg.hideSidebarEntry("places.recents");           // already default — no-op
             cfg.hideSidebarEntry("network");
             cfg.hideSidebarEntry("places.recents");           // dup is a no-op
             QCOMPARE(cfg.hiddenSidebarEntries().size(), 2);

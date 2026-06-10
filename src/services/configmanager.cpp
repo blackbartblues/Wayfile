@@ -391,7 +391,10 @@ void ConfigManager::setDefaults()
     m_sidebarWidth = 220;
     m_sidebarVisible = true;
     m_sidebarCompact = false;
-    m_hiddenSidebarEntries.clear();
+    // Recents is hidden from the sidebar by default (restorable via the
+    // sidebar's "Show hidden entries" menu). Note: this won't retro-apply to a
+    // config that already persisted an explicit `hidden_entries` array.
+    m_hiddenSidebarEntries = {QStringLiteral("places.recents")};
     m_scrollSpeed = 3.0;
     m_gridCellSize = 180;  // keep in sync with FileGridView min/maxCellSize (110–320)
     m_bookmarks = {"~/Documents", "~/Downloads", "~/Pictures", "~/Projects"};
@@ -451,8 +454,11 @@ void ConfigManager::loadConfig()
             m_sidebarVisible = *v;
         if (auto v = config["sidebar"]["compact"].value<bool>())
             m_sidebarCompact = *v;
-        m_hiddenSidebarEntries.clear();
+        // Only an explicit array in the file overrides the default (above);
+        // a missing key keeps the default (Recents hidden), matching the
+        // "removed key reverts to default" contract documented above.
         if (auto arr = config["sidebar"]["hidden_entries"].as_array()) {
+            m_hiddenSidebarEntries.clear();
             for (const auto &item : *arr) {
                 if (auto v = item.value<std::string>())
                     m_hiddenSidebarEntries.append(QString::fromStdString(*v));
