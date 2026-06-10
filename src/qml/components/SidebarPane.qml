@@ -35,35 +35,35 @@ Item {
 
     function sidebarMenuItems(item) {
         if (!item)
-            return []
+            return withHideEntries(item, [])
 
         if (item.kind === "quickAccess") {
             if (item.isRecents || item.isHidden)
-                return [
+                return withHideEntries(item, [
                     { text: "Open", shortcut: "", action: "open" }
-                ]
+                ])
 
             if (fileOps.isTrashPath(item.path))
-                return [
+                return withHideEntries(item, [
                     { text: "Open", shortcut: "Return", action: "open" },
                     { text: "Open in New Tab", shortcut: "", action: "opennewtab" },
                     { text: "Open in Split View", shortcut: "", action: "split_open", icon: "SquareSplitHorizontal" },
                     { separator: true },
                     { text: "Empty Trash", shortcut: "", action: "emptytrash", destructive: true }
-                ]
+                ])
 
-            return [
+            return withHideEntries(item, [
                 { text: "Open", shortcut: "Return", action: "open" },
                 { text: "Open in New Tab", shortcut: "", action: "opennewtab" },
                 { text: "Open in Split View", shortcut: "", action: "split_open", icon: "SquareSplitHorizontal" },
                 { separator: true },
                 { text: "Open in Terminal", shortcut: "", action: "terminal" },
                 { text: "Properties", shortcut: "", action: "properties" }
-            ]
+            ])
         }
 
         if (item.kind === "bookmark") {
-            return [
+            return withHideEntries(item, [
                 { text: "Open", shortcut: "Return", action: "open" },
                 { text: "Open in New Tab", shortcut: "", action: "opennewtab" },
                 { text: "Open in Split View", shortcut: "", action: "split_open", icon: "SquareSplitHorizontal" },
@@ -72,16 +72,16 @@ Item {
                 { text: "Properties", shortcut: "", action: "properties" },
                 { separator: true },
                 { text: "Remove from Bookmarks", shortcut: "", action: "removebookmark", destructive: true }
-            ]
+            ])
         }
 
         if (item.kind === "device") {
             if (!item.mounted)
-                return [
+                return withHideEntries(item, [
                     { text: "Mount", shortcut: "", action: "mountdevice" }
-                ]
+                ])
 
-            return [
+            return withHideEntries(item, [
                 { text: "Open", shortcut: "Return", action: "open" },
                 { text: "Open in New Tab", shortcut: "", action: "opennewtab" },
                 { text: "Open in Split View", shortcut: "", action: "split_open", icon: "SquareSplitHorizontal" },
@@ -90,10 +90,35 @@ Item {
                 { text: "Properties", shortcut: "", action: "properties" },
                 { separator: true },
                 { text: "Unmount", shortcut: "", action: "unmountdevice" }
-            ]
+            ])
         }
 
-        return []
+        return withHideEntries(item, [])
+    }
+
+    // W7 per-entry hide: append the "Hide from sidebar" action (only for rows
+    // carrying a non-empty entryId — Home and devices carry none, so they are
+    // not hideable) and a universal "Show hidden entries (N)" restore affordance
+    // whenever anything is hidden. The restore item is added on EVERY sidebar
+    // right-click so the user can recover even after hiding the row they'd
+    // normally click. `hideSidebarEntry`/`clearHiddenSidebarEntries` persist.
+    function withHideEntries(item, baseItems) {
+        var items = baseItems.slice()
+        var entryId = item ? (item.entryId || "") : ""
+        var hiddenCount = config.hiddenSidebarEntries.length
+
+        if (entryId !== "") {
+            if (items.length > 0)
+                items.push({ separator: true })
+            items.push({ text: "Hide from sidebar", shortcut: "", action: "hide-entry", icon: "EyeOff" })
+        }
+
+        if (hiddenCount > 0) {
+            items.push({ separator: true })
+            items.push({ text: "Show hidden entries (" + hiddenCount + ")", shortcut: "", action: "show-hidden", icon: "Eye" })
+        }
+
+        return items
     }
 
     // Gallery mode swaps the sidebar's Places list for a folder navigator, with a

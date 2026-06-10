@@ -16,6 +16,11 @@ Rectangle {
     property bool isRecentsView: false
     property bool isHiddenView: false
     property Item tooltipLayer: null
+
+    // Per-entry hide (W7): convenience flags for the Network/Trash sections,
+    // whose header (Network) or whole row (Trash) must collapse with their id.
+    readonly property bool networkHidden: config.hiddenSidebarEntries.indexOf("network") >= 0
+    readonly property bool trashHidden: config.hiddenSidebarEntries.indexOf("trash") >= 0
     signal bookmarkClicked(string path)
     signal sidebarContextMenuRequested(var item, point position)
     signal recentsClicked()
@@ -149,6 +154,32 @@ Rectangle {
             readonly property real externalGapHeight: externalDragActive ? rowHeight : 0
             readonly property int externalDropIndex: bookmarkDropArea._extDropIndex
 
+            // Per-entry hide (W7): a bookmark's path is its stable entryId. Hidden
+            // bookmarks collapse their row to height 0, so the click/drag grid must
+            // operate over the VISIBLE subset only. `visibleIndices` maps a packed
+            // visible row position → the real BookmarkModel index; the helpers below
+            // translate between the two so the fixed-row math stays correct while
+            // mid-list rows are hidden. The binding re-runs on hidden-list change.
+            readonly property var visibleIndices: {
+                var hidden = config.hiddenSidebarEntries
+                var n = bookmarks.count // force dependency registration even when n === 0
+                var out = []
+                for (var i = 0; i < n; i++) {
+                    var p = bookmarks.data(bookmarks.index(i, 0), 258 /* PathRole */) || ""
+                    if (hidden.indexOf(p) < 0)
+                        out.push(i)
+                }
+                return out
+            }
+            readonly property int visibleCount: visibleIndices.length
+
+            // Packed visible row → real model index (or -1 when out of range).
+            function modelIndexOf(visibleRow) {
+                if (visibleRow < 0 || visibleRow >= visibleIndices.length)
+                    return -1
+                return visibleIndices[visibleRow]
+            }
+
             property int dragCurrentIndex: -1
             property string dragName: ""
             property real dragMouseY: 0
@@ -178,9 +209,21 @@ Rectangle {
             }
 
             function updateExternalDrop(drag) {
-                var clampedY = Math.max(0, Math.min(drag.y, bookmarks.count * rowHeight))
-                bookmarkDropArea._extDropIndex = Math.max(0,
-                    Math.min(Math.round(clampedY / rowHeight), bookmarks.count))
+                // Clamp + snap against the VISIBLE grid (mirrors idxAt), then translate
+                // the visible row to a real model INSERTION index. When nothing is
+                // hidden, visibleCount === bookmarks.count and this reduces to the old
+                // math (round(clampedY/rowHeight) clamped to bookmarks.count).
+                var clampedY = Math.max(0, Math.min(drag.y, visibleCount * rowHeight))
+                var vr = Math.max(0, Math.min(Math.round(clampedY / rowHeight), visibleCount))
+                var insertAt
+                if (vr >= visibleCount) {
+                    insertAt = bookmarks.count // append at end
+                } else {
+                    insertAt = modelIndexOf(vr) // insert before that visible row
+                    if (insertAt < 0)
+                        insertAt = bookmarks.count
+                }
+                bookmarkDropArea._extDropIndex = insertAt
                 externalDragMouseY = Math.max(0, Math.min(drag.y, bookmarksList.height))
 
                 var urls = dragUrls(drag)
@@ -245,7 +288,13 @@ Rectangle {
 
                 delegate: Item {
                     width: bookmarksList.width
-                    height: bookmarksSection.rowHeight
+                    // Hidden bookmarks (path in hiddenSidebarEntries) collapse to 0
+                    // so ListView packs the visible ones contiguously; the MouseArea
+                    // grid math runs over `visibleIndices` to stay aligned.
+                    readonly property bool entryHidden:
+                        config.hiddenSidebarEntries.indexOf(model.path) >= 0
+                    visible: !entryHidden
+                    height: entryHidden ? 0 : bookmarksSection.rowHeight
 
                     Rectangle {
                         id: bmDelegate
@@ -398,12 +447,18 @@ Rectangle {
                 property bool isDragging: false
                 property int pressButton: Qt.NoButton
 
+                // Map a y within the (packed, visible-only) bookmark grid to the
+                // real BookmarkModel index. Returns -1 if there are no visible rows.
                 function idxAt(y) {
-                    return Math.max(0, Math.min(Math.floor(y / bookmarksSection.rowHeight), bookmarks.count - 1))
+                    var n = bookmarksSection.visibleCount
+                    if (n <= 0)
+                        return -1
+                    var visRow = Math.max(0, Math.min(Math.floor(y / bookmarksSection.rowHeight), n - 1))
+                    return bookmarksSection.modelIndexOf(visRow)
                 }
 
                 onPositionChanged: (mouse) => {
-                    hoverIndex = (mouse.y >= 0 && mouse.y < bookmarks.count * bookmarksSection.rowHeight)
+                    hoverIndex = (mouse.y >= 0 && mouse.y < bookmarksSection.visibleCount * bookmarksSection.rowHeight)
                         ? idxAt(mouse.y) : -1
 
                     if (!pressed) return
@@ -445,7 +500,7 @@ Rectangle {
                     if (mouse.button !== Qt.RightButton)
                         return
 
-                    var index = (mouse.y >= 0 && mouse.y < bookmarks.count * bookmarksSection.rowHeight)
+                    var index = (mouse.y >= 0 && mouse.y < bookmarksSection.visibleCount * bookmarksSection.rowHeight)
                         ? idxAt(mouse.y) : -1
                     if (index < 0 || index >= bookmarks.count)
                         return
@@ -456,7 +511,9 @@ Rectangle {
                         kind: "bookmark",
                         index: index,
                         name: bookmarks.data(bookmarks.index(index, 0), 257 /* NameRole */) || "",
-                        path: path
+                        path: path,
+                        // A bookmark's own path is its stable hide id (W7).
+                        entryId: path
                     }, Qt.point(mapped.x, mapped.y))
                 }
                 onExited: hoverIndex = -1
@@ -535,13 +592,22 @@ Rectangle {
             // Quick access entries
             Repeater {
                 model: ListModel {
-                    ListElement { name: "Home"; iconType: "home"; mono: true }
-                    ListElement { name: "Recents"; iconType: "clock"; mono: false }
-                    ListElement { name: "Hidden"; iconType: "eyeoff"; mono: false }
+                    // Home carries no entryId and is never hideable. Recents and
+                    // Hidden each get a stable id so the hidden-entries filter +
+                    // "Hide from sidebar" action can target them individually.
+                    ListElement { name: "Home"; iconType: "home"; mono: true; entryId: "" }
+                    ListElement { name: "Recents"; iconType: "clock"; mono: false; entryId: "places.recents" }
+                    ListElement { name: "Hidden"; iconType: "eyeoff"; mono: false; entryId: "places.hidden" }
                 }
 
                 delegate: Rectangle {
                     id: quickAccessDelegate
+
+                    // Home (entryId "") is always visible; the rest collapse when
+                    // their id is in the persisted hidden-entries list.
+                    visible: model.entryId === ""
+                             || config.hiddenSidebarEntries.indexOf(model.entryId) < 0
+                    height: visible ? 32 : 0
 
                     readonly property string resolvedPath: {
                         const home = fsModel.homePath()
@@ -553,7 +619,6 @@ Rectangle {
 
                     width: parent.width - Theme.spacing
                     anchors.horizontalCenter: parent.horizontalCenter
-                    height: 32
                     readonly property bool isActive: {
                         if (model.name === "Recents") return root.isRecentsView
                         if (model.name === "Hidden") return root.isHiddenView
@@ -653,7 +718,8 @@ Rectangle {
                                     name: model.name,
                                     path: quickAccessDelegate.resolvedPath,
                                     isRecents: model.name === "Recents",
-                                    isHidden: model.name === "Hidden"
+                                    isHidden: model.name === "Hidden",
+                                    entryId: model.entryId
                                 }, Qt.point(mapped.x, mapped.y))
                                 return
                             }
@@ -726,10 +792,11 @@ Rectangle {
             }
         }
 
-        // Separator above NETWORK — always visible: Network is a permanent,
-        // always-reachable entry (network:///), so it always needs a divider
-        // above it. (Unlike the devices separator, which hides with devices.)
+        // Separator above NETWORK — hides with the Network entry (W7 per-entry
+        // hide). Network is otherwise a permanent, always-reachable entry, so
+        // the divider follows the row's visibility.
         Rectangle {
+            visible: !root.networkHidden
             Layout.fillWidth: true
             Layout.leftMargin: Theme.spacing
             Layout.rightMargin: Theme.spacing
@@ -739,6 +806,7 @@ Rectangle {
 
         // Wayfile section header: NETWORK — remote/virtual locations.
         Text {
+            visible: !root.networkHidden
             Layout.fillWidth: true
             Layout.leftMargin: Theme.spacing
             Layout.topMargin: Theme.spacing / 2
@@ -764,7 +832,10 @@ Rectangle {
 
                     width: parent.width - Theme.spacing
                     anchors.horizontalCenter: parent.horizontalCenter
-                    height: 32
+                    // Hide-from-sidebar (W7): "network" id. Collapse row + (via the
+                    // shared networkHidden flag) the NETWORK header above it.
+                    visible: !root.networkHidden
+                    height: visible ? 32 : 0
                     readonly property bool isActive:
                         !root.isRecentsView && !root.isHiddenView && fileOps.isRemotePath(root.currentPath)
 
@@ -852,7 +923,8 @@ Rectangle {
                                     name: "Network",
                                     path: "network:///",
                                     isRecents: false,
-                                    isHidden: false
+                                    isHidden: false,
+                                    entryId: "network"
                                 }, Qt.point(mapped.x, mapped.y))
                                 return
                             }
@@ -870,8 +942,10 @@ Rectangle {
         }
 
         // Trash — pinned at the very bottom, with a mono item-count chip.
+        // Hide-from-sidebar (W7): "trash" id; ColumnLayout drops it when hidden.
         Rectangle {
             id: trashRow
+            visible: !root.trashHidden
             Layout.fillWidth: true
             Layout.leftMargin: Theme.spacing / 2
             Layout.rightMargin: Theme.spacing / 2
@@ -955,7 +1029,8 @@ Rectangle {
                         var p = trashHover.mapToItem(null, m.x, m.y)
                         root.sidebarContextMenuRequested({
                             kind: "quickAccess", name: "Trash",
-                            path: root.trashPath, isRecents: false, isHidden: false
+                            path: root.trashPath, isRecents: false, isHidden: false,
+                            entryId: "trash"
                         }, Qt.point(p.x, p.y))
                         return
                     }

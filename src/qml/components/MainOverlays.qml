@@ -359,7 +359,14 @@ Item {
         onEmptyTrashRequested: emptyTrashConfirmDialog.open()
 
         onCustomActionRequested: (action) => {
-            if (action === "removebookmark") {
+            if (action === "hide-entry") {
+                // W7 per-entry hide — persisted via ConfigManager (toml).
+                if (sidebarItem.entryId)
+                    config.hideSidebarEntry(sidebarItem.entryId)
+            } else if (action === "show-hidden") {
+                // Restore every hidden sidebar entry at once (persisted).
+                config.clearHiddenSidebarEntries()
+            } else if (action === "removebookmark") {
                 if (sidebarItem.kind === "bookmark" && sidebarItem.index >= 0)
                     bookmarks.removeBookmark(sidebarItem.index)
             } else if (action === "mountdevice") {
