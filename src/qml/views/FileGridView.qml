@@ -999,8 +999,15 @@ GridView {
             if (rb.width < 4 && rb.height < 4) return
 
             var newSel = []
-            var c = root.count
-            for (var i = 0; i < c; i++) {
+            // Only realized (visible) items can intersect the viewport-bound
+            // rubber band, so clamp to the visible row range instead of scanning
+            // every index (huge folders made this O(count) per mouse-move).
+            var ch = Math.max(1, root.cellHeight)
+            var cols = Math.max(1, root.columnsPerRow)
+            var first = Math.max(0, Math.floor(root.contentY / ch) - 1) * cols
+            var last = Math.min(root.count - 1,
+                (Math.ceil((root.contentY + root.height) / ch) + 1) * cols - 1)
+            for (var i = first; i <= last; i++) {
                 var item = root.itemAtIndex(i)
                 if (!item) continue
                 var itemPos = root.mapFromItem(item, 0, 0)

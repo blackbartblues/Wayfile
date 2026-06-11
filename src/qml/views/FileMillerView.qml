@@ -701,8 +701,14 @@ FocusScope {
                     if (rb.width < 4 && rb.height < 4) return
 
                     var newSel = []
-                    var c = currentColumn.count
-                    for (var i = 0; i < c; i++) {
+                    // Only realized (visible) rows can intersect the viewport-bound
+                    // rubber band, so clamp to the visible range instead of scanning
+                    // every row.
+                    var rh = Math.max(1, root.rowHeight)
+                    var first = Math.max(0, Math.floor(currentColumn.contentY / rh) - 2)
+                    var last = Math.min(currentColumn.count - 1,
+                        Math.ceil((currentColumn.contentY + currentColumn.height) / rh) + 2)
+                    for (var i = first; i <= last; i++) {
                         var item = currentColumn.itemAtIndex(i)
                         if (!item) continue
                         var itemPos = currentColumn.mapFromItem(item, 0, 0)
