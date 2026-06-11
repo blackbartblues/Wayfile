@@ -145,6 +145,7 @@ list(APPEND wayfile_qml_module_args
         qml/views/MillerCurrentRow.qml
         qml/views/MillerPreviewColumn.qml
         qml/views/KineticWheelScroller.qml
+        qml/views/DropParse.js
         qml/components/ContextMenu.qml
         qml/components/ContextMenuRow.qml
         qml/components/ContextMenuSubmenuRow.qml

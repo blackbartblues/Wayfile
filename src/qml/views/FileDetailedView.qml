@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import Wayfile
 import Quill as Q
+import "DropParse.js" as DropParse
 
 FocusScope {
     id: root
@@ -127,27 +128,11 @@ FocusScope {
     signal transferRequested(var paths, string destinationPath, bool moveOperation)
 
     function dropPaths(drop) {
+        // In-app drag: the C++ DragHelper already knows the exact source paths.
         if (dragHelper.active && dragHelper.activePaths.length > 0)
             return dragHelper.activePaths.slice()
-
-        var paths = []
-        var urls = drop.urls || []
-
-        for (var i = 0; i < urls.length; i++) {
-            var s = urls[i].toString()
-            paths.push(s.startsWith("file://") ? decodeURIComponent(s.substring(7)) : s)
-        }
-
-        if (paths.length === 0 && drop.hasText) {
-            var lines = drop.text.split("\n")
-            for (var j = 0; j < lines.length; j++) {
-                var line = lines[j].trim()
-                if (line !== "")
-                    paths.push(line.startsWith("file://") ? decodeURIComponent(line.substring(7)) : line)
-            }
-        }
-
-        return paths
+        // System DnD: parse the drop payload (shared with the other views).
+        return DropParse.pathsFromDrop(drop)
     }
 
     function activateCurrentSelection() {

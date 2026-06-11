@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import Wayfile
 import Quill as Q
+import "DropParse.js" as DropParse
 
 GridView {
     id: root
@@ -272,35 +273,11 @@ GridView {
 
     // Parse file paths from a drop event
     function parseDragPaths(drop) {
+        // In-app drag: the C++ DragHelper already knows the exact source paths.
         if (dragHelper.active && dragHelper.activePaths.length > 0)
             return dragHelper.activePaths.slice()
-
-        var paths = []
-
-        function decodePath(value) {
-            return value.startsWith("file://") ? decodeURIComponent(value.substring(7)) : value
-        }
-
-        // Try drop.urls first (system DnD)
-        if (drop.urls && drop.urls.length > 0) {
-            for (var i = 0; i < drop.urls.length; i++) {
-                var s = drop.urls[i].toString()
-                paths.push(decodePath(s))
-            }
-        }
-
-        // Fallback: parse text/uri-list from text mime data
-        if (paths.length === 0 && drop.hasText) {
-            var text = drop.text
-            var lines = text.split("\n")
-            for (var j = 0; j < lines.length; j++) {
-                var line = lines[j].trim()
-                if (line !== "")
-                    paths.push(decodePath(line))
-            }
-        }
-
-        return paths
+        // System DnD: parse the drop payload (shared with the other views).
+        return DropParse.pathsFromDrop(drop)
     }
 
     // ── Drag state ─────────────────────────────────────────────────────────
