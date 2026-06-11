@@ -52,8 +52,6 @@ FocusScope {
         return parent === currentPath ? "" : parent
     }
 
-    readonly property string currentDirName: currentPath ? fileOps.displayNameForPath(currentPath) : ""
-
     property int rowHeight: 28
     readonly property int minRowHeight: 22
     readonly property int maxRowHeight: 56
@@ -297,7 +295,10 @@ FocusScope {
                 required property string fileExtension
                 required property string gitStatusIcon
 
-                readonly property bool isCurrentDir: parentDelegate.fileName === root.currentDirName
+                // Compare full paths, not basenames: two sibling dirs sharing a
+                // basename would both highlight. currentPath is the same format as
+                // the model's filePath (see pathForRow/rowForPath).
+                readonly property bool isCurrentDir: parentDelegate.filePath === root.currentPath
 
                 Rectangle {
                     anchors.fill: parent
