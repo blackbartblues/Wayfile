@@ -47,23 +47,23 @@
   <screenshots>
     <screenshot type="default">
       <caption>Hybrid view — folder grid over a sortable file list</caption>
-      <image>https://raw.githubusercontent.com/blackbartblues/Wayfile/v1.0.1/docs/screenshots/hybrid-view.png</image>
+      <image>https://raw.githubusercontent.com/blackbartblues/Wayfile/v1.0.0/docs/screenshots/hybrid-view.png</image>
     </screenshot>
     <screenshot>
-      <caption>Grid view with gold folder glyphs and file-type chips</caption>
-      <image>https://raw.githubusercontent.com/blackbartblues/Wayfile/v1.0.1/docs/screenshots/grid-view.png</image>
+      <caption>Grid view with thin-frame, type-coloured file icons</caption>
+      <image>https://raw.githubusercontent.com/blackbartblues/Wayfile/v1.0.0/docs/screenshots/grid-view.png</image>
     </screenshot>
     <screenshot>
-      <caption>Miller column view with live preview</caption>
-      <image>https://raw.githubusercontent.com/blackbartblues/Wayfile/v1.0.1/docs/screenshots/miller-view.png</image>
+      <caption>Miller column view with live preview and metadata</caption>
+      <image>https://raw.githubusercontent.com/blackbartblues/Wayfile/v1.0.0/docs/screenshots/miller-view.png</image>
     </screenshot>
     <screenshot>
       <caption>Quick preview overlay with metadata</caption>
-      <image>https://raw.githubusercontent.com/blackbartblues/Wayfile/v1.0.1/docs/screenshots/quick-preview.png</image>
+      <image>https://raw.githubusercontent.com/blackbartblues/Wayfile/v1.0.0/docs/screenshots/quick-preview.png</image>
     </screenshot>
     <screenshot>
-      <caption>Built-in Colours palette editor</caption>
-      <image>https://raw.githubusercontent.com/blackbartblues/Wayfile/v1.0.1/docs/screenshots/colours-editor.png</image>
+      <caption>Two tabs merged into a split supertab</caption>
+      <image>https://raw.githubusercontent.com/blackbartblues/Wayfile/v1.0.0/docs/screenshots/supertab.png</image>
     </screenshot>
   </screenshots>
 
@@ -79,14 +79,18 @@
   </provides>
 
   <releases>
-    <release version="1.0.1" date="2026-06-07">
+    <release version="1.0.0" date="2026-06-11">
       <description>
-        <p>Rebrand from Heimdall to Wayfile. The project was renamed to avoid a clash with the existing heimdall package (a Samsung firmware flasher that owns the heimdall binary), freeing the wayfile binary name, application id and AUR slot. The brand wordmark has been removed from the tab strip. No functional changes from 1.0.0.</p>
-      </description>
-    </release>
-    <release version="1.0.0" date="2026-06-07">
-      <description>
-        <p>First stable release of the obsidian and gold rework: the Bifrost signature theme across the whole UI, a hybrid default view (folder grid over a sortable file list), an in-app granular Colours palette editor saved as a live custom theme, merged split-pane tabs, fully tokenised chrome, and the Quill control library bridged onto the theme.</p>
+        <p>First stable release of Wayfile — a Qt6/QML file manager with the obsidian-and-gold Bifrost design system.</p>
+        <ul>
+          <li>Hybrid default view: a folder grid over a sortable file list with one shared selection</li>
+          <li>Thin-frame, type-coloured file icons and accent-coloured folders, with a soft gold bloom on hover and selection</li>
+          <li>Five live accent presets — Bifrost, Aurora, Nebula, Ember, and Verdant — derived from a single accent on a shared obsidian base</li>
+          <li>A Colours settings page with a preset picker, token-by-token editing, and save-as-named-theme</li>
+          <li>Unified sidebar: Favorites with colour tags, an expandable Places tree, devices with capacity meters, and network locations</li>
+          <li>Merged tabs into split supertabs, Miller columns, quick preview, async file operations, and git status</li>
+          <li>An Inter, Cormorant Garamond, and JetBrains Mono type stack, and a new compass-folder logo</li>
+        </ul>
       </description>
     </release>
     <release version="0.4.25" date="2026-04-15">
