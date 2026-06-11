@@ -24,6 +24,10 @@ Rectangle {
     // W8: the Network section enumerates live GVFS network mounts and hides
     // entirely (header + separator + rows) when there are none (or it's hidden).
     readonly property bool networkSectionVisible: !networkHidden && networkModel.count > 0
+    // True when the sidebar is collapsed to the icon-only rail. The rail itself
+    // (SidebarCompactRail) derives this independently; this copy gates the
+    // full-mode-only collapse control below.
+    readonly property bool compactMode: root.host && root.host.sidebarCompact
     signal bookmarkClicked(string path)
     signal sidebarContextMenuRequested(var item, point position)
     signal recentsClicked()
@@ -56,7 +60,6 @@ Rectangle {
     Component { id: iconEyeOff; IconEyeOff { size: 16; color: Theme.muted } }
     Component { id: iconClock; IconClock { size: 16; color: Theme.muted } }
     Component { id: iconTrash; IconTrash { size: 16; color: Theme.muted } }
-    Component { id: iconGlobe; IconGlobe { size: 16; color: Theme.muted } }
     // W8: inline "network" glyph (Lucide network: three nodes + a connecting
     // bus) for the Network section. icons/ is a no-push submodule, so it lives
     // here in the main repo rather than as a new IconNetwork.qml.
@@ -108,14 +111,6 @@ Rectangle {
             }
         }
     }
-    // Per-place icons for XDG roots in the compact rail (matching SidebarPlacesTree).
-    Component { id: iconMonitor;  IconMonitor  { size: 16; color: Theme.muted } }
-    Component { id: iconFileText; IconFileText { size: 16; color: Theme.muted } }
-    Component { id: iconDownload; IconDownload { size: 16; color: Theme.muted } }
-    Component { id: iconImage;    IconImage    { size: 16; color: Theme.muted } }
-    Component { id: iconMusic;    IconMusic    { size: 16; color: Theme.muted } }
-    Component { id: iconVideo;    IconVideo    { size: 16; color: Theme.muted } }
-
     // Inverse rounded corner — top right
     Shape {
         z: 1; width: Theme.radiusMedium; height: Theme.radiusMedium
@@ -1178,386 +1173,24 @@ Rectangle {
     }
 
     // ── W7 COMPACT RAIL ──────────────────────────────────────────────────────
-    // 56px icon-only column shown when the sidebar is in Compact mode. Renders
-    // the top-level visible entries (Favorites star · Home · Recents · Hidden ·
-    // each existing XDG root · each mounted/known device · Network · Trash) as
-    // centred icon buttons with hover tooltips, active state, and navigation
-    // wired to the SAME handlers as the full rows. Respects the same hide filter.
-    readonly property bool compactMode: root.host && root.host.sidebarCompact
-
-    // Fixed width of the compact icon rail (icon column / Flickable / each button).
-    readonly property int compactRailWidth: 56
-
-    // XDG-existence checks reuse SidebarPlacesTree's already-resident
-    // FolderTreeModel (placesTree.folderModel) — no second QFileSystemModel.
-
-    readonly property var compactXdgRoots: {
-        const home = fsModel.homePath()
-        return [
-            { label: "Desktop",   dir: home + "/Desktop"   },
-            { label: "Documents", dir: home + "/Documents" },
-            { label: "Downloads", dir: home + "/Downloads" },
-            { label: "Pictures",  dir: home + "/Pictures"  },
-            { label: "Music",     dir: home + "/Music"     },
-            { label: "Videos",    dir: home + "/Videos"    }
-        ]
-    }
-
-    // Reusable compact icon button. `iconKind` selects the glyph; `active` lights
-    // the gold accent rail + wash; `tip` is the hover tooltip; onActivated runs
-    // the navigation handler. XDG/device entries draw a folder/drive glyph.
-    Component {
-        id: compactButton
-        Item {
-            id: cbtn
-            width: root.compactRailWidth
-            height: 34
-            property string iconKind: "folder"
-            property bool active: false
-            property string tip: ""
-            // W8: optional fixed glyph color (used by colored favorite stars in
-            // the rail). When unset (transparent), the active/muted rule applies.
-            property color glyphColor: "transparent"
-            signal activated()
-
-            Rectangle {
-                id: cbtnBg
-                anchors.centerIn: parent
-                width: 40
-                height: 28
-                radius: Theme.radiusRow
-                color: cbtn.active
-                    ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.10)
-                    : (cbtnHover.hovered
-                       ? Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.04)
-                       : "transparent")
-                Behavior on color { ColorAnimation { duration: Theme.animDuration } }
-            }
-
-            // Active: 2px gold left rail with a soft glow (matches the full rows).
-            Rectangle {
-                visible: cbtn.active
-                anchors.left: parent.left
-                anchors.top: parent.top
-                anchors.topMargin: 5
-                anchors.bottom: parent.bottom
-                anchors.bottomMargin: 5
-                width: 2
-                color: Theme.gold
-                topRightRadius: 3
-                bottomRightRadius: 3
-                layer.enabled: true
-                layer.effect: MultiEffect {
-                    autoPaddingEnabled: true
-                    shadowEnabled: true
-                    shadowColor: Theme.goldGlow
-                    shadowBlur: 0.6
-                }
-            }
-
-            Loader {
-                anchors.centerIn: parent
-                width: 16; height: 16
-                sourceComponent: {
-                    switch (cbtn.iconKind) {
-                    case "star":      return iconStarGold
-                    case "favstar":   return iconStarFilled
-                    case "home":      return iconHome
-                    case "clock":     return iconClock
-                    case "eyeoff":    return iconEyeOff
-                    case "globe":     return iconGlobe
-                    case "network":   return iconNetwork
-                    case "trash":     return iconTrash
-                    case "harddrive": return iconCompactDrive
-                    case "usb":       return iconCompactUsb
-                    case "desktop":   return iconMonitor
-                    case "documents": return iconFileText
-                    case "downloads": return iconDownload
-                    case "pictures":  return iconImage
-                    case "music":     return iconMusic
-                    case "videos":    return iconVideo
-                    default:          return iconFolder
-                    }
-                }
-                onLoaded: {
-                    if (!item)
-                        return
-                    // The "star" section anchor is intrinsically gold; leave it.
-                    if (cbtn.iconKind === "star")
-                        return
-                    // A pinned-favorite star carries its own fixed color
-                    // (glyphColor); every other glyph turns gold when active.
-                    if (cbtn.glyphColor.a > 0)
-                        item.color = Qt.binding(() => cbtn.glyphColor)
-                    else
-                        item.color = Qt.binding(() => cbtn.active ? Theme.gold : Theme.muted)
-                }
-            }
-
-            HoverHandler { id: cbtnHover }
-            MouseArea {
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: cbtn.activated()
-            }
-
-            Quill.Tooltip {
-                text: cbtn.tip
-                visible: cbtnHover.hovered && cbtn.tip.length > 0
-            }
-        }
-    }
-
-    // Drive glyphs for the compact device buttons (full rows use SidebarDeviceRow).
-    Component { id: iconCompactDrive; IconHardDrive { size: 18; color: Theme.muted } }
-    Component { id: iconCompactUsb;   IconUsb { size: 18; color: Theme.muted } }
-
-    // Compact Trash pinned to bottom of the rail. Rendered outside the Flickable
-    // so it stays anchored to the bottom of the sidebar even when the scrollable
-    // content is short. Height matches the rail button (34) + bottom padding.
-    Loader {
-        id: compactTrashLoader
-        z: 1
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: Theme.spacing
-        anchors.horizontalCenter: parent.horizontalCenter
-        width: root.compactRailWidth
-        active: root.compactMode && !root.trashHidden
-        visible: active
-        height: active ? 34 : 0
-        sourceComponent: compactButton
-        onLoaded: {
-            item.iconKind = "trash"
-            item.tip = "Trash"
-            item.active = Qt.binding(() =>
-                !root.isRecentsView && !root.isHiddenView
-                && fileOps.isTrashPath(root.currentPath))
-            item.activated.connect(function() { root.bookmarkClicked(root.trashPath) })
-        }
-    }
-
-    Flickable {
-        id: compactRail
+    // 56px icon-only column shown in Compact mode — see SidebarCompactRail.qml.
+    // It overlays the full sidebar (sibling, painted on top); the component
+    // hides itself via compactMode, so the full rows and the rail never show at
+    // once. placesTree stays instantiated while invisible, so its folderModel
+    // (reused for XDG-existence checks) is valid even in compact mode.
+    SidebarCompactRail {
         anchors.fill: parent
-        // Reserve room for the bottom-pinned compact Trash button so scrolled
-        // content never slides under it: 34 (compactTrashLoader height) +
-        // Theme.spacing (its bottom anchor margin) + 4 (gap above it).
-        anchors.bottomMargin: root.compactMode && !root.trashHidden
-            ? (34 + Theme.spacing + 4) : 0
-        visible: root.compactMode
-        contentWidth: width
-        contentHeight: compactColumn.height
-        clip: true
-        boundsBehavior: Flickable.StopAtBounds
-
-        Column {
-            id: compactColumn
-            width: root.compactRailWidth
-            spacing: 2
-            topPadding: Theme.spacing
-            bottomPadding: Theme.spacing
-
-            // Favorites star — purely a section anchor in compact mode; keeps it
-            // simple (navigates Home like the wordmark used to).
-            Loader {
-                width: root.compactRailWidth
-                sourceComponent: compactButton
-                onLoaded: {
-                    item.iconKind = "star"
-                    item.tip = "Favorites"
-                    item.active = false
-                    item.activated.connect(function() {
-                        root.bookmarkClicked(fsModel.homePath())
-                    })
-                }
-            }
-
-            // Bookmarked favorites (respect per-bookmark hide).
-            Repeater {
-                model: bookmarks
-                delegate: Loader {
-                    width: root.compactRailWidth
-                    readonly property bool entryHidden:
-                        config.hiddenSidebarEntries.indexOf(model.path) >= 0
-                    active: !entryHidden
-                    visible: active
-                    height: active ? 34 : 0
-                    sourceComponent: compactButton
-                    onLoaded: {
-                        // W8: filled star in the bookmark's chosen color (gold
-                        // default), matching the full Favorites rows.
-                        item.iconKind = "favstar"
-                        item.glyphColor = Qt.binding(() =>
-                            (model.color && model.color.length > 0)
-                                ? model.color : Theme.gold)
-                        item.tip = model.name
-                        item.active = Qt.binding(() =>
-                            !root.isRecentsView && !root.isHiddenView
-                            && model.path === root.currentPath)
-                        var p = model.path
-                        item.activated.connect(function() { root.bookmarkClicked(p) })
-                    }
-                }
-            }
-
-            // Thin divider before Places.
-            Rectangle {
-                width: 36; height: 1; anchors.horizontalCenter: parent.horizontalCenter
-                color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.08)
-            }
-
-            // Home — always visible.
-            Loader {
-                width: root.compactRailWidth
-                sourceComponent: compactButton
-                onLoaded: {
-                    item.iconKind = "home"
-                    item.tip = "Home"
-                    item.active = Qt.binding(() =>
-                        !root.isRecentsView && !root.isHiddenView
-                        && fsModel.homePath() === root.currentPath)
-                    item.activated.connect(function() {
-                        root.bookmarkClicked(fsModel.homePath())
-                    })
-                }
-            }
-
-            // Recents.
-            Loader {
-                width: root.compactRailWidth
-                active: config.hiddenSidebarEntries.indexOf("places.recents") < 0
-                visible: active
-                height: active ? 34 : 0
-                sourceComponent: compactButton
-                onLoaded: {
-                    item.iconKind = "clock"
-                    item.tip = "Recents"
-                    item.active = Qt.binding(() => root.isRecentsView)
-                    item.activated.connect(function() { root.recentsClicked() })
-                }
-            }
-
-            // Hidden.
-            Loader {
-                width: root.compactRailWidth
-                active: config.hiddenSidebarEntries.indexOf("places.hidden") < 0
-                visible: active
-                height: active ? 34 : 0
-                sourceComponent: compactButton
-                onLoaded: {
-                    item.iconKind = "eyeoff"
-                    item.tip = "Hidden"
-                    item.active = Qt.binding(() => root.isHiddenView)
-                    item.activated.connect(function() { root.hiddenClicked() })
-                }
-            }
-
-            // XDG roots — only those that exist (re-checked on directoryLoaded).
-            Repeater {
-                model: root.compactXdgRoots
-                delegate: Loader {
-                    width: root.compactRailWidth
-                    required property var modelData
-                    property bool dirExists: placesTree.folderModel.indexForPath(modelData.dir).valid
-                    Connections {
-                        target: placesTree.folderModel
-                        function onDirectoryLoaded(p) {
-                            dirExists = placesTree.folderModel.indexForPath(modelData.dir).valid
-                        }
-                    }
-                    active: dirExists
-                    visible: active
-                    height: active ? 34 : 0
-                    sourceComponent: compactButton
-                    onLoaded: {
-                        // Map each XDG root to its unique semantic icon kind
-                        // (mirrors the per-place icons in SidebarPlacesTree).
-                        var lbl = modelData.label
-                        if      (lbl === "Desktop")   item.iconKind = "desktop"
-                        else if (lbl === "Documents") item.iconKind = "documents"
-                        else if (lbl === "Downloads") item.iconKind = "downloads"
-                        else if (lbl === "Pictures")  item.iconKind = "pictures"
-                        else if (lbl === "Music")     item.iconKind = "music"
-                        else if (lbl === "Videos")    item.iconKind = "videos"
-                        else                          item.iconKind = "folder"
-                        item.tip = modelData.label
-                        item.active = Qt.binding(() =>
-                            !root.isRecentsView && !root.isHiddenView
-                            && modelData.dir === root.currentPath)
-                        var d = modelData.dir
-                        item.activated.connect(function() {
-                            if (root.host) root.host.navigateActivePaneTo(d)
-                        })
-                    }
-                }
-            }
-
-            // Devices — same model the full Devices section iterates.
-            Item {
-                width: root.compactRailWidth; height: devices.count > 0 ? 9 : 0
-                visible: devices.count > 0
-                Rectangle {
-                    anchors.centerIn: parent
-                    width: 36; height: 1
-                    color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.08)
-                }
-            }
-            Repeater {
-                model: devices
-                delegate: Loader {
-                    id: deviceCompact
-                    width: root.compactRailWidth
-                    // Stable index for devices.mount(); model.mounted / model.mountPoint
-                    // must be read LIVE inside the handler (not captured at load), so an
-                    // unmounted-at-load device still mounts on click.
-                    required property int index
-                    required property var model
-                    sourceComponent: compactButton
-                    onLoaded: {
-                        item.iconKind = model.removable ? "usb" : "harddrive"
-                        item.tip = model.deviceName
-                        item.active = Qt.binding(() =>
-                            !root.isRecentsView && !root.isHiddenView
-                            && model.mounted && model.mountPoint === root.currentPath)
-                        item.activated.connect(function() {
-                            // Mirror SidebarDeviceRow: mounted → navigate; unmounted →
-                            // mount (after the udisks2-availability guard).
-                            if (deviceCompact.model.mounted)
-                                root.bookmarkClicked(deviceCompact.model.mountPoint)
-                            else if (deviceCompact.model.backend === "udisks2"
-                                     && !runtimeFeatures.udisksctlAvailable)
-                                root.featureHintRequested(runtimeFeatures.installHint("deviceMount"))
-                            else
-                                devices.mount(deviceCompact.index)
-                        })
-                    }
-                }
-            }
-
-            // Network — one compact button per live GVFS mount (W8). Empty
-            // model (or hidden) → no rows.
-            Repeater {
-                model: root.networkHidden ? null : networkModel
-                delegate: Loader {
-                    readonly property string entryName: model.name
-                    readonly property string entryUri: model.uri
-                    width: root.compactRailWidth
-                    height: 34
-                    sourceComponent: compactButton
-                    onLoaded: {
-                        item.iconKind = "network"
-                        item.tip = entryName
-                        item.active = Qt.binding(() =>
-                            !root.isRecentsView && !root.isHiddenView
-                            && root.currentPath.length > 0
-                            && (root.currentPath === entryUri
-                                || root.currentPath.indexOf(entryUri) === 0))
-                        item.activated.connect(function() { root.bookmarkClicked(entryUri) })
-                    }
-                }
-            }
-
-        }
+        host: root.host
+        currentPath: root.currentPath
+        isRecentsView: root.isRecentsView
+        isHiddenView: root.isHiddenView
+        trashPath: root.trashPath
+        networkHidden: root.networkHidden
+        trashHidden: root.trashHidden
+        placesFolderModel: placesTree.folderModel
+        onBookmarkClicked: (path) => root.bookmarkClicked(path)
+        onRecentsClicked: root.recentsClicked()
+        onHiddenClicked: root.hiddenClicked()
+        onFeatureHintRequested: (message) => root.featureHintRequested(message)
     }
 }

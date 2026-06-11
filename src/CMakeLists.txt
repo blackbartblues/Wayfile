@@ -116,6 +116,7 @@ list(APPEND wayfile_qml_module_args
         qml/components/StatusBar.qml
         qml/components/OperationsBar.qml
         qml/components/Sidebar.qml
+        qml/components/SidebarCompactRail.qml
         qml/components/SidebarDeviceRow.qml
         qml/components/SidebarPane.qml
         qml/components/SidebarPlacesTree.qml
