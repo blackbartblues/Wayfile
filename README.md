@@ -8,7 +8,7 @@
 
 </div>
 
-> **Wayfile is a fork of [HyprFM](https://github.com/soyeb-jim285/hyprfm)** by Soyeb Pervez Jim — re-skinned with the obsidian-and-gold *Bifröst* design system and substantially extended. The **1.0.0** release rebuilds the entire visual layer — thin-frame type-coloured icons, glowing tabs, a unified Places sidebar, a compass-folder logo, an *Inter · Cormorant · JetBrains Mono* type stack, and five live accent presets — on top of HyprFM, and adds a hybrid view, merged tabs, network locations, and a token-driven theme system. All credit for the original file manager goes to the upstream project.
+> **Wayfile is a comprehensive overhaul of [HyprFM](https://github.com/soyeb-jim285/hyprfm)** by Soyeb Pervez Jim. Built on HyprFM's foundations, the **1.0.0** release reworks the project from the ground up: an entirely new visual layer — thin-frame type-coloured icons, glowing tabs, a unified Places sidebar, a compass-folder logo, an *Inter · Cormorant · JetBrains Mono* type stack, and five live accent presets — plus a hybrid default view, merged tabs, network locations, and a token-driven theme system. Wayfile wouldn't exist without HyprFM — all credit for the original file manager goes to Soyeb Pervez Jim.
 
 ---
 
