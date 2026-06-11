@@ -74,10 +74,19 @@ Column {
     Component { id: xdgIconMusic;     IconMusic    { size: 16; color: Theme.muted } }
     Component { id: xdgIconVideos;    IconVideo    { size: 16; color: Theme.muted } }
 
-    // One shared folders-only FS model for every subtree.
+    // One shared folders-only FS model for every subtree (visible folders).
     FolderTreeModel {
         id: folderTree
         rootPath: root.homeDir
+    }
+
+    // Parallel model for the "Hidden" root: same home dir, but lists ONLY hidden
+    // (dot-prefixed) directories so Hidden's subtree shows hidden folders while
+    // Home's shows the visible ones.
+    FolderTreeModel {
+        id: hiddenFolderTree
+        rootPath: root.homeDir
+        hiddenOnly: true
     }
 
     // R6: Home + Hidden lead the forest as expandable roots (both rooted at
@@ -227,17 +236,22 @@ Column {
                 // Pass the root dir into the component via a Loader property
                 // (avoids the parent.xxx anti-pattern inside sourceComponent).
                 property string subtreeRootDir: xdgItem.modelData.dir
+                // The Hidden root browses the hidden-only model; every other root
+                // (Home + XDG) uses the shared visible-folders model.
+                property var subtreeModel: xdgItem.modelData.special === "hidden"
+                                           ? hiddenFolderTree : folderTree
 
                 sourceComponent: Component {
                     TreeView {
                         id: subtree
-                        // subtreeRootDir is accessed via the Loader parent.
+                        // subtreeRootDir / subtreeModel are accessed via the Loader parent.
                         readonly property string rootDir: subtreeLoader.subtreeRootDir
+                        readonly property var modelRef: subtreeLoader.subtreeModel
                         width: subtreeLoader.width
                         // Non-interactive: the outer sidebar Flickable scrolls.
                         interactive: false
                         clip: false
-                        model: folderTree
+                        model: subtree.modelRef
                         columnWidthProvider: function(column) { return subtree.width }
                         // Defer the relayout out of the binding-eval phase: this
                         // TreeView's contentHeight drives the Loader height, so a
@@ -245,14 +259,14 @@ Column {
                         onWidthChanged: Qt.callLater(subtree.forceLayout)
 
                         Component.onCompleted: {
-                            subtree.rootIndex = folderTree.indexForPath(subtree.rootDir)
+                            subtree.rootIndex = subtree.modelRef.indexForPath(subtree.rootDir)
                         }
 
                         Connections {
-                            target: folderTree
+                            target: subtree.modelRef
                             function onDirectoryLoaded(p) {
                                 if (p === subtree.rootDir)
-                                    subtree.rootIndex = folderTree.indexForPath(subtree.rootDir)
+                                    subtree.rootIndex = subtree.modelRef.indexForPath(subtree.rootDir)
                             }
                         }
 
@@ -269,7 +283,7 @@ Column {
                             required property bool hasChildren
                             required property bool isTreeNode
 
-                            readonly property string fullPath: folderTree.pathAt(subtree.index(rowItem.row, 0))
+                            readonly property string fullPath: subtree.modelRef.pathAt(subtree.index(rowItem.row, 0))
                             readonly property bool isCurrent: rowItem.fullPath === root.currentDir
                             // Depth offset +1 so subtree items are indented one level
                             // past the XDG header row.

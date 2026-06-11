@@ -48,6 +48,42 @@ private slots:
                  QString("visible"));
     }
 
+    void testHiddenOnlyListsOnlyHiddenFolders()
+    {
+        TestDir dir;
+        dir.createDir("visible");
+        dir.createDir(".secret");          // hidden folder → included
+        dir.createDir(".config");          // hidden folder → included
+        dir.createFile(".hiddenfile", "x"); // hidden FILE → excluded (folders only)
+        dir.createFile("note.txt", "x");    // file → excluded
+
+        FolderTreeModel model;
+        model.setHiddenOnly(true);
+        const QModelIndex root = model.setRootPath(dir.path());
+        QTRY_COMPARE(model.rowCount(root), 2);
+
+        QStringList names;
+        for (int r = 0; r < model.rowCount(root); ++r)
+            names << model.index(r, 0, root).data(QFileSystemModel::FileNameRole).toString();
+        names.sort();
+        QCOMPARE(names, (QStringList{".config", ".secret"}));
+    }
+
+    void testHiddenOnlyDefaultsOff()
+    {
+        // Default mode is unchanged: visible folders only, hidden excluded.
+        TestDir dir;
+        dir.createDir("visible");
+        dir.createDir(".secret");
+
+        FolderTreeModel model;
+        QVERIFY(!model.hiddenOnly());
+        const QModelIndex root = model.setRootPath(dir.path());
+        QTRY_COMPARE(model.rowCount(root), 1);
+        QCOMPARE(model.index(0, 0, root).data(QFileSystemModel::FileNameRole).toString(),
+                 QString("visible"));
+    }
+
     void testIndexForPathRoundTrips()
     {
         TestDir dir;
