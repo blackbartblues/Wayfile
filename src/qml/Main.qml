@@ -1360,6 +1360,10 @@ ApplicationWindow {
     }
 
     // ── Helper: list of all file paths in current directory (for preview cycling)
+    // Returns [{ path, isDir }] for every entry in the active pane. isDir comes
+    // from the model row (cheap — model.isDir(row)), NOT fileProperties() (which
+    // does a folder scan), so QuickPreview can source isDir externally and avoid
+    // the feedback loop of binding it to its own async preview output.
     function getDirectoryFiles() {
         var files = []
         var activeModel = paneModel(activePaneIndex)
@@ -1367,7 +1371,7 @@ ApplicationWindow {
         for (var i = 0; i < count; i++) {
             var fp = filePathFromModel(activeModel, i)
             if (fp !== "")
-                files.push(fp)
+                files.push({ path: fp, isDir: isDirectoryFromModel(activeModel, i) })
         }
         return files
     }

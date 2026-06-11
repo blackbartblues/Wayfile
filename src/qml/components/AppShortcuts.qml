@@ -288,9 +288,20 @@ Item {
             }
             var paths = host.getSelectedPaths()
             if (paths.length === 0) return
+            var dirFiles = host.getDirectoryFiles()
+            // Resolve the first file's isDir from the (cheap) cycle list so we can
+            // set it BEFORE filePath — see QuickPreview.fileIsDir.
+            var firstIsDir = false
+            for (var i = 0; i < dirFiles.length; ++i) {
+                if (dirFiles[i].path === paths[0]) {
+                    firstIsDir = dirFiles[i].isDir
+                    break
+                }
+            }
             appShortcuts.quickPreview.fileModel = host.paneBaseModel(host.activePaneIndex)
+            appShortcuts.quickPreview.directoryFiles = dirFiles
+            appShortcuts.quickPreview.fileIsDir = firstIsDir
             appShortcuts.quickPreview.filePath = paths[0]
-            appShortcuts.quickPreview.directoryFiles = host.getDirectoryFiles()
             appShortcuts.quickPreview.active = true
             appShortcuts.quickPreview.forceActiveFocus()
         }

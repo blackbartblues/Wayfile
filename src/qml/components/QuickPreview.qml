@@ -9,14 +9,21 @@ Item {
     Accessible.name: "Quick preview" + (root.filePath ? ": " + root.filePath.split("/").pop() : "")
 
     property string filePath: ""
+    // [{ path, isDir }] for the items the user can browse with Left/Right.
     property var directoryFiles: []
+    // Authoritative isDir for the current filePath, sourced externally (from the
+    // model row) and set BEFORE filePath. PreviewState.refresh() reads isDir to
+    // pick the preview type, so it must not be derived from fileProps (the async
+    // refresh OUTPUT) — that fed the previous file's isDir into the first cycle
+    // of every new selection.
+    property bool fileIsDir: false
     property bool active: false
     property var fileModel: fsModel
 
     PreviewState {
         id: previewState
         filePath: root.filePath
-        isDir: previewState.fileProps.isDir || false
+        isDir: root.fileIsDir
         fileModel: root.fileModel
         loadEnabled: root.active
     }
@@ -101,7 +108,7 @@ Item {
     function currentIndex() {
         if (directoryFiles.length === 0) return -1
         for (var i = 0; i < directoryFiles.length; i++) {
-            if (directoryFiles[i] === filePath) return i
+            if (directoryFiles[i].path === filePath) return i
         }
         return -1
     }
@@ -112,7 +119,10 @@ Item {
         var idx = currentIndex()
         if (idx < 0) idx = 0
         idx = (idx + direction + files.length) % files.length
-        filePath = files[idx]
+        // isDir BEFORE filePath: PreviewState.refresh() (triggered by the filePath
+        // change) reads isDir to choose the preview type.
+        root.fileIsDir = files[idx].isDir || false
+        root.filePath = files[idx].path
     }
 
     onActiveChanged: {
