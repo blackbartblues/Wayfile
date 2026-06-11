@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/screenshots/wayfile-banner.png" alt="Wayfile — an obsidian-and-gold file manager for Wayland" width="100%"/>
+<img src="docs/screenshots/banner.png" alt="Wayfile — an obsidian-and-gold file manager for Wayland" width="100%"/>
 
 [![License](https://img.shields.io/github/license/blackbartblues/Wayfile?style=flat-square&color=D4AA6A)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/blackbartblues/Wayfile?style=flat-square&color=D4AA6A)](https://github.com/blackbartblues/Wayfile/releases)
