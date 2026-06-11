@@ -66,6 +66,17 @@ FocusScope {
         return runs
     }
 
+    // O(1) membership for per-row isSelected — every visible row used to run an
+    // O(N) selectedIndices.indexOf(index) on each selection change (O(rows×sel)).
+    // Built once per selection change here; rows look up selectedSet[index].
+    readonly property var selectedSet: {
+        var set = ({})
+        var sel = selectedIndices
+        for (var i = 0; i < sel.length; ++i)
+            set[sel[i]] = true
+        return set
+    }
+
     // Map of folder path → item count
     property var folderItemCounts: ({})
 
@@ -440,6 +451,7 @@ FocusScope {
                 selectionControllerRef: selectionController
                 wheelScrollerRef: wheelScroller
                 selectedIndices: root.selectedIndices
+                selectedSet: root.selectedSet
                 folderItemCounts: root.folderItemCounts
                 colName: root.colName
                 colSize: root.colSize

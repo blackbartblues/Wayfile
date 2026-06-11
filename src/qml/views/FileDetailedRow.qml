@@ -26,6 +26,9 @@ Item {
     // Reactive state, bound from the (typed) FileDetailedView root so the
     // bindings below re-evaluate when it changes.
     property var selectedIndices: []
+    // O(1) membership map (index -> true) built once per selection change by the
+    // view; used by isSelected instead of an O(N) indexOf in every row.
+    property var selectedSet: ({})
     property var folderItemCounts: ({})
     property int colName: 0
     property int colSize: 0
@@ -61,7 +64,7 @@ Item {
     required property string fileCategory
     required property string fileExtension
 
-    readonly property bool isSelected: selectedIndices.indexOf(index) >= 0
+    readonly property bool isSelected: selectedSet[index] === true
     readonly property bool isCutPending: clipboard.isCut && clipboard.contains(detRow.filePath)
     readonly property bool isPastePending: fileOps.pendingTargetPaths.indexOf(detRow.filePath) >= 0
 
