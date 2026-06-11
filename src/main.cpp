@@ -470,9 +470,8 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("searchProxy", paneServices[0].searchProxy);
     engine.rootContext()->setContextProperty("searchResults", paneServices[0].searchResults);
     engine.rootContext()->setContextProperty("searchService", paneServices[0].searchService);
-    engine.rootContext()->setContextProperty("splitSearchProxy", paneServices[1].searchProxy);
-    engine.rootContext()->setContextProperty("splitSearchResults", paneServices[1].searchResults);
-    engine.rootContext()->setContextProperty("splitSearchService", paneServices[1].searchService);
+    // Pane-1 search services are reached via paneServicesProvider.search*At(pane);
+    // the old global splitSearch* context props were unused, so they're gone.
     engine.rootContext()->setContextProperty("previewService", previewService);
     engine.rootContext()->setContextProperty("metadataExtractor", metadataExtractor);
     engine.rootContext()->setContextProperty("diskUsageService", diskUsageService);
