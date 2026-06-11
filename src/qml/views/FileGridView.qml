@@ -381,23 +381,28 @@ GridView {
         antialiasing: true
         renderStrategy: Canvas.Cooperative
 
+        // Coalesce repaints: scrolling fires contentX/Y changes every pixel, so
+        // funnel every trigger through Qt.callLater — a burst within one event
+        // loop pass collapses into a single requestPaint().
+        function scheduleRepaint() { Qt.callLater(requestPaint) }
+
         Connections {
             target: root
-            function onContentYChanged() { selectionOverlay.requestPaint() }
-            function onContentXChanged() { selectionOverlay.requestPaint() }
+            function onContentYChanged() { selectionOverlay.scheduleRepaint() }
+            function onContentXChanged() { selectionOverlay.scheduleRepaint() }
         }
         property var selRef: root.selectedIndices
         property int colsRef: root.columnsPerRow
         property int cwRef: root.cellWidth
         property int chRef: root.cellHeight
         property bool dragRef: root.isDragging
-        onSelRefChanged: requestPaint()
-        onColsRefChanged: requestPaint()
-        onCwRefChanged: requestPaint()
-        onChRefChanged: requestPaint()
-        onDragRefChanged: requestPaint()
-        onWidthChanged: requestPaint()
-        onHeightChanged: requestPaint()
+        onSelRefChanged: scheduleRepaint()
+        onColsRefChanged: scheduleRepaint()
+        onCwRefChanged: scheduleRepaint()
+        onChRefChanged: scheduleRepaint()
+        onDragRefChanged: scheduleRepaint()
+        onWidthChanged: scheduleRepaint()
+        onHeightChanged: scheduleRepaint()
 
         onPaint: {
             var ctx = getContext("2d")
