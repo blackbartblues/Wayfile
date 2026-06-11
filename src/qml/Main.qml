@@ -1542,8 +1542,15 @@ ApplicationWindow {
                     return
                 fileOps.archiveRootFolderReady.disconnect(onArchiveRoot)
                 fileOps.archiveExtractFinished.disconnect(onArchiveExtracted)
-                if (nav.success)
-                    root.navigatePaneTo(pane, nav.root ? dir + "/" + nav.root : dir)
+                if (nav.success) {
+                    // Defense-in-depth: only descend into a single clean child
+                    // component. nav.root comes from the archive's own listing,
+                    // so reject anything that could climb out of dir.
+                    var navRoot = nav.root
+                    var safeRoot = navRoot !== "" && navRoot.indexOf("/") === -1
+                                   && navRoot !== ".." && navRoot !== "."
+                    root.navigatePaneTo(pane, safeRoot ? dir + "/" + navRoot : dir)
+                }
             }
             onArchiveRoot = function(archivePath, rootFolder) {
                 if (archivePath !== filePath)
