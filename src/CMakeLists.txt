@@ -127,6 +127,7 @@ list(APPEND wayfile_qml_module_args
         qml/components/Toolbar.qml
         qml/components/HoverRect.qml
         qml/components/SelectionController.qml
+        qml/components/TransferController.qml
         qml/components/WayfileLogo.qml
         qml/views/FileViewContainer.qml
         qml/views/HybridView.qml

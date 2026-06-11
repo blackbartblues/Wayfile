@@ -42,13 +42,6 @@ ApplicationWindow {
     readonly property bool isRecentsView: root.paneIsRecents(activePaneIndex)
     readonly property bool isHiddenView: root.paneIsHidden(activePaneIndex)
     property var deleteConfirmPaths: []
-    property var transferConflictItems: []
-    property var transferResolvedItems: []
-    property int transferConflictIndex: -1
-    property bool transferMoveOperation: false
-    property bool transferClearClipboardOnSuccess: false
-    property string transferDestinationPath: ""
-    property var transferReservedTargets: ({})
     property bool paneFocusScheduled: false
     readonly property string unifiedTrashPath: "trash:///"
     // Bind to the activePanePath reactive mirror, not panePath(activePaneIndex)
@@ -591,24 +584,6 @@ ApplicationWindow {
         return subViewFor(activeFileView())
     }
 
-    function reservedTargetNames() {
-        return namesFromReserved(transferReservedTargets)
-    }
-
-    // Extract the basenames of the truthy keys of a {targetPath: bool} map, so a
-    // batch transfer can block names already claimed within the same batch when
-    // generating the next unique "(copy)" name.
-    function namesFromReserved(reservedMap) {
-        var names = []
-        for (var path in reservedMap) {
-            if (!reservedMap[path])
-                continue
-            var slashIndex = path.lastIndexOf("/")
-            names.push(slashIndex >= 0 ? path.substring(slashIndex + 1) : path)
-        }
-        return names
-    }
-
     function shouldFocusActivePane() {
         return root.active
             && !root.searchMode
@@ -771,200 +746,15 @@ ApplicationWindow {
         root.scheduleActivePaneFocus()
     }
 
-    function resetTransferConflictState() {
-        transferConflictItems = []
-        transferResolvedItems = []
-        transferConflictIndex = -1
-        transferMoveOperation = false
-        transferClearClipboardOnSuccess = false
-        transferDestinationPath = ""
-        transferReservedTargets = ({})
-    }
-
-    function executeTransferOperation(items, moveOperation, clearClipboardOnSuccess) {
-        if (!items || items.length === 0)
-            return
-
-        var usesRemotePath = false
-        for (var i = 0; i < items.length; ++i) {
-            if (fileOps.isRemotePath(items[i].sourcePath) || fileOps.isRemotePath(items[i].targetPath)) {
-                usesRemotePath = true
-                break
-            }
-        }
-
-        if (clearClipboardOnSuccess) {
-            // Named one-shot rather than arguments.callee (which breaks under
-            // JS strict mode and is hard to debug): disconnect by reference.
-            var onClipboardTransferFinished = function(success) {
-                fileOps.operationFinished.disconnect(onClipboardTransferFinished)
-                if (success)
-                    clipboard.clear()
-            }
-            fileOps.operationFinished.connect(onClipboardTransferFinished)
-        }
-
-        if (usesRemotePath) {
-            if (moveOperation)
-                fileOps.moveResolvedItems(items)
-            else
-                fileOps.copyResolvedItems(items)
-            return
-        }
-
-        if (moveOperation)
-            undoManager.moveResolvedItems(items)
-        else
-            undoManager.copyResolvedItems(items)
-    }
-
-    function openTransferConflict(index) {
-        if (index < 0 || index >= transferConflictItems.length) {
-            var items = transferResolvedItems.slice()
-            var moveOperation = transferMoveOperation
-            var clearClipboard = transferClearClipboardOnSuccess
-            resetTransferConflictState()
-            mainOverlays.conflictDialog.close()
-            executeTransferOperation(items, moveOperation, clearClipboard)
-            return
-        }
-
-        transferConflictIndex = index
-        var item = transferConflictItems[index]
-        mainOverlays.conflictDialog.renameText = fileOps.uniqueNameForDestination(
-            transferDestinationPath,
-            item.sourceName,
-            reservedTargetNames()
-        )
-        mainOverlays.conflictDialog.errorText = ""
-        mainOverlays.conflictDialog.currentItem = item
-        mainOverlays.conflictDialog.open()
-    }
-
-    function beginTransfer(paths, destinationPath, moveOperation, clearClipboardOnSuccess) {
-        if (!paths || paths.length === 0 || !destinationPath)
-            return
-
-        var plan = fileOps.transferPlan(paths, destinationPath)
-        if (!plan || plan.length === 0)
-            return
-
-        var resolved = []
-        var conflicts = []
-        var reserved = ({})
-
-        for (var i = 0; i < plan.length; ++i) {
-            var item = plan[i]
-            if (item.samePath) {
-                // A move onto an item's own location is meaningless — skip it.
-                // It must never reach the overwrite/backup path, which would
-                // move the file to a backup then fail to copy the now-missing
-                // source, destroying it. (Also guards drag into source's dir.)
-                if (moveOperation)
-                    continue
-                // A COPY into the source's own folder becomes "name (copy).ext"
-                // (Windows/Nautilus behaviour) rather than a no-op. Reserve the
-                // generated name so a multi-file batch doesn't collide.
-                var copyName = fileOps.uniqueNameForDestination(
-                    destinationPath, item.sourceName, namesFromReserved(reserved))
-                var copyTarget = destinationPath + "/" + copyName
-                reserved[copyTarget] = true
-                resolved.push({
-                    sourcePath: item.sourcePath,
-                    targetPath: copyTarget,
-                    overwrite: false
-                })
-                continue
-            }
-            var targetPath = item.targetPath
-            var hasReservedConflict = reserved[targetPath] === true
-            if (item.targetExists || hasReservedConflict) {
-                conflicts.push(item)
-                continue
-            }
-
-            reserved[targetPath] = true
-            resolved.push({
-                sourcePath: item.sourcePath,
-                targetPath: item.targetPath,
-                overwrite: false
-            })
-        }
-
-        // Everything was a self-drop (or nothing actionable): do nothing.
-        if (resolved.length === 0 && conflicts.length === 0)
-            return
-
-        if (conflicts.length === 0) {
-            executeTransferOperation(resolved, moveOperation, clearClipboardOnSuccess)
-            return
-        }
-
-        transferResolvedItems = resolved
-        transferConflictItems = conflicts
-        transferConflictIndex = -1
-        transferMoveOperation = moveOperation
-        transferClearClipboardOnSuccess = clearClipboardOnSuccess
-        transferDestinationPath = destinationPath
-        transferReservedTargets = reserved
-        openTransferConflict(0)
-    }
-
+    // The copy/move transfer engine + conflict state machine lives in
+    // transferController (below). These two thin delegations stay on root only
+    // because MainOverlays' conflictDialog handlers reach them through `host`.
     function resolveTransferConflict(action) {
-        if (transferConflictIndex < 0 || transferConflictIndex >= transferConflictItems.length)
-            return
-
-        var item = transferConflictItems[transferConflictIndex]
-        if (action === "overwrite") {
-            if (item.samePath) {
-                mainOverlays.conflictDialog.errorText = "Cannot overwrite an item with itself"
-                return
-            }
-
-            transferReservedTargets[item.targetPath] = true
-            transferResolvedItems = transferResolvedItems.concat([{ sourcePath: item.sourcePath, targetPath: item.targetPath, overwrite: true }])
-        } else if (action === "rename") {
-            var name = mainOverlays.conflictDialog.renameText.trim()
-            if (name === "" || name === "." || name === ".." || name.indexOf("/") >= 0) {
-                mainOverlays.conflictDialog.errorText = "Enter a valid file name"
-                return
-            }
-
-            var targetPath = transferDestinationPath + "/" + name
-            if (transferReservedTargets[targetPath] || fileOps.pathExists(targetPath) || targetPath === item.sourcePath) {
-                mainOverlays.conflictDialog.errorText = "That name already exists"
-                return
-            }
-
-            transferReservedTargets[targetPath] = true
-            transferResolvedItems = transferResolvedItems.concat([{ sourcePath: item.sourcePath, targetPath: targetPath, overwrite: false }])
-        }
-
-        var nextIndex = transferConflictIndex + 1
-        if (nextIndex >= transferConflictItems.length) {
-            openTransferConflict(nextIndex)
-            return
-        }
-
-        transferConflictIndex = nextIndex
-        var nextItem = transferConflictItems[nextIndex]
-        mainOverlays.conflictDialog.currentItem = nextItem
-        mainOverlays.conflictDialog.renameText = fileOps.uniqueNameForDestination(
-            transferDestinationPath,
-            nextItem.sourceName,
-            reservedTargetNames()
-        )
-        mainOverlays.conflictDialog.errorText = ""
-        mainOverlays.conflictDialog.focusRenameField()
+        transferController.resolveTransferConflict(action)
     }
 
-    function cancelTransferConflicts() {
-        if (mainOverlays.conflictDialog.visible)
-            mainOverlays.conflictDialog.close()
-        else {
-            resetTransferConflictState()
-            scheduleActivePaneFocus()
-        }
+    function resetTransferConflictState() {
+        transferController.resetTransferConflictState()
     }
 
     // #9: every pane's history navigation goes through the indexed
@@ -1498,9 +1288,16 @@ ApplicationWindow {
         sidebarVisible: root.sidebarVisible
         sidebarWidth: root.sidebarWidth
         activePaneIndex: root.activePaneIndex
-        transferMoveOperation: root.transferMoveOperation
+        transferMoveOperation: transferController.transferMoveOperation
         deleteConfirmPaths: root.deleteConfirmPaths
         isTrashView: root.isTrashView
+    }
+
+    // ── Copy/move transfer engine + conflict resolution ──────────────────────
+    TransferController {
+        id: transferController
+        conflictDialog: mainOverlays.conflictDialog
+        onActivePaneFocusRequested: root.scheduleActivePaneFocus()
     }
 
     // ── Keyboard Shortcuts ───────────────────────────────────────────────────────────────────────────
@@ -1598,7 +1395,7 @@ ApplicationWindow {
             var wasCut = clipboard.isCut
             var items = clipboard.paths
             if (!items || items.length === 0) return
-            beginTransfer(items, destPath, wasCut, wasCut)
+            transferController.beginTransfer(items, destPath, wasCut, wasCut)
             return
         }
 
@@ -1626,7 +1423,7 @@ ApplicationWindow {
             activePaneIndex: root.activePaneIndex
             onNewTabRequested: root.createTabWithDefaults()
             onTransferRequested: (paths, destinationPath, moveOperation) =>
-                root.beginTransfer(paths, destinationPath, moveOperation, false)
+                transferController.beginTransfer(paths, destinationPath, moveOperation, false)
             // P2-M7: clicking a mini folder icon inside a merged supertab
             // activates the tab and snaps active pane focus to that sub-pane
             // in one gesture — same intent as clicking the pane in the
@@ -1715,7 +1512,7 @@ ApplicationWindow {
                 if (subView) subView.forceActiveFocus()
             }
             onSearchFilterToggled: root.setPaneFilterPanelOpen(activePaneIndex, !root.paneFilterPanelOpen(activePaneIndex))
-            onTransferRequested: (paths, destinationPath, moveOperation) => root.beginTransfer(paths, destinationPath, moveOperation, false)
+            onTransferRequested: (paths, destinationPath, moveOperation) => transferController.beginTransfer(paths, destinationPath, moveOperation, false)
             onTypeFilterChanged: (filter) => root.searchProxyForPane(activePaneIndex).fileTypeFilter = filter
             onDateFilterChanged: (filter) => root.searchProxyForPane(activePaneIndex).dateFilter = filter
             onSizeFilterChanged: (filter) => root.searchProxyForPane(activePaneIndex).sizeFilter = filter
@@ -1854,7 +1651,7 @@ ApplicationWindow {
                             }
                             onTransferRequested: (paths, destinationPath, moveOperation) => {
                                 root.setActivePane(index)
-                                root.beginTransfer(paths, destinationPath, moveOperation, false)
+                                transferController.beginTransfer(paths, destinationPath, moveOperation, false)
                             }
                             onContextMenuRequested: (filePath, isDirectory, position) =>
                                 root.showContextMenuForPane(index, filePath, isDirectory, position)
