@@ -2,6 +2,7 @@
 
 #include <QDir>
 #include <QDirIterator>
+#include <QElapsedTimer>
 #include <QFileInfo>
 #include <QProcess>
 #include <QStandardPaths>
@@ -198,6 +199,28 @@ QStringList archiveEntriesFromOutput(const QString &program, const QString &outp
     return entries;
 }
 
+// Zip-slip guard: returns the first archive entry that would extract OUTSIDE the
+// destination — an absolute path, or one that escapes via "..". Entries arrive
+// already QDir::cleanPath'd from archiveEntriesFromOutput, so internal "a/../b"
+// is collapsed and only a genuine leading "../" (or "..") remains a traversal.
+// Tool-agnostic (covers unzip/tar/7z/bsdtar) — a pre-extraction check layered on
+// top of whatever protections the extractor itself provides. Empty result = safe.
+QString firstUnsafeArchiveEntry(const QStringList &entries)
+{
+    for (const QString &entry : entries) {
+        if (entry.startsWith('/') || QDir::isAbsolutePath(entry))
+            return entry;
+        if (entry == QStringLiteral("..") || entry.startsWith(QStringLiteral("../")))
+            return entry;
+    }
+    return {};
+}
+
+// Wall-clock cap for the archive read loops below: bounds a child that hangs
+// alive without closing its output (the loop would otherwise spin forever).
+// Deliberately generous — only a genuinely stuck process should ever hit it.
+constexpr qint64 kArchiveOpTimeoutMs = 30 * 60 * 1000; // 30 minutes
+
 QString commonArchiveRootFolder(const QStringList &entries)
 {
     QString root;
@@ -300,8 +323,15 @@ void FileOperations::compressFiles(const QStringList &paths, const QString &form
             if (!proc.waitForStarted(5000))
                 return QStringLiteral("Failed to start compression");
 
+            QElapsedTimer wall;
+            wall.start();
             int processed = 0;
             while (proc.state() != QProcess::NotRunning || proc.canReadLine()) {
+                if (wall.hasExpired(kArchiveOpTimeoutMs)) {
+                    proc.kill();
+                    proc.waitForFinished(2000);
+                    return QStringLiteral("Compression timed out");
+                }
                 if (!proc.canReadLine())
                     proc.waitForReadyRead(200);
                 while (proc.canReadLine()) {
@@ -352,8 +382,14 @@ void FileOperations::extractArchive(const QString &archivePath, const QString &d
                 QProcess listProc;
                 listProc.start(listProg, listArgs);
                 if (listProc.waitForFinished(30000) && listProc.exitCode() == 0) {
-                    const QByteArray output = listProc.readAllStandardOutput();
-                    totalFiles = output.count('\n');
+                    const QString output = QString::fromUtf8(listProc.readAllStandardOutput());
+                    const QStringList entries = archiveEntriesFromOutput(listProg, output);
+                    // Zip-slip: refuse before writing a single byte if any entry
+                    // would escape the destination.
+                    const QString unsafe = firstUnsafeArchiveEntry(entries);
+                    if (!unsafe.isEmpty())
+                        return QStringLiteral("Refusing to extract: archive contains an unsafe path \"%1\"").arg(unsafe);
+                    totalFiles = entries.size();
                 }
             }
             if (totalFiles <= 0) totalFiles = 1;
@@ -366,8 +402,15 @@ void FileOperations::extractArchive(const QString &archivePath, const QString &d
             if (!proc.waitForStarted(5000))
                 return QStringLiteral("Failed to start extraction");
 
+            QElapsedTimer wall;
+            wall.start();
             int processed = 0;
             while (proc.state() != QProcess::NotRunning || proc.canReadLine()) {
+                if (wall.hasExpired(kArchiveOpTimeoutMs)) {
+                    proc.kill();
+                    proc.waitForFinished(2000);
+                    return QStringLiteral("Extraction timed out");
+                }
                 if (!proc.canReadLine())
                     proc.waitForReadyRead(200);
                 while (proc.canReadLine()) {
