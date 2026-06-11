@@ -324,8 +324,13 @@ void FileOperations::extractArchive(const QString &archivePath, const QString &d
 {
     QString program;
     QStringList args;
-    if (!archiveExtractCommand(archivePath, destination, &program, &args))
+    if (!archiveExtractCommand(archivePath, destination, &program, &args)) {
+        // No usable extractor for this format: still report completion (failed)
+        // so any post-extraction navigation handler resolves and disconnects
+        // instead of leaking forever.
+        emit archiveExtractFinished(archivePath, false, QStringLiteral("Unsupported archive format"));
         return;
+    }
 
     // Add verbose flag for progress tracking
     QStringList verboseArgs = args;
@@ -378,6 +383,9 @@ void FileOperations::extractArchive(const QString &archivePath, const QString &d
             if (proc.exitCode() != 0)
                 return QStringLiteral("Extraction failed");
             return {};
+        },
+        [this, archivePath](bool ok, const QString &error) {
+            emit archiveExtractFinished(archivePath, ok, error);
         });
 }
 

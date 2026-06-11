@@ -1537,7 +1537,7 @@ ApplicationWindow {
                 if (!nav.rootResolved || !nav.extractDone)
                     return
                 fileOps.archiveRootFolderReady.disconnect(onArchiveRoot)
-                fileOps.operationFinished.disconnect(onArchiveExtracted)
+                fileOps.archiveExtractFinished.disconnect(onArchiveExtracted)
                 if (nav.success)
                     root.navigatePaneTo(pane, nav.root ? dir + "/" + nav.root : dir)
             }
@@ -1548,13 +1548,17 @@ ApplicationWindow {
                 nav.rootResolved = true
                 finishArchive()
             }
-            onArchiveExtracted = function(success) {
+            // archiveExtractFinished carries the archive path, so a concurrent
+            // paste/rename's operationFinished can't be mistaken for ours.
+            onArchiveExtracted = function(archivePath, success, error) {
+                if (archivePath !== filePath)
+                    return
                 nav.extractDone = true
                 nav.success = success
                 finishArchive()
             }
             fileOps.archiveRootFolderReady.connect(onArchiveRoot)
-            fileOps.operationFinished.connect(onArchiveExtracted)
+            fileOps.archiveExtractFinished.connect(onArchiveExtracted)
             fileOps.requestArchiveRootFolder(filePath)
             fileOps.extractArchive(filePath, dir)
         } else {

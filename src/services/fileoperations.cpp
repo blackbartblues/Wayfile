@@ -331,7 +331,8 @@ void FileOperations::cleanupTransfer(int transferId)
 }
 
 void FileOperations::startSimpleOperation(const QString &statusText, const QStringList &changedPaths,
-                                           std::function<QString(ProgressReporter)> work)
+                                           std::function<QString(ProgressReporter)> work,
+                                           std::function<void(bool, const QString &)> onFinished)
 {
     const int id = m_nextTransferId++;
     ActiveTransfer transfer;
@@ -359,16 +360,18 @@ void FileOperations::startSimpleOperation(const QString &statusText, const QStri
     auto *runner = new QObject;
     runner->moveToThread(thread);
 
-    connect(thread, &QThread::started, runner, [runner, work, reportProgress, this, id]() {
+    connect(thread, &QThread::started, runner, [runner, work, reportProgress, onFinished, this, id]() {
         const QString error = work(reportProgress);
         const bool ok = error.isEmpty();
-        QMetaObject::invokeMethod(this, [this, id, ok, error]() {
+        QMetaObject::invokeMethod(this, [this, id, ok, error, onFinished]() {
             if (auto *t = findTransfer(id)) {
                 t->progress = 1.0;
                 emitChangedPaths(t->changedPaths);
             }
             m_progress = 1.0;
             emit operationFinished(ok, error);
+            if (onFinished)
+                onFinished(ok, error);
             cleanupTransfer(id);
         }, Qt::QueuedConnection);
         runner->deleteLater();

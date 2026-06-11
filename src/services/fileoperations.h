@@ -106,6 +106,12 @@ signals:
     void pathsChanged(const QStringList &paths);
     void operationFinished(bool success, const QString &error);
     void archiveRootFolderReady(const QString &archivePath, const QString &rootFolder);
+    // Extraction-specific completion, carrying the archive path so a listener can
+    // tell ITS extraction apart from the global operationFinished (which every
+    // paste/rename/clipboard op also emits). Always fires exactly once per
+    // extractArchive() call — including the early-return when the format is
+    // unsupported — so post-extraction navigation never leaks its handlers.
+    void archiveExtractFinished(const QString &archivePath, bool success, const QString &error);
     void clipboardImageAvailableChanged();
 
 private:
@@ -140,7 +146,8 @@ private:
     void startGioTransfer(const QVariantList &operations, bool moveOperation);
     using ProgressReporter = std::function<void(int current, int total, const QString &fileName)>;
     void startSimpleOperation(const QString &statusText, const QStringList &changedPaths,
-                              std::function<QString(ProgressReporter)> work);
+                              std::function<QString(ProgressReporter)> work,
+                              std::function<void(bool success, const QString &error)> onFinished = {});
     void cleanupTransfer(int transferId);
     void emitAggregatedState();
     ActiveTransfer *findTransfer(int id);
