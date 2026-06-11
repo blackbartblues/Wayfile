@@ -125,28 +125,32 @@ void FileOperations::trashFiles(const QStringList &paths)
         [paths](ProgressReporter report) -> QString {
             QString lastError;
             const int total = paths.size();
+
             // Inside a Flatpak, GLib's g_file_trash() puts files in the
             // *sandbox's* trash (~/.var/app/<app-id>/data/Trash) because
-            // XDG_DATA_HOME is overridden. Shell out to host gio so files
-            // land in the user's real ~/.local/share/Trash.
-            const bool inFlatpak = runningInFlatpak();
+            // XDG_DATA_HOME is overridden. Shell out to host gio so files land
+            // in the user's real ~/.local/share/Trash — and do it in ONE call
+            // for all paths rather than spawning flatpak-spawn per file.
+            if (runningInFlatpak()) {
+                report(0, total, {});
+                QStringList args = {QStringLiteral("--host"), QStringLiteral("gio"),
+                                    QStringLiteral("trash")};
+                for (const QString &p : paths)
+                    args << normalizeLocation(p);
+                QProcess proc;
+                proc.start(QStringLiteral("flatpak-spawn"), args);
+                proc.waitForFinished(30000);
+                report(total, total, {});
+                if (proc.exitCode() != 0)
+                    return QString::fromUtf8(proc.readAllStandardError()).trimmed();
+                return {};
+            }
+
+            // Native: g_file_trash per file is fast and in-process, so keep the
+            // per-file loop (it also reports progress for large batches).
             for (int i = 0; i < total; ++i) {
                 const QString normalized = normalizeLocation(paths[i]);
                 report(i, total, locationFileName(normalized));
-
-                if (inFlatpak) {
-                    QProcess proc;
-                    proc.start(QStringLiteral("flatpak-spawn"),
-                               {QStringLiteral("--host"), QStringLiteral("gio"),
-                                QStringLiteral("trash"), normalized});
-                    proc.waitForFinished(10000);
-                    if (proc.exitCode() != 0) {
-                        const QString err = QString::fromUtf8(proc.readAllStandardError()).trimmed();
-                        if (!err.isEmpty())
-                            lastError = err;
-                    }
-                    continue;
-                }
 
                 GFile *file = gFileForLocation(normalized);
                 GError *gErr = nullptr;
