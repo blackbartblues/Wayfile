@@ -451,7 +451,12 @@ void GioTransferWorker::handleProgressCallback(goffset currentBytes, goffset tot
     }
 
     if (m_cancelled.load()) {
-        g_cancellable_cancel(m_cancellable);
+        // m_cancellable is created/unref'd under m_mutex (execute) and cancelled
+        // under it (cancel()); guard this cancel too rather than touch it bare,
+        // so every access to the pointer is uniformly serialised.
+        QMutexLocker lock(&m_mutex);
+        if (m_cancellable)
+            g_cancellable_cancel(m_cancellable);
         return;
     }
 
