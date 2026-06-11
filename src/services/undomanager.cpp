@@ -5,8 +5,10 @@
 #include <QDir>
 #include <QFile>
 #include <QDateTime>
+#include <QFutureWatcher>
 #include <QProcess>
 #include <QRegularExpression>
+#include <QtConcurrent>
 #include <QUrl>
 
 #include <algorithm>
@@ -383,20 +385,26 @@ void UndoManager::executeRedo(const UndoRecord &rec)
 
 void UndoManager::restoreFromTrash(const QStringList &originalPaths)
 {
-    // Resolve every path against a single trash listing (see
-    // latestTrashUrisByOriginalPath) so a multi-file undo costs one `gio list`,
-    // not one per path.
-    const QHash<QString, QString> latestByOrig = latestTrashUrisByOriginalPath();
+    // `gio list trash:///` can block for seconds (a full trash listing), so
+    // resolve it off the GUI thread and restore once the listing returns. One
+    // listing resolves every path (see latestTrashUrisByOriginalPath), so a
+    // multi-file undo still costs a single `gio list`.
+    auto *watcher = new QFutureWatcher<QHash<QString, QString>>(this);
+    connect(watcher, &QFutureWatcherBase::finished, this, [this, watcher, originalPaths]() {
+        watcher->deleteLater();
+        const QHash<QString, QString> latestByOrig = watcher->result();
 
-    QStringList restoreTargets;
-    for (const QString &origPath : originalPaths) {
-        const QString trashUri = latestByOrig.value(QDir::cleanPath(origPath));
-        if (!trashUri.isEmpty())
-            restoreTargets.append(trashUri);
-    }
+        QStringList restoreTargets;
+        for (const QString &origPath : originalPaths) {
+            const QString trashUri = latestByOrig.value(QDir::cleanPath(origPath));
+            if (!trashUri.isEmpty())
+                restoreTargets.append(trashUri);
+        }
 
-    if (!restoreTargets.isEmpty())
-        m_fileOps->restoreFromTrash(restoreTargets);
+        if (!restoreTargets.isEmpty())
+            m_fileOps->restoreFromTrash(restoreTargets);
+    });
+    watcher->setFuture(QtConcurrent::run(latestTrashUrisByOriginalPath));
 }
 
 void UndoManager::restoreBackupPaths(const QStringList &targets, const QStringList &backupPaths)
