@@ -11,6 +11,7 @@
 #include <QMimeData>
 #include <QPixmap>
 #include <QProcess>
+#include <QRegularExpression>
 #include <QStandardPaths>
 #include <QTimer>
 #include <QUrl>
@@ -343,7 +344,13 @@ void FileOperations::startExternalClipboardImagePaste(const QString &outputPath)
                         }
                     }
                 }
-                if (imageType.isEmpty()) {
+                // Defence-in-depth: imageType is echoed from wl-paste's own
+                // --list-types output and passed back as an argv (no shell), but
+                // pin it to a well-formed image/* MIME so nothing unexpected ever
+                // reaches the --type argument.
+                static const QRegularExpression mimeRe(
+                    QStringLiteral("^image/[A-Za-z0-9][A-Za-z0-9.+-]*$"));
+                if (imageType.isEmpty() || !mimeRe.match(imageType).hasMatch()) {
                     emit operationFinished(false, "Clipboard does not contain an image");
                     return;
                 }
@@ -423,7 +430,17 @@ void FileOperations::openInTerminal(const QString &dirPath)
         return;
     }
 
-    QString terminal = qEnvironmentVariable("TERMINAL", "kitty");
+    // Resolve $TERMINAL to a real executable rather than handing an arbitrary
+    // env value straight to QProcess (which would just silently fail to start on
+    // a bogus value). Fall back to kitty when unset or unresolvable.
+    const QString requested = qEnvironmentVariable("TERMINAL", QStringLiteral("kitty"));
+    QString terminal = QStandardPaths::findExecutable(requested);
+    if (terminal.isEmpty())
+        terminal = QStandardPaths::findExecutable(QStringLiteral("kitty"));
+    if (terminal.isEmpty()) {
+        emit operationFinished(false, QStringLiteral("No terminal emulator found ($TERMINAL not set or not installed)"));
+        return;
+    }
     auto *proc = new QProcess(this);
     proc->setWorkingDirectory(dirPath);
     proc->start(terminal, {});
