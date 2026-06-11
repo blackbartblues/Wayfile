@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Wayfile
 GenericName=File Manager
-Comment=A lightweight Qt6/QML file manager for Hyprland
+Comment=A lightweight Qt6/QML file manager for Wayland
 Exec=wayfile %F
 Icon=io.github.blackbartblues.Wayfile
 Terminal=false

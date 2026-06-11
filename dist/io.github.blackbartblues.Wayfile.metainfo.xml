@@ -5,18 +5,18 @@
   <project_license>MIT</project_license>
 
   <name>Wayfile</name>
-  <summary>Lightweight Qt6/QML file manager for Hyprland</summary>
+  <summary>Lightweight Qt6/QML file manager for Wayland</summary>
 
   <description>
     <p>
       Wayfile is a fast, keyboard-driven file manager built with Qt6 and QML.
-      It is designed for tiling Wayland compositors like Hyprland but works on
-      any Wayland desktop session.
+      It runs on any Wayland desktop session and feels at home on tiling
+      compositors.
     </p>
     <p>
-      Wayfile is a fork of HyprFM by Soyeb Pervez Jim, re-skinned with the
-      obsidian and gold Bifrost theme and extended with a hybrid
-      folders-and-files view and an in-app palette editor.
+      Wayfile is a comprehensive overhaul of HyprFM by Soyeb Pervez Jim,
+      rebuilt around the obsidian and gold Bifrost design system with a hybrid
+      folders-and-files view, five live accent presets, and a unified sidebar.
     </p>
     <p>Features:</p>
     <ul>
@@ -95,7 +95,7 @@
     </release>
     <release version="0.4.25" date="2026-04-15">
       <description>
-        <p>Distinct USB icon for removable media, sidebar partitions sorted with removables on top, and settings panel reworked as a floating Hyprland-styled window.</p>
+        <p>Distinct USB icon for removable media, sidebar partitions sorted with removables on top, and settings panel reworked as a floating window.</p>
       </description>
     </release>
     <release version="0.4.24" date="2026-04-11">

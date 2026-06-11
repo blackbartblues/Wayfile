@@ -2,7 +2,7 @@
 pkgname=wayfile-git
 pkgver=r447.g78a2fec
 pkgrel=1
-pkgdesc="A lightweight Qt6/QML file manager for Hyprland"
+pkgdesc="An obsidian-and-gold Qt6/QML file manager for Wayland"
 arch=('x86_64' 'aarch64')
 url="https://github.com/blackbartblues/Wayfile"
 license=('MIT')

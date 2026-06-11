@@ -1,5 +1,5 @@
 pkgbase = wayfile-git
-	pkgdesc = A lightweight Qt6/QML file manager for Hyprland
+	pkgdesc = An obsidian-and-gold Qt6/QML file manager for Wayland
 	pkgver = r447.g78a2fec
 	pkgrel = 1
 	url = https://github.com/blackbartblues/Wayfile

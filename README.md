@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/screenshots/wayfile-banner.png" alt="Wayfile — an obsidian-and-gold file manager for Hyprland and Wayland" width="100%"/>
+<img src="docs/screenshots/wayfile-banner.png" alt="Wayfile — an obsidian-and-gold file manager for Wayland" width="100%"/>
 
 [![License](https://img.shields.io/github/license/blackbartblues/Wayfile?style=flat-square&color=D4AA6A)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/blackbartblues/Wayfile?style=flat-square&color=D4AA6A)](https://github.com/blackbartblues/Wayfile/releases)
@@ -12,7 +12,7 @@
 
 ---
 
-Wayfile is a Qt6/QML file manager built to feel native on Hyprland: lightweight, fast, and unapologetically keyboard-driven. Its signature look is **Bifröst** — a deep obsidian surface with a warm gate-glow gold accent — and its default layout is the **hybrid view**: a folder grid stacked over a sortable file list with one shared selection. Underneath the polish sit the features power users actually reach for: Miller columns, split panes, merged tabs, async file operations, rich previews, git status, and a live theme system with five accent presets.
+Wayfile is a Qt6/QML file manager built to feel native on Wayland: lightweight, fast, and unapologetically keyboard-driven. Its signature look is **Bifröst** — a deep obsidian surface with a warm gate-glow gold accent — and its default layout is the **hybrid view**: a folder grid stacked over a sortable file list with one shared selection. Underneath the polish sit the features power users actually reach for: Miller columns, split panes, merged tabs, async file operations, rich previews, git status, and a live theme system with five accent presets.
 
 <div align="center">
 
@@ -98,7 +98,7 @@ Bifröst ships with five accent presets. Pick one in **Settings → Colours** an
 - **Thin-frame SVG icon set** — type-coloured file glyphs and accent-coloured folders, rendered via Qt Shapes, with a soft gold bloom on hover and selection
 - **Type stack** — *Inter* (UI), *Cormorant Garamond* (display), and *JetBrains Mono* (mono), all bundled
 - **Configurable** corner radius, fonts, animation timing, and transparency
-- **Compositor blur** on Hyprland, plus native KWin blur on KDE Plasma
+- **Compositor blur** on supporting Wayland compositors, plus native KWin blur on KDE Plasma
 
 <div align="center">
 
