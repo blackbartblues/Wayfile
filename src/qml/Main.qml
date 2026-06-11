@@ -1176,7 +1176,7 @@ ApplicationWindow {
     // ── Helper: collect selected file paths from active view ─────────────────
     function getSelectedPaths(pane) {
         var paths = []
-        var targetPane = pane || activePaneIndex
+        var targetPane = (pane !== undefined && pane !== null) ? pane : activePaneIndex
         var view = fileViewForPane(targetPane)
         if (!view) return paths
 
@@ -1195,7 +1195,7 @@ ApplicationWindow {
 
     function getSelectedItems(pane) {
         var items = []
-        var targetPane = pane || activePaneIndex
+        var targetPane = (pane !== undefined && pane !== null) ? pane : activePaneIndex
         var view = fileViewForPane(targetPane)
         if (!view) return items
 
@@ -1386,7 +1386,7 @@ ApplicationWindow {
     }
 
     function closeSearch(pane) {
-        clearPaneSearch(pane || activePaneIndex)
+        clearPaneSearch((pane !== undefined && pane !== null) ? pane : activePaneIndex)
     }
 
     function handleSearchQuery(query) {
@@ -1423,7 +1423,7 @@ ApplicationWindow {
     }
 
     function triggerRecursiveSearch(pane, query) {
-        var targetPane = pane || activePaneIndex
+        var targetPane = (pane !== undefined && pane !== null) ? pane : activePaneIndex
         var targetQuery = query !== undefined ? query : searchProxyForPane(targetPane).searchQuery
         if (targetQuery === "") return
         searchServiceForPane(targetPane).startSearch(
