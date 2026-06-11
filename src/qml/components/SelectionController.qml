@@ -271,4 +271,33 @@ Item {
                a.y < b.y + b.height &&
                a.y + a.height > b.y
     }
+
+    // Viewport-clamped rubber-band hit-test for the ROW-based views (detailed /
+    // miller), which had a byte-near-identical copy. `flickable` is the row
+    // ListView (exposes count/contentY/height/itemAtIndex/mapFromItem),
+    // `rubberBand` exposes selectionRect. Only realized rows can intersect a
+    // viewport-bound band, so the scan is clamped to the visible range (a ±2
+    // row pad) — huge folders otherwise scanned every row per mouse-move. The
+    // grid keeps its own 2D-geometry variant (cellHeight × columnsPerRow).
+    function selectRowsIntersecting(flickable, rubberBand, rowHeight) {
+        var rb = rubberBand.selectionRect
+        if (rb.width < 4 && rb.height < 4)
+            return
+
+        var newSel = []
+        var rh = Math.max(1, rowHeight)
+        var first = Math.max(0, Math.floor(flickable.contentY / rh) - 2)
+        var last = Math.min(flickable.count - 1,
+                            Math.ceil((flickable.contentY + flickable.height) / rh) + 2)
+        for (var i = first; i <= last; i++) {
+            var item = flickable.itemAtIndex(i)
+            if (!item)
+                continue
+            var itemPos = flickable.mapFromItem(item, 0, 0)
+            var itemRect = Qt.rect(itemPos.x, itemPos.y, item.width, item.height)
+            if (rectsIntersect(rb, itemRect))
+                newSel.push(i)
+        }
+        selectedIndices = newSel
+    }
 }

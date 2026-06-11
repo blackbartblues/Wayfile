@@ -682,26 +682,7 @@ FocusScope {
                 }
 
                 function selectIntersecting() {
-                    var rb = currentRubberBand.selectionRect
-                    if (rb.width < 4 && rb.height < 4) return
-
-                    var newSel = []
-                    // Only realized (visible) rows can intersect the viewport-bound
-                    // rubber band, so clamp to the visible range instead of scanning
-                    // every row.
-                    var rh = Math.max(1, root.rowHeight)
-                    var first = Math.max(0, Math.floor(currentColumn.contentY / rh) - 2)
-                    var last = Math.min(currentColumn.count - 1,
-                        Math.ceil((currentColumn.contentY + currentColumn.height) / rh) + 2)
-                    for (var i = first; i <= last; i++) {
-                        var item = currentColumn.itemAtIndex(i)
-                        if (!item) continue
-                        var itemPos = currentColumn.mapFromItem(item, 0, 0)
-                        var itemRect = Qt.rect(itemPos.x, itemPos.y, item.width, item.height)
-                        if (selectionController.rectsIntersect(rb, itemRect))
-                            newSel.push(i)
-                    }
-                    selectionController.selectedIndices = newSel
+                    selectionController.selectRowsIntersecting(currentColumn, currentRubberBand, root.rowHeight)
                 }
             }
 
