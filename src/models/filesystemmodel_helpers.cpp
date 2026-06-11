@@ -4,10 +4,12 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QHash>
 #include <QLocale>
 #include <QMimeDatabase>
 #include <QProcess>
 #include <QRegularExpression>
+#include <QSet>
 #include <QStandardPaths>
 #include <QStorageInfo>
 #include <QUrl>
@@ -332,7 +334,7 @@ QString fileCategoryForEntry(const QString &name, bool isDir, const QString &con
 
     // Archives — explicit MIME names (covers tar/gzip/xz/bzip2/zstd/7z/rar/zip
     // and their compound *-compressed-tar variants).
-    static const QStringList archiveMimes = {
+    static const QSet<QString> archiveMimes = {
         QStringLiteral("application/zip"), QStringLiteral("application/gzip"),
         QStringLiteral("application/x-tar"), QStringLiteral("application/x-7z-compressed"),
         QStringLiteral("application/x-xz"), QStringLiteral("application/x-bzip"),
@@ -349,7 +351,7 @@ QString fileCategoryForEntry(const QString &name, bool isDir, const QString &con
     // rest are common application/* and text/* code formats.
     if (mimeName.startsWith(QLatin1String("text/x-")))
         return QStringLiteral("code");
-    static const QStringList codeMimes = {
+    static const QSet<QString> codeMimes = {
         QStringLiteral("application/json"), QStringLiteral("application/xml"),
         QStringLiteral("text/xml"), QStringLiteral("application/javascript"),
         QStringLiteral("text/javascript"), QStringLiteral("application/x-shellscript"),
@@ -380,38 +382,47 @@ QString folderTypeForPath(const QString &absolutePath)
     if (absolutePath.isEmpty())
         return QString();
 
-    const QDir target(absolutePath);
-    auto matches = [&target](QStandardPaths::StandardLocation loc) {
-        const QString dir = QStandardPaths::writableLocation(loc);
-        return !dir.isEmpty() && target == QDir(dir);
-    };
-
-    // XDG user-dirs (QStandardPaths). HomeLocation is always defined; the
-    // rest fall back to ~/Subdir when unset, which is exactly what we want.
-    if (matches(QStandardPaths::HomeLocation))      return QStringLiteral("home");
-    if (matches(QStandardPaths::DocumentsLocation)) return QStringLiteral("documents");
-    if (matches(QStandardPaths::DownloadLocation))  return QStringLiteral("downloads");
-    if (matches(QStandardPaths::PicturesLocation))  return QStringLiteral("pictures");
-    if (matches(QStandardPaths::MusicLocation))     return QStringLiteral("music");
-    if (matches(QStandardPaths::MoviesLocation))    return QStringLiteral("videos");
-    if (matches(QStandardPaths::DesktopLocation))   return QStringLiteral("desktop");
-
-    // "Projects" has no XDG entry — match the handoff convention of a dev
-    // directory living directly under $HOME.
-    const QString home = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
-    if (!home.isEmpty()) {
-        static const QStringList devNames = {
-            QStringLiteral("Projects"), QStringLiteral("Code"),
-            QStringLiteral("Developer"), QStringLiteral("dev"),
-            QStringLiteral("Development"),
+    // Prebuilt once: normalized XDG/dev dir path -> folder type. Replaces the 7
+    // QStandardPaths::writableLocation() calls (plus the dev-name loop) this ran
+    // per directory entry via data(). First insert wins, preserving the original
+    // priority: XDG locations beat dev-dir names, and earlier XDG entries win on
+    // the rare collision (an unset location falling back onto $HOME).
+    static const QHash<QString, QString> folderTypes = []() {
+        QHash<QString, QString> types;
+        auto add = [&types](const QString &dir, const QString &type) {
+            if (dir.isEmpty())
+                return;
+            const QString key = QDir(dir).absolutePath();
+            if (!types.contains(key))
+                types.insert(key, type);
         };
-        for (const QString &name : devNames) {
-            if (target == QDir(home + QLatin1Char('/') + name))
-                return QStringLiteral("projects");
-        }
-    }
+        auto loc = [](QStandardPaths::StandardLocation l) {
+            return QStandardPaths::writableLocation(l);
+        };
+        // XDG user-dirs. HomeLocation is always defined; the rest fall back to
+        // ~/Subdir when unset, which is exactly what we want.
+        add(loc(QStandardPaths::HomeLocation),      QStringLiteral("home"));
+        add(loc(QStandardPaths::DocumentsLocation), QStringLiteral("documents"));
+        add(loc(QStandardPaths::DownloadLocation),  QStringLiteral("downloads"));
+        add(loc(QStandardPaths::PicturesLocation),  QStringLiteral("pictures"));
+        add(loc(QStandardPaths::MusicLocation),     QStringLiteral("music"));
+        add(loc(QStandardPaths::MoviesLocation),    QStringLiteral("videos"));
+        add(loc(QStandardPaths::DesktopLocation),   QStringLiteral("desktop"));
 
-    return QString();
+        // "Projects" has no XDG entry — match the handoff convention of a dev
+        // directory living directly under $HOME.
+        const QString home = loc(QStandardPaths::HomeLocation);
+        if (!home.isEmpty()) {
+            for (const QString &name : {QStringLiteral("Projects"), QStringLiteral("Code"),
+                                        QStringLiteral("Developer"), QStringLiteral("dev"),
+                                        QStringLiteral("Development")}) {
+                add(home + QLatin1Char('/') + name, QStringLiteral("projects"));
+            }
+        }
+        return types;
+    }();
+
+    return folderTypes.value(QDir(absolutePath).absolutePath());
 }
 
 // Classify a file as image/video for thumbnail purposes. Prefers an
