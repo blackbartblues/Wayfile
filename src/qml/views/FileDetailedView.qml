@@ -25,13 +25,14 @@ FocusScope {
         // rubberband / drag in the previous directory — otherwise the wheel
         // handler short-circuits until the user clicks something.
         if (listView) listView.interactive = true
+        clearFolderItemCounts()
         Qt.callLater(refreshFolderItemCounts)
     }
     onVisibleChanged: {
         if (visible)
             Qt.callLater(refreshFolderItemCounts)
         else
-            folderItemCounts = ({})
+            clearFolderItemCounts()
     }
 
     // Model bound by FileViewContainer
@@ -68,8 +69,17 @@ FocusScope {
     // Map of folder path → item count
     property var folderItemCounts: ({})
 
-    function refreshFolderItemCounts() {
+    // Drop all cached counts. Called when the listing itself changes (new dir,
+    // row count change) — NOT on plain scrolling.
+    function clearFolderItemCounts() {
         folderItemCounts = ({})
+    }
+
+    // Fill-only: scan just the visible folders we have not counted yet and merge
+    // them into the cache. Each folder count is a sync entryList(), so re-scanning
+    // already-known folders on every scroll-stop was pure waste; caching across
+    // scrolls scans each visible folder once until the listing is invalidated.
+    function refreshFolderItemCounts() {
         if (!root.visible || !viewModel || listView.count <= 0 || !viewModel.folderItemCounts)
             return
 
@@ -77,17 +87,26 @@ FocusScope {
         var last = Math.min(listView.count - 1,
             Math.ceil((listView.contentY + listView.height) / root.rowHeight) + 12)
 
+        var cache = root.folderItemCounts
         var paths = []
         for (var i = first; i <= last; ++i) {
             if (selectionController.isDirForRow(i)) {
                 var p = selectionController.pathForRow(i)
-                if (p && !fileOps.isRemotePath(p))
+                if (p && cache[p] === undefined && !fileOps.isRemotePath(p))
                     paths.push(p)
             }
         }
         if (paths.length === 0)
             return
-        folderItemCounts = viewModel.folderItemCounts(paths)
+
+        var fresh = viewModel.folderItemCounts(paths)
+        // New object so the property change notifies bindings.
+        var merged = ({})
+        for (var k in cache)
+            merged[k] = cache[k]
+        for (var nk in fresh)
+            merged[nk] = fresh[nk]
+        root.folderItemCounts = merged
     }
 
     signal fileActivated(string filePath, bool isDirectory)
@@ -284,7 +303,12 @@ FocusScope {
             reuseItems: true
             cacheBuffer: 512
 
-            onCountChanged: Qt.callLater(root.refreshFolderItemCounts)
+            // Listing changed → counts may be stale: invalidate then refill.
+            onCountChanged: {
+                root.clearFolderItemCounts()
+                Qt.callLater(root.refreshFolderItemCounts)
+            }
+            // Plain scroll → only fill newly-visible folders (cache kept).
             onMovementEnded: Qt.callLater(root.refreshFolderItemCounts)
 
             focus: visible
