@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(wayfile VERSION 1.0.0 LANGUAGES CXX)
+project(wayfile VERSION 1.0.1 LANGUAGES CXX)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GIO REQUIRED IMPORTED_TARGET gio-2.0 gio-unix-2.0)

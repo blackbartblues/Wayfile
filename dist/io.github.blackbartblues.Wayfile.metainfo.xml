@@ -79,6 +79,17 @@
   </provides>
 
   <releases>
+    <release version="1.0.1" date="2026-06-12">
+      <description>
+        <p>Maintenance release: security hardening, performance, and a smoother core — no visual changes.</p>
+        <ul>
+          <li>Security: rejects zip-slip paths during archive extraction, guards archive-root navigation against path traversal, validates clipboard MIME types and the $TERMINAL command, and caps archive operations with a wall-clock timeout</li>
+          <li>Performance: faster MIME and folder-type classification, cached folder item counts, lighter selection repaints while scrolling, batched Flatpak trashing, and remote file properties, the trash listing, and undo no longer block the interface</li>
+          <li>New: hidden folders now appear under a dedicated Hidden root in the Places tree</li>
+          <li>Fixes: correct current-folder highlight in Miller columns, reliable archive extract-and-navigate, accurate quick preview for folders, and left-pane operations no longer misroute in split view</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.0.0" date="2026-06-11">
       <description>
         <p>First stable release of Wayfile — a Qt6/QML file manager with the obsidian-and-gold Bifrost design system.</p>
