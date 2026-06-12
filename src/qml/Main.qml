@@ -1297,7 +1297,6 @@ ApplicationWindow {
     TransferController {
         id: transferController
         conflictDialog: mainOverlays.conflictDialog
-        onActivePaneFocusRequested: root.scheduleActivePaneFocus()
     }
 
     // ── Keyboard Shortcuts ───────────────────────────────────────────────────────────────────────────

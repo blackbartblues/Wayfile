@@ -21,10 +21,6 @@ Item {
     // = mainOverlays.conflictDialog (the TransferConflictDialog instance).
     property var conflictDialog: null
 
-    // ── Signals the host wires ─────────────────────────────────────────────
-    // The host re-focuses the active pane (controller is pane-agnostic).
-    signal activePaneFocusRequested()
-
     // ── Transfer / conflict state ──────────────────────────────────────────
     property var transferConflictItems: []
     property var transferResolvedItems: []
@@ -237,14 +233,5 @@ Item {
         )
         conflictDialog.errorText = ""
         conflictDialog.focusRenameField()
-    }
-
-    function cancelTransferConflicts() {
-        if (conflictDialog.visible)
-            conflictDialog.close()
-        else {
-            resetTransferConflictState()
-            activePaneFocusRequested()
-        }
     }
 }
