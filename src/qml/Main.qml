@@ -312,15 +312,29 @@ ApplicationWindow {
     // from the path-change signals in the Connections blocks above and on
     // activePaneIndex changes.
     property string activePanePath: ""
-    // Bumped on every pane navigation. The per-pane currentPath binding in the
-    // PaneFrame Repeater delegate references this so it re-evaluates
-    // panePath(index) — which reads an untracked Q_INVOKABLE and would
-    // otherwise stay stale, sending drops/operations to the previously-viewed
-    // folder.
-    property int paneNavTick: 0
+    // Reactive mirrors of the active pane's back/forward availability. The
+    // toolbar binds these instead of calling the paneCanGoBack/Forward
+    // Q_INVOKABLEs, which aren't bindable and would otherwise stay stale.
+    property bool activePaneCanGoBack: false
+    property bool activePaneCanGoForward: false
+    // One current path per live pane. The PaneFrame Repeater delegate binds
+    // paneCurrentPath to panePaths[index]; reassigning the array re-evaluates
+    // those bindings, so a pane never stays on a stale folder (panePath() reads
+    // an untracked Q_INVOKABLE a raw binding wouldn't re-fire on). Replaces the
+    // former paneNavTick generation hack.
+    property var panePaths: []
+    // Single refresh point for the active tab's nav signals (wired from the
+    // Connections blocks above) and activePaneIndex changes.
     function refreshActivePanePath() {
-        paneNavTick++
-        activePanePath = panePath(activePaneIndex)
+        var t = tabModel.activeTab
+        activePanePath = t ? panePath(activePaneIndex) : ""
+        activePaneCanGoBack = t ? t.paneCanGoBack(activePaneIndex) : false
+        activePaneCanGoForward = t ? t.paneCanGoForward(activePaneIndex) : false
+        var paths = []
+        var n = t ? t.paneCount : 0
+        for (var i = 0; i < n; ++i)
+            paths.push(panePath(i))
+        panePaths = paths
     }
     onActivePaneIndexChanged: refreshActivePanePath()
     readonly property bool searchMode: paneSearchMode(activePaneIndex)
@@ -865,24 +879,6 @@ ApplicationWindow {
         // Only the active tab: the click merges it with an adjacent tab, or
         // spawns a fresh pane when it's the only tab.
         return tabModel.count >= 2 ? "Merge with adjacent tab" : "Split into a new pane"
-    }
-
-    // paneCanGoBack/Forward are Q_INVOKABLEs (not bindable Q_PROPERTYs), so
-    // touch paneNavTick — bumped on every pane navigation via
-    // refreshActivePanePath — to give the toolbar's enabled bindings a
-    // reactive dependency that re-fires when any pane's history changes.
-    function activePaneCanGoBack() {
-        root.paneNavTick
-        return tabModel.activeTab
-            ? tabModel.activeTab.paneCanGoBack(activePaneIndex)
-            : false
-    }
-
-    function activePaneCanGoForward() {
-        root.paneNavTick
-        return tabModel.activeTab
-            ? tabModel.activeTab.paneCanGoForward(activePaneIndex)
-            : false
     }
 
     function activeItemCount() {
@@ -1451,8 +1447,8 @@ ApplicationWindow {
             // re-fires on tab/pane switches — never on in-pane navigation —
             // which froze the breadcrumb on a stale path.
             navigationPath: activePanePath
-            canGoBack: activePaneCanGoBack()
-            canGoForward: activePaneCanGoForward()
+            canGoBack: activePaneCanGoBack
+            canGoForward: activePaneCanGoForward
             mergeWillUnmerge: root.mergeButtonWillUnmerge()
             mergeOn: root.mergeButtonOn()
             mergeTooltip: root.mergeButtonTooltip()
@@ -1630,15 +1626,13 @@ ApplicationWindow {
                             paneFileModel: root.paneModel(index)
                             // (paneTitle removed in Phase 7 — SplitPaneHeader
                             // now shows the pane's path + item count instead.)
-                            // panePath() reads an untracked Q_INVOKABLE; depend
-                            // on paneNavTick (bumped on every navigation) and
-                            // the active tab so this re-evaluates instead of
-                            // staying on the previously-viewed folder.
-                            paneCurrentPath: {
-                                root.paneNavTick
-                                var _t = tabModel.activeTab
-                                return root.panePath(index)
-                            }
+                            // Bind to the panePaths mirror (rebuilt on every nav
+                            // by refreshActivePanePath) so the pane never shows a
+                            // stale folder — panePath() reads an untracked
+                            // Q_INVOKABLE a raw binding wouldn't re-evaluate.
+                            paneCurrentPath: index < root.panePaths.length
+                                ? root.panePaths[index]
+                                : ""
                             paneViewMode: tabModel.activeTab ? tabModel.activeTab.viewMode : "hybrid"
 
                             onInteractionStarted: root.setActivePane(index)
