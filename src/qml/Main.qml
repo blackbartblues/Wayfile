@@ -535,7 +535,7 @@ ApplicationWindow {
         if (model.filePath)
             return model.filePath(row)
 
-        return model.data(model.index(row, 0), 258 /* FilePathRole */) || ""
+        return model.data(model.index(row, 0), Roles.fs.path) || ""
     }
 
     function isDirectoryFromModel(model, row) {
@@ -545,7 +545,7 @@ ApplicationWindow {
         if (model.isDir)
             return model.isDir(row)
 
-        return model.data(model.index(row, 0), 265 /* IsDirRole */) || false
+        return model.data(model.index(row, 0), Roles.fs.isDir) || false
     }
 
     function fileViewForPane(pane) {

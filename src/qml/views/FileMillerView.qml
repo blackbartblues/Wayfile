@@ -208,7 +208,7 @@ FocusScope {
                     return ""
                 if (millerParentModel.filePath)
                     return millerParentModel.filePath(row)
-                return millerParentModel.data(millerParentModel.index(row, 0), 258) || ""
+                return millerParentModel.data(millerParentModel.index(row, 0), Roles.fs.path) || ""
             }
 
             function rowForPath(path) {

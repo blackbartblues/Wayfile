@@ -223,7 +223,7 @@ Rectangle {
                 var n = bookmarks.count // force dependency registration even when n === 0
                 var out = []
                 for (var i = 0; i < n; i++) {
-                    var p = bookmarks.data(bookmarks.index(i, 0), 258 /* PathRole */) || ""
+                    var p = bookmarks.data(bookmarks.index(i, 0), Roles.bookmark.path) || ""
                     if (hidden.indexOf(p) < 0)
                         out.push(i)
                 }
@@ -533,7 +533,7 @@ Rectangle {
                         isDragging = true
                         bookmarksSection.dragCurrentIndex = pressIndex
                         bookmarksSection.dragName = bookmarks.data(
-                            bookmarks.index(pressIndex, 0), 257 /* NameRole */) || ""
+                            bookmarks.index(pressIndex, 0), Roles.bookmark.name) || ""
                     }
                     if (isDragging) {
                         bookmarksSection.dragMouseY = mouse.y
@@ -556,7 +556,7 @@ Rectangle {
                         isDragging = false
                     } else if (mouse.button === Qt.LeftButton && pressIndex >= 0 && pressIndex < bookmarks.count) {
                         var path = bookmarks.data(
-                            bookmarks.index(pressIndex, 0), 258 /* PathRole */) || ""
+                            bookmarks.index(pressIndex, 0), Roles.bookmark.path) || ""
                         if (path) root.bookmarkClicked(path)
                     }
                     pressIndex = -1
@@ -571,12 +571,12 @@ Rectangle {
                     if (index < 0 || index >= bookmarks.count)
                         return
 
-                    var path = bookmarks.data(bookmarks.index(index, 0), 258 /* PathRole */) || ""
+                    var path = bookmarks.data(bookmarks.index(index, 0), Roles.bookmark.path) || ""
                     var mapped = bmInteraction.mapToItem(null, mouse.x, mouse.y)
                     root.sidebarContextMenuRequested({
                         kind: "bookmark",
                         index: index,
-                        name: bookmarks.data(bookmarks.index(index, 0), 257 /* NameRole */) || "",
+                        name: bookmarks.data(bookmarks.index(index, 0), Roles.bookmark.name) || "",
                         path: path,
                         // A bookmark's own path is its stable hide id (W7).
                         entryId: path
@@ -594,12 +594,12 @@ Rectangle {
                         ? idxAt(mouse.y) : -1
                     if (index < 0 || index >= bookmarks.count)
                         return
-                    var path = bookmarks.data(bookmarks.index(index, 0), 258 /* PathRole */) || ""
+                    var path = bookmarks.data(bookmarks.index(index, 0), Roles.bookmark.path) || ""
                     var mapped = bmInteraction.mapToItem(null, mouse.x, mouse.y)
                     root.sidebarContextMenuRequested({
                         kind: "bookmark",
                         index: index,
-                        name: bookmarks.data(bookmarks.index(index, 0), 257 /* NameRole */) || "",
+                        name: bookmarks.data(bookmarks.index(index, 0), Roles.bookmark.name) || "",
                         path: path,
                         entryId: path,
                         colorPicker: true

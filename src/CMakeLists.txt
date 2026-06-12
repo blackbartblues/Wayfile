@@ -90,6 +90,7 @@ if(WAYFILE_ENABLE_UNITY_BUILD)
     )
 endif()
 
+set_source_files_properties(qml/Roles.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 set_source_files_properties(qml/theme/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 set_source_files_properties(qml/theme/Fonts.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 set_source_files_properties(qml/theme/FileTypeColors.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
@@ -109,6 +110,7 @@ endif()
 list(APPEND wayfile_qml_module_args
     QML_FILES
         qml/Main.qml
+        qml/Roles.qml
         qml/theme/Theme.qml
         qml/theme/Fonts.qml
         qml/theme/FileTypeColors.qml

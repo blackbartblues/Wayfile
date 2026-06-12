@@ -1,4 +1,5 @@
 import QtQuick
+import Wayfile
 
 // Shared selection / type-ahead / focus logic for the three file views
 // (FileGridView, FileDetailedView, FileMillerView). Non-visual: it owns the
@@ -95,7 +96,7 @@ Item {
         if (fileModel.filePath)
             return fileModel.filePath(row)
 
-        return fileModel.data(fileModel.index(row, 0), 258 /* FilePathRole */) || ""
+        return fileModel.data(fileModel.index(row, 0), Roles.fs.path) || ""
     }
 
     function fileNameForRow(row) {
@@ -105,7 +106,7 @@ Item {
         if (fileModel.fileName)
             return fileModel.fileName(row)
 
-        return fileModel.data(fileModel.index(row, 0), 257 /* FileNameRole */) || ""
+        return fileModel.data(fileModel.index(row, 0), Roles.fs.name) || ""
     }
 
     function isDirForRow(row) {
@@ -115,7 +116,7 @@ Item {
         if (fileModel.isDir)
             return fileModel.isDir(row)
 
-        return fileModel.data(fileModel.index(row, 0), 265 /* IsDirRole */) || false
+        return fileModel.data(fileModel.index(row, 0), Roles.fs.isDir) || false
     }
 
     function rowForPath(path) {
