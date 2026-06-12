@@ -32,9 +32,9 @@ QStringList gioInfoArgs(const QString &normalizedPath)
     };
 }
 
-// Parse `gio info` output into the properties map. Shared by sync
-// remoteFileProperties and the async requestFileProperties path so both produce
-// byte-identical results — only how the process runs (blocking vs. not) differs.
+// Parse `gio info` output into the properties map, used by the async
+// requestFileProperties path. (Sync remoteFileProperties no longer spawns
+// gio info — it returns cached or fallback data to avoid blocking the GUI.)
 QVariantMap parseRemoteGioInfo(const QString &normalizedPath, const QString &output)
 {
     QVariantMap props;
@@ -236,13 +236,11 @@ QVariantMap FileSystemModel::remoteFileProperties(const QString &path) const
             return buildRemotePropertiesFromEntry(entry);
     }
 
-    QProcess proc;
-    proc.start(QStringLiteral("gio"), gioInfoArgs(normalizedPath));
-
-    if (!proc.waitForFinished(8000) || proc.exitCode() != 0)
-        return buildFallbackRemoteProperties(normalizedPath);
-
-    return parseRemoteGioInfo(normalizedPath, QString::fromUtf8(proc.readAllStandardOutput()));
+    // Cache miss: never block the GUI thread on `gio info` (which could stall up
+    // to 8s). Return a cheap fallback; callers that need fresh remote metadata
+    // use the async requestFileProperties path, which spawns gio info without
+    // blocking and reports back via remotePropertiesReady.
+    return buildFallbackRemoteProperties(normalizedPath);
 }
 
 void FileSystemModel::requestFileProperties(const QString &path)
