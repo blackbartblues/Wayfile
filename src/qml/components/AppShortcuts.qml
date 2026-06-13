@@ -128,17 +128,17 @@ Item {
     // View mode switching
     Shortcut {
         sequence: config.shortcutMap["grid_view"]
-        onActivated: { if (tabModel.activeTab) tabModel.activeTab.viewMode = "grid" }
+        onActivated: { if (host) host.applyViewToActivePane("grid") }
     }
 
     Shortcut {
         sequence: config.shortcutMap["miller_view"]
-        onActivated: { if (tabModel.activeTab) tabModel.activeTab.viewMode = "miller" }
+        onActivated: { if (host) host.applyViewToActivePane("miller") }
     }
 
     Shortcut {
         sequence: config.shortcutMap["detailed_view"]
-        onActivated: { if (tabModel.activeTab) tabModel.activeTab.viewMode = "detailed" }
+        onActivated: { if (host) host.applyViewToActivePane("detailed") }
     }
 
     // File operations

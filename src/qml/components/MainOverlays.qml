@@ -325,7 +325,7 @@ Item {
         }
 
         onViewModeRequested: (mode) => {
-            if (tabModel.activeTab) tabModel.activeTab.viewMode = mode
+            if (host) host.applyViewToActivePane(mode)
         }
 
         onSortRequested: (column, ascending) => host.applySortFromUi(column, ascending)
