@@ -48,6 +48,20 @@ ColumnLayout {
         text: "Layout newly opened tabs start in: grid, Miller columns, or detailed list."
     }
 
+    Q.Toggle {
+        Layout.fillWidth: true
+        label: "Remember view per folder"
+        checked: panel.draftRememberFolderView
+        onToggled: (value) => {
+            panel.draftRememberFolderView = value
+            panel.applySettingsNow()
+        }
+    }
+
+    SettingDescription {
+        text: "When on, each folder reopens in the view you last set for it. New folders keep the current pane's view."
+    }
+
     SettingsDropdown {
         settingsPanel: panel
         Layout.fillWidth: true

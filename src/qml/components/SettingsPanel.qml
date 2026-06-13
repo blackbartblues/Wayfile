@@ -79,6 +79,7 @@ Window {
     property string draftIconTheme: config.iconTheme
     property bool draftBuiltinIcons: config.builtinIcons
     property string draftDefaultView: config.defaultView
+    property bool draftRememberFolderView: config.rememberFolderView
     property string draftSortBy: config.sortBy
     property bool draftSortAscending: config.sortAscending
     property bool draftShowHidden: currentShowHidden
@@ -286,6 +287,7 @@ Window {
 
             draftShowHidden = currentShowHidden
             draftDefaultView = config.defaultView
+            draftRememberFolderView = config.rememberFolderView
             draftSortBy = config.sortBy
             draftSortAscending = config.sortAscending
             draftSidebarVisible = currentSidebarVisible
@@ -356,6 +358,7 @@ Window {
             builtinIcons: draftBuiltinIcons,
             showHidden: draftShowHidden,
             defaultView: draftDefaultView,
+            rememberFolderView: draftRememberFolderView,
             sortBy: draftSortBy,
             sortAscending: draftSortAscending,
             sidebarVisible: draftSidebarVisible,
