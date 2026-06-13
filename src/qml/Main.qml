@@ -135,6 +135,7 @@ ApplicationWindow {
                 root.clearPaneSearch(0)
                 root.scheduleActivePaneFocus()
                 root.refreshActivePanePath()
+                root.maybeApplyFolderView(0)
             }
         }
         // Navigation inside any non-primary pane (idx >= 1) pushes only
@@ -150,6 +151,7 @@ ApplicationWindow {
             root.clearPaneSearch(idx)
             root.scheduleActivePaneFocus()
             root.refreshActivePanePath()
+            root.maybeApplyFolderView(idx)
         }
         // Phase 2 P2-M6: merge / unmerge / compactToPrimary keeps the
         // active tab the same but restructures its m_panes list; sync the
@@ -170,6 +172,12 @@ ApplicationWindow {
         function onViewModeChanged() {
             if (tabModel.activeTab)
                 root.syncMillerParentModel(tabModel.activeTab.currentPath)
+            root.scheduleActivePaneFocus()
+        }
+        function onPaneViewModeChanged(idx) {
+            root.refreshActivePanePath()
+            if (idx === root.activePaneIndex)
+                root.syncMillerParentModel(root.activePanePath)
             root.scheduleActivePaneFocus()
         }
     }
@@ -323,6 +331,11 @@ ApplicationWindow {
     // an untracked Q_INVOKABLE a raw binding wouldn't re-fire on). Replaces the
     // former paneNavTick generation hack.
     property var panePaths: []
+    // One view mode per live pane, mirror of paneViewMode(index). Same rationale
+    // as panePaths: paneViewMode() is an untracked Q_INVOKABLE, so the PaneFrame
+    // delegate and footer bind to this array, rebuilt by refreshActivePanePath()
+    // and the onPaneViewModeChanged handler.
+    property var paneViewModes: []
     // Single refresh point for the active tab's nav signals (wired from the
     // Connections blocks above) and activePaneIndex changes.
     function refreshActivePanePath() {
@@ -335,6 +348,10 @@ ApplicationWindow {
         for (var i = 0; i < n; ++i)
             paths.push(panePath(i))
         panePaths = paths
+        var views = []
+        for (var k = 0; k < n; ++k)
+            views.push(t ? t.paneViewMode(k) : "hybrid")
+        paneViewModes = views
     }
     onActivePaneIndexChanged: refreshActivePanePath()
     readonly property bool searchMode: paneSearchMode(activePaneIndex)
@@ -418,7 +435,7 @@ ApplicationWindow {
     }
 
     function syncMillerParentModel(path) {
-        if (!tabModel.activeTab || tabModel.activeTab.viewMode !== "miller") {
+        if (!tabModel.activeTab || root.activePaneViewMode() !== "miller") {
             millerParentModel.setRootPath("")
             return
         }
@@ -586,7 +603,7 @@ ApplicationWindow {
         if (!view)
             return null
 
-        var vm = tabModel.activeTab ? tabModel.activeTab.viewMode : "hybrid"
+        var vm = view.viewMode || "hybrid"
         if (vm === "hybrid") return view.hybridViewItem
         if (vm === "grid") return view.gridViewItem
         if (vm === "miller") return view.millerViewItem
@@ -596,6 +613,49 @@ ApplicationWindow {
 
     function activeSubView() {
         return subViewFor(activeFileView())
+    }
+
+    // The focused pane's current view mode, from the reactive mirror.
+    function activePaneViewMode() {
+        return activePaneIndex < paneViewModes.length
+            ? paneViewModes[activePaneIndex]
+            : "hybrid"
+    }
+
+    // True only for a pane showing a real on-disk folder — folder-view memory
+    // never reads or writes for Recents / Hidden / Trash / remote / search panes.
+    function isRealFolderPane(idx) {
+        if (idx < 0)
+            return false
+        if (paneIsRecents(idx) || paneIsHidden(idx) || paneSearchMode(idx))
+            return false
+        var p = panePath(idx)
+        if (!p || p === "")
+            return false
+        return !fileOps.isTrashPath(p) && !fileOps.isRemotePath(p)
+    }
+
+    // Footer / shortcut / menu view-switch: set the focused pane's view and,
+    // when the setting is on, record it as that folder's remembered view.
+    function applyViewToActivePane(mode) {
+        if (!tabModel.activeTab)
+            return
+        var idx = root.activePaneIndex
+        tabModel.activeTab.setPaneViewMode(idx, mode)
+        if (config.rememberFolderView && root.isRealFolderPane(idx))
+            folderViewStore.rememberView(root.panePath(idx), mode)
+    }
+
+    // On navigation, apply a folder's remembered view (if any). A miss leaves
+    // the pane's current view untouched (sticky-per-pane).
+    function maybeApplyFolderView(idx) {
+        if (!config.rememberFolderView || !tabModel.activeTab)
+            return
+        if (!root.isRealFolderPane(idx))
+            return
+        var saved = folderViewStore.viewForFolder(root.panePath(idx))
+        if (saved && saved.length > 0)
+            tabModel.activeTab.setPaneViewMode(idx, saved)
     }
 
     function shouldFocusActivePane() {
@@ -1633,7 +1693,9 @@ ApplicationWindow {
                             paneCurrentPath: index < root.panePaths.length
                                 ? root.panePaths[index]
                                 : ""
-                            paneViewMode: tabModel.activeTab ? tabModel.activeTab.viewMode : "hybrid"
+                            paneViewMode: index < root.paneViewModes.length
+                                ? root.paneViewModes[index]
+                                : (config ? config.defaultView : "hybrid")
 
                             onInteractionStarted: root.setActivePane(index)
                             onFileActivated: (filePath, isDirectory) =>
@@ -1685,12 +1747,12 @@ ApplicationWindow {
                     selectedCount: root.currentSelectedCount
                     selectedSize: root.currentSelectedSize
                     selectedSizePending: root.currentSelectedSizePending
-                    // View-switch cluster (#8 pkt 7): reflect and drive the
-                    // active tab's per-tab viewMode.
-                    viewMode: tabModel.activeTab ? tabModel.activeTab.viewMode : "hybrid"
-                    onViewModeRequested: (m) => {
-                        if (tabModel.activeTab) tabModel.activeTab.viewMode = m
-                    }
+                    // View-switch cluster: reflect and drive the FOCUSED pane's
+                    // own view mode (per-pane independent views).
+                    viewMode: root.activePaneIndex < root.paneViewModes.length
+                        ? root.paneViewModes[root.activePaneIndex]
+                        : "hybrid"
+                    onViewModeRequested: (m) => root.applyViewToActivePane(m)
                 }
             }
         }
