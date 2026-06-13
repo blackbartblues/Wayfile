@@ -184,6 +184,19 @@ Item {
         }
     }
 
+    // Open "just works": when a host-local file has no working default handler,
+    // FileOperations.openFile emits openFileFailed → surface the App Chooser
+    // (with the MIME set, so "Set Default" is available) plus an info toast.
+    Connections {
+        target: fileOps
+        function onOpenFileFailed(path, mimeType) {
+            toast.show("No default app for \"" + fileOps.displayNameForPath(path) + "\" — choose one", "info")
+            appChooserDialog.filePath = path
+            appChooserDialog.mimeType = mimeType
+            appChooserDialog.open()
+        }
+    }
+
     // ── Properties dialog ──────────────────────────────────────────────────
     PropertiesDialog {
         id: propertiesDialog
