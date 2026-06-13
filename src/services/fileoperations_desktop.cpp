@@ -2,13 +2,13 @@
 #include "services/fileoperations_helpers.h"
 
 #include <QClipboard>
-#include <QDesktopServices>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QImage>
 #include <QMimeData>
+#include <QMimeDatabase>
 #include <QPixmap>
 #include <QProcess>
 #include <QRegularExpression>
@@ -16,6 +16,8 @@
 #include <QTimer>
 #include <QUrl>
 #include <QUuid>
+
+#include <memory>
 
 using namespace FileOperationsHelpers;
 
@@ -144,22 +146,36 @@ void FileOperations::openFile(const QString &path)
         return;
     }
 
-    // Local files. Outside a sandbox: hand off to Qt's QDesktopServices
-    // (which uses xdg-open / kde-open / gio-launch under the hood and
-    // honors the user's MIME associations). Inside a Flatpak: shell out
-    // to `flatpak-spawn --host xdg-open` so the host opens the file with
-    // the host's default app, completely bypassing the sandbox. This is
-    // the same pattern Nautilus and Dolphin use when running as Flatpaks.
+    // Flatpak local files: shell out to `flatpak-spawn --host xdg-open` so the
+    // host opens the file with its default app, bypassing the sandbox. (Out of
+    // scope for the App Chooser fallback — left as fire-and-forget.)
     if (runningInFlatpak()) {
         proc->start(QStringLiteral("flatpak-spawn"),
                     {QStringLiteral("--host"), QStringLiteral("xdg-open"), normalized});
         return;
     }
 
-    proc->deleteLater();
-    const QUrl url = QUrl::fromLocalFile(normalized);
-    if (!QDesktopServices::openUrl(url))
-        qWarning() << "FileOperations::openFile: failed to open" << normalized;
+    // Host local files: launch via `gio open`, which honors the user's default
+    // app AND the MIME subclass hierarchy and — unlike xdg-open / QDesktopServices
+    // — has no web-browser fallback for unhandled types. When gio reports no
+    // default handler (non-zero exit) or fails to start, emit openFileFailed so
+    // the UI can offer the App Chooser. Reported at most once.
+    auto reported = std::make_shared<bool>(false);
+    auto reportFailure = [this, normalized, reported]() {
+        if (*reported)
+            return;
+        *reported = true;
+        QMimeDatabase mimeDb;
+        emit openFileFailed(normalized, mimeDb.mimeTypeForFile(normalized).name());
+    };
+    connect(proc, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
+            [reportFailure](int exitCode, QProcess::ExitStatus status) {
+                if (status != QProcess::NormalExit || exitCode != 0)
+                    reportFailure();
+            });
+    connect(proc, &QProcess::errorOccurred, this,
+            [reportFailure](QProcess::ProcessError) { reportFailure(); });
+    proc->start(QStringLiteral("gio"), {QStringLiteral("open"), normalized});
 }
 
 bool FileOperations::pathExists(const QString &path) const

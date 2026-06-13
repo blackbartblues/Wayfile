@@ -114,6 +114,11 @@ signals:
     void archiveExtractFinished(const QString &archivePath, bool success, const QString &error);
     void clipboardImageAvailableChanged();
 
+    // Emitted when a host-local file has no working default handler, so the UI
+    // can offer the App Chooser instead of failing silently. mimeType may be
+    // empty for an unknown type.
+    void openFileFailed(const QString &path, const QString &mimeType);
+
 private:
     struct ActiveTransfer {
         int id = 0;
