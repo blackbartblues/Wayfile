@@ -460,6 +460,67 @@ private slots:
         QCOMPARE(rtab->paneCurrentPath(2), QString("/home"));
     }
 
+    void testSessionPreservesPerPaneViews()
+    {
+        TabListModel model;
+        TabModel *tab = model.activeTab();
+        tab->navigateTo("/tmp");
+        tab->addPane("/usr");
+        tab->setSupertab(true);
+        tab->setPaneViewMode(0, "grid");
+        tab->setPaneViewMode(1, "detailed");
+
+        const QJsonArray saved = model.saveSession();
+        TabListModel restored;
+        restored.restoreSession(saved, 0);
+
+        TabModel *rt = restored.activeTab();
+        QCOMPARE(rt->paneCount(), 2);
+        QCOMPARE(rt->paneViewMode(0), QString("grid"));
+        QCOMPARE(rt->paneViewMode(1), QString("detailed"));
+    }
+
+    void testLegacySessionStringPanesRestore()
+    {
+        // Sessions written before this feature stored panes as bare path
+        // strings and a single top-level viewMode. They must still restore.
+        QJsonObject legacy{
+            {"path", "/tmp"},
+            {"viewMode", "miller"},
+            {"sortBy", "name"},
+            {"sortAscending", true},
+            {"panes", QJsonArray{QString("/tmp"), QString("/usr")}},
+            {"isSupertab", true},
+        };
+        TabListModel model;
+        model.restoreSession(QJsonArray{legacy}, 0);
+        TabModel *tab = model.activeTab();
+        QCOMPARE(tab->paneCount(), 2);
+        QCOMPARE(tab->paneViewMode(0), QString("miller"));
+        QCOMPARE(tab->paneViewMode(1), QString("miller"));   // legacy → shared
+    }
+
+    void testReopenClosedTabKeepsPerPaneViews()
+    {
+        TabListModel model;
+        model.addTab();                       // a 2nd tab so close is allowed
+        model.setActiveIndex(1);              // pin to the new tab deterministically
+        TabModel *tab = model.activeTab();
+        tab->navigateTo("/tmp");
+        tab->addPane("/usr");
+        tab->setSupertab(true);
+        tab->setPaneViewMode(0, "grid");
+        tab->setPaneViewMode(1, "detailed");
+
+        model.closeTab(model.activeIndex());
+        model.reopenClosedTab();
+
+        TabModel *rt = model.activeTab();
+        QCOMPARE(rt->paneCount(), 2);
+        QCOMPARE(rt->paneViewMode(0), QString("grid"));
+        QCOMPARE(rt->paneViewMode(1), QString("detailed"));
+    }
+
     // Phase C: merge button (no explicit multi-selection) — default to the
     // tab on the RIGHT of the active one.
     void testMergeActiveWithAdjacentPrefersRight()

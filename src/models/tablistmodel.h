@@ -134,6 +134,7 @@ private:
         QString path;
         QString viewMode;
         QStringList panePaths;
+        QStringList paneViewModes;
         QString sortBy;
         bool sortAscending = true;
         bool isSupertab = false;

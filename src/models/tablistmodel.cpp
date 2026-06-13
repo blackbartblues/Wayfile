@@ -88,6 +88,7 @@ void TabListModel::connectTab(int row, TabModel *tab)
     // too — otherwise a supertab's pane 2/3 path changes wouldn't be saved.
     connect(tab, &TabModel::panePathChanged, this, &TabListModel::sessionChanged);
     connect(tab, &TabModel::viewModeChanged, this, &TabListModel::sessionChanged);
+    connect(tab, &TabModel::paneViewModeChanged, this, &TabListModel::sessionChanged);
     connect(tab, &TabModel::sortChanged, this, &TabListModel::sessionChanged);
 }
 
@@ -192,13 +193,16 @@ void TabListModel::closeTab(int index)
     }
 
     TabModel *tab = m_tabs.at(index);
-    QStringList panePaths;
-    for (int i = 0; i < tab->paneCount(); ++i)
+    QStringList panePaths, paneViewModes;
+    for (int i = 0; i < tab->paneCount(); ++i) {
         panePaths.append(tab->paneCurrentPath(i));
+        paneViewModes.append(tab->paneViewMode(i));
+    }
     m_closedTabs.append({
         tab->currentPath(),
         tab->viewMode(),
         panePaths,
+        paneViewModes,
         tab->sortBy(),
         tab->sortAscending(),
         tab->isSupertab(),
@@ -685,6 +689,9 @@ void TabListModel::reopenClosedTab()
             tab->addPane(info.panePaths.at(i));
         tab->setSupertab(true);
     }
+    // Restore each pane's independent view (pane 0 already set via setViewMode).
+    for (int i = 0; i < info.paneViewModes.size() && i < tab->paneCount(); ++i)
+        tab->setPaneViewMode(i, info.paneViewModes.at(i));
     m_tabs.append(tab);
     connectTab(m_tabs.size() - 1, tab);
     endInsertRows();
@@ -697,14 +704,18 @@ QJsonArray TabListModel::saveSession() const
 {
     QJsonArray arr;
     for (const auto *tab : m_tabs) {
-        // Persist the full pane list so merged supertabs survive a restart.
+        // Persist each pane's path AND its independent view so merged
+        // supertabs and per-pane views both survive a restart.
         QJsonArray panes;
         for (int i = 0; i < tab->paneCount(); ++i)
-            panes.append(tab->paneCurrentPath(i));
+            panes.append(QJsonObject{
+                {"path", tab->paneCurrentPath(i)},
+                {"viewMode", tab->paneViewMode(i)},
+            });
 
         arr.append(QJsonObject{
             {"path", tab->currentPath()},
-            {"viewMode", tab->viewMode()},
+            {"viewMode", tab->viewMode()},   // = pane 0; kept for older readers
             {"sortBy", tab->sortBy()},
             {"sortAscending", tab->sortAscending()},
             {"panes", panes},
@@ -729,22 +740,37 @@ void TabListModel::restoreSession(const QJsonArray &tabs, int activeIdx)
 
         const QJsonArray panes = obj.value("panes").toArray();
         const bool isSupertab = obj.value("isSupertab").toBool(false);
+        const QString legacyViewMode = obj.value("viewMode").toString("grid");
+
+        // A pane element is either a bare path string (legacy session) or a
+        // {path, viewMode} object (per-pane view persistence).
+        auto panePathAt = [&](int i) -> QString {
+            const QJsonValue v = panes.at(i);
+            return v.isObject() ? v.toObject().value("path").toString() : v.toString();
+        };
+        auto paneViewAt = [&](int i) -> QString {
+            const QJsonValue v = panes.at(i);
+            return v.isObject() ? v.toObject().value("viewMode").toString(legacyViewMode)
+                                : legacyViewMode;
+        };
 
         // Pane 0 path: prefer the panes array, fall back to the legacy "path"
         // field for sessions written before merge persistence existed.
         const QString firstPath = panes.isEmpty()
             ? obj.value("path").toString()
-            : panes.first().toString();
+            : panePathAt(0);
         tab->navigateTo(normalizedSessionPath(firstPath));
-        tab->setViewMode(obj.value("viewMode").toString("grid"));
+        tab->setViewMode(panes.isEmpty() ? legacyViewMode : paneViewAt(0));
         tab->setSortBy(obj.value("sortBy").toString("name"));
         tab->setSortAscending(obj.value("sortAscending").toBool(true));
 
         if (isSupertab && panes.size() > 1) {
-            // Recreate the merged supertab: one pane per saved path, then mark
-            // it so title() joins every pane's name — mirrors mergeSelected().
-            for (int i = 1; i < panes.size(); ++i)
-                tab->addPane(normalizedSessionPath(panes.at(i).toString()));
+            // Recreate the merged supertab: one pane per saved path, each with
+            // its own restored view — mirrors mergeSelected().
+            for (int i = 1; i < panes.size(); ++i) {
+                tab->addPane(normalizedSessionPath(panePathAt(i)));
+                tab->setPaneViewMode(i, paneViewAt(i));
+            }
             tab->setSupertab(true);
         }
         // Non-supertab tabs (and legacy single-pane sessions) come back at
