@@ -39,6 +39,7 @@
 #include "models/devicemodel.h"
 #include "models/networklocationmodel.h"
 #include "models/recentfilesmodel.h"
+#include "models/folderviewstore.h"
 #include "models/searchresultsmodel.h"
 #include "models/searchproxymodel.h"
 #include "models/dirfilterproxymodel.h"
@@ -390,6 +391,9 @@ int main(int argc, char *argv[])
     // Create RecentFilesModel
     RecentFilesModel *recentFiles = new RecentFilesModel(configDir + "/recents.json", &app);
 
+    // Per-folder remembered view modes (path -> grid/list/detailed/miller/hybrid).
+    FolderViewStore *folderViewStore = new FolderViewStore(configDir + "/folder-views.json", &app);
+
     // Create DeviceModel
     DeviceModel *devices = new DeviceModel(&app, true);
 
@@ -466,6 +470,7 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("devices", devices);
     engine.rootContext()->setContextProperty("networkModel", networkLocations);
     engine.rootContext()->setContextProperty("recentFiles", recentFiles);
+    engine.rootContext()->setContextProperty("folderViewStore", folderViewStore);
     engine.rootContext()->setContextProperty("hiddenEntries", hiddenEntries);
     engine.rootContext()->setContextProperty("searchProxy", paneServices[0].searchProxy);
     engine.rootContext()->setContextProperty("searchResults", paneServices[0].searchResults);
