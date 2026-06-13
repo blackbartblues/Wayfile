@@ -397,6 +397,7 @@ void ConfigManager::setDefaults()
     m_hiddenSidebarEntries = {QStringLiteral("places.recents")};
     m_scrollSpeed = 3.0;
     m_gridCellSize = 180;  // keep in sync with FileGridView min/maxCellSize (110–320)
+    m_rememberFolderView = true;
     m_bookmarks = {"~/Documents", "~/Downloads", "~/Pictures", "~/Projects"};
     m_radiusSmall = 4;
     m_radiusMedium = 6;
@@ -469,6 +470,8 @@ void ConfigManager::loadConfig()
             m_scrollSpeed = qBound(1.0, *v, 10.0);
         if (auto v = config["general"]["grid_cell_size"].value<int64_t>())
             m_gridCellSize = qBound(110, static_cast<int>(*v), 320);
+        if (auto v = config["general"]["remember_folder_view"].value<bool>())
+            m_rememberFolderView = *v;
 
         // Appearance
         if (auto v = config["appearance"]["radius_small"].value<int64_t>())
@@ -619,6 +622,7 @@ QVariantMap ConfigManager::bookmarkColors() const
 }
 double ConfigManager::scrollSpeed() const { return m_scrollSpeed; }
 int ConfigManager::gridCellSize() const { return m_gridCellSize; }
+bool ConfigManager::rememberFolderView() const { return m_rememberFolderView; }
 int ConfigManager::radiusSmall() const { return m_radiusSmall; }
 int ConfigManager::radiusMedium() const { return m_radiusMedium; }
 int ConfigManager::radiusLarge() const { return m_radiusLarge; }
@@ -758,6 +762,11 @@ void ConfigManager::saveSettings(const QVariantMap &settings)
     if (settings.contains("gridCellSize")) {
         m_gridCellSize = qBound(110, settings.value("gridCellSize").toInt(), 320);
         general.insert_or_assign("grid_cell_size", m_gridCellSize);
+    }
+
+    if (settings.contains("rememberFolderView")) {
+        m_rememberFolderView = settings.value("rememberFolderView").toBool();
+        general.insert_or_assign("remember_folder_view", m_rememberFolderView);
     }
 
     if (!general.empty())

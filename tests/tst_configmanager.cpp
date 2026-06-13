@@ -39,6 +39,36 @@ private slots:
         QCOMPARE(mgr.animationsEnabled(), true);
     }
 
+    void testRememberFolderViewDefaultsTrue()
+    {
+        QTemporaryDir dir;
+        ConfigManager config(dir.path() + "/config.toml");
+        QCOMPARE(config.rememberFolderView(), true);
+    }
+
+    void testRememberFolderViewParsedFromToml()
+    {
+        QTemporaryDir dir;
+        const QString path = dir.path() + "/config.toml";
+        QFile f(path);
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        f.write("[general]\nremember_folder_view = false\n");
+        f.close();
+        ConfigManager config(path);
+        QCOMPARE(config.rememberFolderView(), false);
+    }
+
+    void testRememberFolderViewRoundTrip()
+    {
+        QTemporaryDir dir;
+        const QString path = dir.path() + "/config.toml";
+        ConfigManager config(path);
+        config.saveSettings(QVariantMap{{"rememberFolderView", false}});
+        QCOMPARE(config.rememberFolderView(), false);
+        ConfigManager reloaded(path);
+        QCOMPARE(reloaded.rememberFolderView(), false);
+    }
+
     void testCustomDefaultTheme()
     {
         QTemporaryDir dir;

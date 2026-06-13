@@ -29,6 +29,7 @@ class ConfigManager : public QObject
     Q_PROPERTY(QStringList hiddenSidebarEntries READ hiddenSidebarEntries NOTIFY configChanged)
     Q_PROPERTY(double scrollSpeed READ scrollSpeed NOTIFY configChanged)
     Q_PROPERTY(int gridCellSize READ gridCellSize NOTIFY configChanged)
+    Q_PROPERTY(bool rememberFolderView READ rememberFolderView NOTIFY configChanged)
     Q_PROPERTY(QStringList bookmarks READ bookmarks NOTIFY configChanged)
     Q_PROPERTY(int radiusSmall READ radiusSmall NOTIFY configChanged)
     Q_PROPERTY(int radiusMedium READ radiusMedium NOTIFY configChanged)
@@ -84,6 +85,7 @@ public:
     QStringList hiddenSidebarEntries() const;
     double scrollSpeed() const;
     int gridCellSize() const;
+    bool rememberFolderView() const;
     QStringList bookmarks() const;
     QVariantMap bookmarkColors() const;
     int radiusSmall() const;
@@ -147,6 +149,7 @@ private:
     QStringList m_hiddenSidebarEntries;
     double m_scrollSpeed;
     int m_gridCellSize;
+    bool m_rememberFolderView = true;
     QStringList m_bookmarks;
     // path → "#RRGGBB" star color. Absent ⇒ default gold.
     QMap<QString, QString> m_bookmarkColors;
