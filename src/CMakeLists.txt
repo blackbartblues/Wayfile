@@ -26,6 +26,7 @@ set(WAYFILE_SOURCES
     models/devicemodel_mount.cpp
     models/networklocationmodel.cpp
     models/recentfilesmodel.cpp
+    models/folderviewstore.cpp
     models/searchresultsmodel.cpp
     models/searchproxymodel.cpp
     models/dirfilterproxymodel.cpp

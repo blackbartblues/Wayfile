@@ -71,6 +71,13 @@ target_include_directories(tst_bookmarkmodel PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(tst_bookmarkmodel PRIVATE Qt6::Test Qt6::Core)
 add_test(NAME tst_bookmarkmodel COMMAND tst_bookmarkmodel)
 
+add_executable(tst_folderviewstore tst_folderviewstore.cpp
+    ${CMAKE_SOURCE_DIR}/src/models/folderviewstore.cpp
+)
+target_include_directories(tst_folderviewstore PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(tst_folderviewstore PRIVATE Qt6::Test Qt6::Core)
+add_test(NAME tst_folderviewstore COMMAND tst_folderviewstore)
+
 add_executable(tst_fileoperations tst_fileoperations.cpp
     ${FILEOPERATIONS_SRCS}
 )
