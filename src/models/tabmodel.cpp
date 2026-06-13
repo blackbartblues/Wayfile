@@ -116,10 +116,6 @@ void TabModel::setViewMode(const QString &mode)
     if (m_panes[0].viewMode == mode)
         return;
     m_panes[0].viewMode = mode;
-    // Mirror to every other pane if any exist; lazy-grown layouts may have
-    // size 1 (single-pane tab) or any size up to kMaxPanes.
-    for (int i = 1; i < m_panes.size(); ++i)
-        m_panes[i].viewMode = mode;
     emit viewModeChanged();
 }
 
@@ -359,6 +355,18 @@ QString TabModel::paneViewMode(int idx) const
     if (idx < 0 || idx >= m_panes.size())
         return {};
     return m_panes.at(idx).viewMode;
+}
+
+void TabModel::setPaneViewMode(int idx, const QString &mode)
+{
+    if (idx < 0 || idx >= m_panes.size())
+        return;
+    if (m_panes[idx].viewMode == mode)
+        return;
+    m_panes[idx].viewMode = mode;
+    emit paneViewModeChanged(idx);
+    if (idx == 0)
+        emit viewModeChanged();
 }
 
 QStringList TabModel::paneTitles() const

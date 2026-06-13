@@ -76,6 +76,10 @@ public:
     // secondaryX Q_PROPERTYs stay alive while paneRow is still hand-wired.
     Q_INVOKABLE QString paneCurrentPath(int idx) const;
     Q_INVOKABLE QString paneViewMode(int idx) const;
+    // Set one pane's view mode without touching its siblings. idx 0 also emits
+    // viewModeChanged() so tab-level consumers (session save, miller sync for
+    // the primary pane) keep firing.
+    Q_INVOKABLE void setPaneViewMode(int idx, const QString &mode);
     // Phase 2 P2-M7: batched basename list for every live pane.  Mirrors
     // the join used by title() so the TabBar delegate can render the same
     // names as N discrete chips without re-parsing the joined string.
@@ -112,6 +116,9 @@ signals:
     // signal QML gets. Carries the pane index so the handler can re-seed the
     // matching paneServices slot's fsModel.
     void panePathChanged(int idx);
+    // Emitted when a single pane's view mode changes via setPaneViewMode.
+    // Carries the pane index so Main.qml refreshes that pane's binding.
+    void paneViewModeChanged(int idx);
 
 private:
     // m_panes is the single source of truth for every per-pane field

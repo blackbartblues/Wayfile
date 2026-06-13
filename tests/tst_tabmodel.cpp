@@ -85,6 +85,47 @@ private slots:
         QCOMPARE(tab.isSupertab(), true);
     }
 
+    void testSetViewModeNoLongerMirrors()
+    {
+        TabModel tab;                       // pane 0 starts "hybrid"
+        tab.addPane("/tmp");                // pane 1 inherits "hybrid"
+        tab.setViewMode("grid");            // sets pane 0 only now
+        QCOMPARE(tab.paneViewMode(0), QString("grid"));
+        QCOMPARE(tab.paneViewMode(1), QString("hybrid"));   // NOT mirrored
+    }
+
+    void testSetPaneViewModeIndependent()
+    {
+        TabModel tab;
+        tab.addPane("/tmp");
+        tab.setPaneViewMode(1, "detailed");
+        QCOMPARE(tab.paneViewMode(0), QString("hybrid"));
+        QCOMPARE(tab.paneViewMode(1), QString("detailed"));
+    }
+
+    void testSetPaneViewModeSignal()
+    {
+        TabModel tab;
+        QSignalSpy spy(&tab, &TabModel::paneViewModeChanged);
+        tab.setPaneViewMode(0, "miller");
+        QCOMPARE(spy.count(), 1);
+        QCOMPARE(spy.at(0).at(0).toInt(), 0);
+        // idx 0 also pulses the tab-level signal for session/back-compat readers.
+        QSignalSpy tabSpy(&tab, &TabModel::viewModeChanged);
+        tab.setPaneViewMode(0, "grid");
+        QCOMPARE(tabSpy.count(), 1);
+    }
+
+    void testSetPaneViewModeOutOfRangeNoop()
+    {
+        TabModel tab;
+        QSignalSpy spy(&tab, &TabModel::paneViewModeChanged);
+        tab.setPaneViewMode(5, "grid");     // no pane 5
+        tab.setPaneViewMode(-1, "grid");
+        QCOMPARE(spy.count(), 0);
+        QCOMPARE(tab.paneViewMode(0), QString("hybrid"));
+    }
+
     void testNonPrimaryPaneNavigation()
     {
         TabModel tab;
